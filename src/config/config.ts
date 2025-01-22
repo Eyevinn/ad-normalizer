@@ -14,7 +14,15 @@ let config: AdNormalizerConfiguration | null = null;
 
 const loadConfiguration = (): AdNormalizerConfiguration => {
   const encoreUrl = process.env.ENCORE_URL;
-  const callbackListenerUrl = process.env.CALLBACK_LISTENER_URL;
+  if (!process.env.CALLBACK_LISTENER_URL) {
+    throw new Error('CALLBACK_LISTENER_URL is required');
+  }
+  // Handle whether CALLBACK_LISTENER_URL contains /encoreCallback
+  // or not
+  const callbackListenerUrl = new URL(
+    '/encoreCallback',
+    process.env.CALLBACK_LISTENER_URL
+  );
   const endpoint = process.env.S3_ENDPOINT;
   const accessKey = process.env.S3_ACCESS_KEY;
   const secretKey = process.env.S3_SECRET_KEY;
@@ -31,7 +39,7 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
   const oscToken = process.env.OSC_ACCESS_TOKEN;
   const configuration = {
     encoreUrl: encoreUrl,
-    callbackListenerUrl: callbackListenerUrl,
+    callbackListenerUrl: callbackListenerUrl.toString(),
     s3Endpoint: endpoint,
     s3AccessKey: accessKey,
     s3SecretKey: secretKey,

@@ -6,6 +6,10 @@ A Proxy put in fron of an ad server that dispatches transcoding and packaging of
 
 The service accepts requests to the endpoint `api/v1/vast`, and returns a JSON array with the following structure:
 
+```
+% curl -v "http://localhost:8000/api/v1/vast?dur=30"
+```
+
 ```json
 {
   "assets": [
@@ -13,8 +17,15 @@ The service accepts requests to the endpoint `api/v1/vast`, and returns a JSON a
       "creativeId": "abcd1234",
       "masterPlaylistUrl": "https://your-minio-endpoint/creativeId/substring/index.m3u8"
     }
-  ]
+  ],
+  "vastXml": "<VAST...>"
 }
+```
+
+or modified VAST XML if `application/xml` content-type is requested:
+
+```
+% curl -v -H 'accept: application/xml' "http://localhost:8000/api/v1/vast?dur=30"
 ```
 
 The service uses redis to keep track of transcoded creatives, and returns the master playlist URL if one is found; if the service does not know of any packaged assets for a creative, it creates a transcoding and packaging pipeline, and monitors the provided minio bucket for asset uploads. Once the assets are in place, the master playlist URL is added to the redis cache.
