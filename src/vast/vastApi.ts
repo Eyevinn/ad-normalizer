@@ -5,7 +5,7 @@ import fastifyAcceptsSerializer from '@fastify/accepts-serializer';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import logger from '../util/logger';
 import { timestampToSeconds } from '../util/time';
-import { removeTrailingSlash } from '../util/string';
+import { IN_PROGRESS } from '../redis/redisclient';
 
 export const ManifestAsset = Type.Object({
   creativeId: Type.String(),
@@ -95,8 +95,13 @@ const partitionCreatives = async (
   for (const creative of creatives) {
     const asset = await lookUpAsset(creative.creativeId);
     logger.debug('Looking up asset', { creative, asset });
-    if (asset) {
-      found.push({ creativeId: creative.creativeId, masterPlaylistUrl: asset });
+    if (asset && asset) {
+      if (asset !== IN_PROGRESS) {
+        found.push({
+          creativeId: creative.creativeId,
+          masterPlaylistUrl: asset
+        });
+      }
     } else {
       missing.push({
         creativeId: creative.creativeId,

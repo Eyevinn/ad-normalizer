@@ -7,7 +7,7 @@ import { Static, Type } from '@sinclair/typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { ManifestAsset, vastApi } from './vast/vastApi';
 import getConfiguration from './config/config';
-import { RedisClient } from './redis/redisclient';
+import { IN_PROGRESS, DEFAULT_TTL, RedisClient } from './redis/redisclient';
 import logger from './util/logger';
 import { EncoreClient } from './encore/encoreclient';
 import { MinioClient, MinioNotification } from './minio/minio';
@@ -64,9 +64,9 @@ export default (opts: ApiOptions) => {
 
   redisclient.connect();
 
-  const saveToRedis = (key: string, value: string) => {
+  const saveToRedis = (key: string, value: string, ttl: number) => {
     logger.info('Saving to Redis', { key, value });
-    redisclient.set(key, value);
+    redisclient.set(key, value, ttl);
   };
   logger.debug('callback listener URL:', config.callbackListenerUrl);
   const encoreClient = new EncoreClient(
@@ -111,8 +111,14 @@ export default (opts: ApiOptions) => {
     adServerUrl: config.adServerUrl,
     assetServerUrl: `https://${config.s3Endpoint}/${config.bucket}/`,
     lookUpAsset: async (mediaFile: string) => redisclient.get(mediaFile),
-    onMissingAsset: async (asset: ManifestAsset) =>
-      encoreClient.createEncoreJob(asset),
+    onMissingAsset: async (asset: ManifestAsset) => {
+      saveToRedis(
+        asset.creativeId,
+        IN_PROGRESS,
+        config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
+      ); // Use the key as a lock to avoid multiple jobs being started
+      return encoreClient.createEncoreJob(asset);
+    },
     setupNotification: (asset: ManifestAsset) => {
       logger.debug('Setting up notification for asset', { asset });
       minioClient.listenForNotifications(
@@ -120,7 +126,7 @@ export default (opts: ApiOptions) => {
         asset.creativeId + '/', // TODO: Pass encore job id and add as part of the prefix
         'index.m3u8',
         async (notification: MinioNotification) =>
-          await saveToRedis(asset.creativeId, notification.s3.object.key)
+          await saveToRedis(asset.creativeId, notification.s3.object.key, 0)
       );
     }
   });

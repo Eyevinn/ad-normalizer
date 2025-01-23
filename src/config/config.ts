@@ -11,6 +11,7 @@ export interface AdNormalizerConfiguration {
   adServerUrl: string;
   redisUrl: string;
   oscToken?: string;
+  inFlightTtl?: number;
 }
 
 let config: AdNormalizerConfiguration | null = null;
@@ -50,6 +51,7 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
       ? path.join(bucket.hostname, bucket.pathname)
       : bucket.hostname;
   const oscToken = process.env.OSC_ACCESS_TOKEN;
+  const inFlightTtl = process.env.IN_FLIGHT_TTL;
   const configuration = {
     encoreUrl: removeTrailingSlash(encoreUrl.toString()),
     callbackListenerUrl: callbackListenerUrl.toString(),
@@ -59,7 +61,8 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     adServerUrl: adServerUrl,
     redisUrl: redisUrl,
     bucket: removeTrailingSlash(bucketPath),
-    oscToken: oscToken
+    oscToken: oscToken,
+    inFlightTtl: inFlightTtl ? parseInt(inFlightTtl) : null
   } as AdNormalizerConfiguration;
 
   return configuration;
