@@ -33,7 +33,9 @@ if `application/json` content-type is explicitly requested, the normalizer retur
 ```
 % curl -v -H 'accept: application/json' "http://localhost:8000/api/v1/vast?dur=30"
 ```
+
 results in:
+
 ```json
 {
   "ASSETS": [
