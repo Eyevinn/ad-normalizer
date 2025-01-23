@@ -29,6 +29,9 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     '/encoreCallback',
     process.env.CALLBACK_LISTENER_URL
   );
+  if (!process.env.S3_ENDPOINT) {
+    throw new Error('S3_ENDPOINT is required');
+  }
   const endpoint = process.env.S3_ENDPOINT;
   const accessKey = process.env.S3_ACCESS_KEY;
   const secretKey = process.env.S3_SECRET_KEY;
@@ -50,7 +53,7 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
   const configuration = {
     encoreUrl: removeTrailingSlash(encoreUrl.toString()),
     callbackListenerUrl: callbackListenerUrl.toString(),
-    s3Endpoint: endpoint,
+    s3Endpoint: removeTrailingSlash(endpoint),
     s3AccessKey: accessKey,
     s3SecretKey: secretKey,
     adServerUrl: adServerUrl,
