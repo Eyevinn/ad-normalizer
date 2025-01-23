@@ -161,7 +161,10 @@ const fetchVastAndDispatchJobs = async (
   const withBaseUrl = found.map((asset: ManifestAsset) => {
     return {
       creativeId: asset.creativeId,
-      masterPlaylistUrl: opts.assetServerUrl + '/' + asset.masterPlaylistUrl
+      masterPlaylistUrl: PathUtils.join(
+        opts.assetServerUrl,
+        asset.masterPlaylistUrl
+      )
     };
   });
   return { assets: withBaseUrl, vastXml };
