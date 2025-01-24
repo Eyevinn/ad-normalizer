@@ -10,7 +10,6 @@ import { IN_PROGRESS } from '../redis/redisclient';
 export const ManifestAsset = Type.Object({
   creativeId: Type.String(),
   masterPlaylistUrl: Type.String()
-  // TODO: Figure out how to handle durations
 });
 
 export const ManifestResponse = Type.Object({
@@ -50,7 +49,19 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
   next
 ) => {
   fastify.register(fastifyAcceptsSerializer);
-
+  fastify.addContentTypeParser(
+    ['text/xml', 'application/xml'],
+    { parseAs: 'string' },
+    (req, body, done) => {
+      try {
+        const parsed = parseVast(body.toString());
+        done(null, parsed);
+      } catch (error) {
+        logger.error('Failed to parse VAST XML', error);
+        done(new Error('Failed to parse VAST XML'), undefined);
+      }
+    }
+  );
   fastify.get<{ Reply: Static<typeof ManifestResponse> }>(
     '/api/v1/vast',
     {
@@ -80,7 +91,44 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
     },
     async (req, reply) => {
       const path = req.url;
-      const response = await fetchVastAndDispatchJobs(path, opts);
+      const vastStr = await getVastXml(opts.adServerUrl, path);
+      const vastXml = parseVast(vastStr);
+      const response = await findMissingAndDispatchJobs(vastXml, opts);
+      reply.send(response);
+    }
+  );
+
+  fastify.post<{ Body: XMLDocument }>(
+    '/api/v1/vast',
+    {
+      config: {
+        serializers: [
+          {
+            regex: /^application\/xml/,
+            serializer: (data: ManifestResponse) => {
+              return replaceMediaFiles(data.vastXml, data.assets);
+            }
+          },
+          {
+            regex: /^application\/json/,
+            serializer: (data: ManifestResponse) => {
+              return createAssetList(data.vastXml, data.assets);
+            }
+          }
+        ]
+      },
+      schema: {
+        description:
+          'Accepts VAST XML and returns data containing manifest URLs for creatives with transcoded assets.',
+
+        response: {
+          200: ManifestResponse
+        }
+      }
+    },
+    async (req, reply) => {
+      const vastXml = req.body;
+      const response = await findMissingAndDispatchJobs(vastXml, opts);
       reply.send(response);
     }
   );
@@ -112,11 +160,10 @@ const partitionCreatives = async (
   return [found, missing];
 };
 
-const fetchVastAndDispatchJobs = async (
-  path: string,
+const findMissingAndDispatchJobs = async (
+  vastXml: any,
   opts: AdApiOptions
 ): Promise<ManifestResponse> => {
-  const vastXml = await getVastXml(opts.adServerUrl, path);
   const creatives = await getCreatives(vastXml);
   const [found, missing] = await partitionCreatives(
     creatives,
@@ -172,7 +219,9 @@ const fetchVastAndDispatchJobs = async (
       )
     };
   });
-  return { assets: withBaseUrl, vastXml };
+  const builder = new XMLBuilder({ format: true, ignoreAttributes: false });
+  const vastAsString = builder.build(vastXml);
+  return { assets: withBaseUrl, vastXml: vastAsString };
 };
 
 const getVastXml = async (
@@ -202,19 +251,16 @@ const getVastXml = async (
   }
 };
 
-const getCreatives = async (vastXml: string): Promise<ManifestAsset[]> => {
+const getCreatives = async (vastXml: any): Promise<ManifestAsset[]> => {
   try {
-    const parser = new XMLParser();
-    const parsedVAST = parser.parse(vastXml);
-    if (parsedVAST.VAST.Ad) {
-      const creatives = parsedVAST.VAST.Ad.reduce(
+    if (vastXml.VAST.Ad) {
+      const creatives = vastXml.VAST.Ad.reduce(
         (acc: ManifestAsset[], ad: any) => {
-          const adId = ad.InLine.Creatives.Creative.UniversalAdId.replace(
-            /[^a-zA-Z0-9]/g,
-            ''
-          );
+          const adId = ad.InLine.Creatives.Creative.UniversalAdId[
+            '#text'
+          ].replace(/[^a-zA-Z0-9]/g, '');
           const mediaFile =
-            ad.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile;
+            ad.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile['#text'];
           return [...acc, { creativeId: adId, masterPlaylistUrl: mediaFile }];
         },
         []
@@ -223,7 +269,7 @@ const getCreatives = async (vastXml: string): Promise<ManifestAsset[]> => {
     }
     return [];
   } catch (error) {
-    logger.error('Failed to parse VAST XML', { error });
+    logger.error('Failed to parse VAST XML', error);
     return [];
   }
 };
@@ -250,8 +296,19 @@ const replaceMediaFiles = (vastXml: string, assets: ManifestAsset[]) => {
     const modifiedVastXml = builder.build(parsedVAST);
     return modifiedVastXml;
   } catch (error) {
-    logger.error('Failed to replace media files', { error });
+    logger.error('Failed to replace media files', error);
     return vastXml;
+  }
+};
+
+const parseVast = (vastXml: string) => {
+  try {
+    const parser = new XMLParser({ ignoreAttributes: false });
+    const parsedVAST = parser.parse(vastXml);
+    return parsedVAST;
+  } catch (error) {
+    logger.error('Failed to parse VAST XML', { error });
+    return {};
   }
 };
 
@@ -260,7 +317,6 @@ const createAssetList = (vastXml: string, assets: ManifestAsset[]) => {
   try {
     const parser = new XMLParser({ ignoreAttributes: false });
     const parsedVAST = parser.parse(vastXml);
-
     if (parsedVAST.VAST.Ad) {
       assetDescriptions = parsedVAST.VAST.Ad.map((ad: any) => {
         const adId = ad.InLine.Creatives.Creative.UniversalAdId[
@@ -280,7 +336,7 @@ const createAssetList = (vastXml: string, assets: ManifestAsset[]) => {
     }
   } catch (error) {
     const fallbackDuration = 10;
-    logger.error('Failed to create asset list', { error });
+    logger.error('Failed to create asset list', error);
     assetDescriptions = assets.map((asset) => {
       return {
         URI: asset.masterPlaylistUrl,
