@@ -279,7 +279,7 @@ const replaceMediaFiles = (vastXml: string, assets: ManifestAsset[]) => {
     const parser = new XMLParser({ ignoreAttributes: false });
     const parsedVAST = parser.parse(vastXml);
     if (parsedVAST.VAST.Ad) {
-      for (const ad of parsedVAST.VAST.Ad) {
+      parsedVAST.VAST.Ad = parsedVAST.VAST.Ad.reduce((acc: any[], ad: any) => {
         const adId = ad.InLine.Creatives.Creative.UniversalAdId[
           '#text'
         ].replace(/[^a-zA-Z0-9]/g, '');
@@ -289,8 +289,10 @@ const replaceMediaFiles = (vastXml: string, assets: ManifestAsset[]) => {
             asset.masterPlaylistUrl;
           ad.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile['@_type'] =
             'application/x-mpegURL';
+          acc.push(ad);
         }
-      }
+        return acc;
+      }, []);
     }
     const builder = new XMLBuilder({ format: true, ignoreAttributes: false });
     const modifiedVastXml = builder.build(parsedVAST);

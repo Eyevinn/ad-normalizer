@@ -1,6 +1,5 @@
 import { EncoreClient } from './encoreclient';
 import { EncoreJob, InputType } from './types';
-import { ManifestAsset } from '../vast/vastApi';
 
 jest.mock('../util/logger', () => ({
   info: jest.fn()
