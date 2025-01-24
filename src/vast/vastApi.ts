@@ -161,10 +161,10 @@ const partitionCreatives = async (
 };
 
 const findMissingAndDispatchJobs = async (
-  vastXml: any,
+  vastXmlObj: any,
   opts: AdApiOptions
 ): Promise<ManifestResponse> => {
-  const creatives = await getCreatives(vastXml);
+  const creatives = await getCreatives(vastXmlObj);
   const [found, missing] = await partitionCreatives(
     creatives,
     opts.lookUpAsset
@@ -220,8 +220,8 @@ const findMissingAndDispatchJobs = async (
     };
   });
   const builder = new XMLBuilder({ format: true, ignoreAttributes: false });
-  const vastAsString = builder.build(vastXml);
-  return { assets: withBaseUrl, vastXml: vastAsString };
+  const vastXml = builder.build(vastXmlObj);
+  return { assets: withBaseUrl, vastXml: vastXml };
 };
 
 const getVastXml = async (
