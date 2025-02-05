@@ -43,6 +43,17 @@ export interface AdApiOptions {
   setupNotification?: (asset: ManifestAsset) => void;
 }
 
+const alwaysArray = ['VAST.Ad'];
+
+const isArray = (
+  name: string,
+  jpath: string,
+  isLeafNode: boolean,
+  isAttribute: boolean
+): boolean => {
+  return alwaysArray.includes(jpath);
+};
+
 export const vastApi: FastifyPluginCallback<AdApiOptions> = (
   fastify,
   opts,
@@ -276,7 +287,7 @@ const getCreatives = async (vastXml: any): Promise<ManifestAsset[]> => {
 
 const replaceMediaFiles = (vastXml: string, assets: ManifestAsset[]) => {
   try {
-    const parser = new XMLParser({ ignoreAttributes: false });
+    const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
     const parsedVAST = parser.parse(vastXml);
     if (parsedVAST.VAST.Ad) {
       parsedVAST.VAST.Ad = parsedVAST.VAST.Ad.reduce((acc: any[], ad: any) => {
@@ -305,7 +316,7 @@ const replaceMediaFiles = (vastXml: string, assets: ManifestAsset[]) => {
 
 const parseVast = (vastXml: string) => {
   try {
-    const parser = new XMLParser({ ignoreAttributes: false });
+    const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
     const parsedVAST = parser.parse(vastXml);
     return parsedVAST;
   } catch (error) {
@@ -317,7 +328,7 @@ const parseVast = (vastXml: string) => {
 const createAssetList = (vastXml: string, assets: ManifestAsset[]) => {
   let assetDescriptions = [];
   try {
-    const parser = new XMLParser({ ignoreAttributes: false });
+    const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
     const parsedVAST = parser.parse(vastXml);
     if (parsedVAST.VAST.Ad) {
       assetDescriptions = parsedVAST.VAST.Ad.map((ad: any) => {
