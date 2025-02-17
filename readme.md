@@ -7,6 +7,7 @@ A Proxy put in front of an ad server that dispatches transcoding and packaging o
 The service provides two main endpoints:
 
 ### VAST Endpoint
+
 The service accepts requests to the endpoint `api/v1/vast`, and returns a JSON array with the following structure if no conent type is requested:
 
 ```
@@ -51,6 +52,7 @@ results in:
 ```
 
 ### VMAP Endpoint
+
 The service also accepts requests to the endpoint `api/v1/vmap`, which handles VMAP (Video Multiple Ad Playlist) documents. The endpoint returns XML with transcoded assets:
 
 ```
@@ -70,6 +72,7 @@ The service also accepts requests to the endpoint `api/v1/vmap`, which handles V
 ```
 
 For XML response:
+
 ```
 % curl -v -H 'accept: application/xml' "http://localhost:8000/api/v1/vmap"
 ```
