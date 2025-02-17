@@ -1,9 +1,12 @@
 # Ad Normalizer
 
-A Proxy put in fron of an ad server that dispatches transcoding and packaging of VAST creatives.
+A Proxy put in front of an ad server that dispatches transcoding and packaging of VAST and VMAP creatives.
 
 [![Badge OSC](https://img.shields.io/badge/Evaluate-24243B?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiIGZpbGw9InVybCgjcGFpbnQwX2xpbmVhcl8yODIxXzMxNjcyKSIvPgo8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI3IiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiLz4KPGRlZnM%2BCjxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQwX2xpbmVhcl8yODIxXzMxNjcyIiB4MT0iMTIiIHkxPSIwIiB4Mj0iMTIiIHkyPSIyNCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgo8c3RvcCBzdG9wLWNvbG9yPSIjQzE4M0ZGIi8%2BCjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzREQzlGRiIvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM%2BCjwvc3ZnPgo%3D)](https://app.osaas.io/browse/eyevinn-ad-normalizer)
 
+The service provides two main endpoints:
+
+### VAST Endpoint
 The service accepts requests to the endpoint `api/v1/vast`, and returns a JSON array with the following structure if no conent type is requested:
 
 ```
@@ -18,7 +21,7 @@ The service accepts requests to the endpoint `api/v1/vast`, and returns a JSON a
       "masterPlaylistUrl": "https://your-minio-endpoint/creativeId/substring/index.m3u8"
     }
   ],
-  "vastXml": "<VAST...>"
+  "xml": "<VAST...>"
 }
 ```
 
@@ -46,6 +49,32 @@ results in:
   ]
 }
 ```
+
+### VMAP Endpoint
+The service also accepts requests to the endpoint `api/v1/vmap`, which handles VMAP (Video Multiple Ad Playlist) documents. The endpoint returns XML with transcoded assets:
+
+```
+% curl -v "http://localhost:8000/api/v1/vmap"
+```
+
+```json
+{
+  "assets": [
+    {
+      "creativeId": "abcd1234",
+      "masterPlaylistUrl": "https://your-minio-endpoint/creativeId/substring/index.m3u8"
+    }
+  ],
+  "xml": "<vmap:VMAP...>"
+}
+```
+
+For XML response:
+```
+% curl -v -H 'accept: application/xml' "http://localhost:8000/api/v1/vmap"
+```
+
+The VMAP endpoint processes all VAST ads within the VMAP document, ensuring that all video assets are properly transcoded and available in HLS format.
 
 The service uses redis to keep track of transcoded creatives, and returns the master playlist URL if one is found; if the service does not know of any packaged assets for a creative, it creates a transcoding and packaging pipeline, and monitors the provided minio bucket for asset uploads. Once the assets are in place, the master playlist URL is added to the redis cache. Redis is also used as a distributed lock to avoid multiple jobs being created for the same creative.
 
