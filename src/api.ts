@@ -6,6 +6,7 @@ import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { Static, Type } from '@sinclair/typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { ManifestAsset, vastApi } from './vast/vastApi';
+import { vmapApi } from './vmap/vmapApi';
 import getConfiguration from './config/config';
 import { IN_PROGRESS, DEFAULT_TTL, RedisClient } from './redis/redisclient';
 import logger from './util/logger';
@@ -124,6 +125,30 @@ export default (opts: ApiOptions) => {
       minioClient.listenForNotifications(
         config.bucket,
         asset.creativeId + '/', // TODO: Pass encore job id and add as part of the prefix
+        'index.m3u8',
+        async (notification: MinioNotification) =>
+          await saveToRedis(asset.creativeId, notification.s3.object.key, 0)
+      );
+    }
+  });
+
+  api.register(vmapApi, {
+    adServerUrl: config.adServerUrl,
+    assetServerUrl: `https://${config.s3Endpoint}/${config.bucket}/`,
+    lookUpAsset: async (mediaFile: string) => redisclient.get(mediaFile),
+    onMissingAsset: async (asset: ManifestAsset) => {
+      saveToRedis(
+        asset.creativeId,
+        IN_PROGRESS,
+        config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
+      );
+      return encoreClient.createEncoreJob(asset);
+    },
+    setupNotification: (asset: ManifestAsset) => {
+      logger.debug('Setting up notification for asset', { asset });
+      minioClient.listenForNotifications(
+        config.bucket,
+        asset.creativeId + '/',
         'index.m3u8',
         async (notification: MinioNotification) =>
           await saveToRedis(asset.creativeId, notification.s3.object.key, 0)

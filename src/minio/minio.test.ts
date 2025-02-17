@@ -1,4 +1,4 @@
-import { MinioClient, MinioNotification } from './minio';
+import { MinioClient } from './minio';
 import * as Minio from 'minio';
 import logger from '../util/logger';
 

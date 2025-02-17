@@ -14,8 +14,8 @@ export const ManifestAsset = Type.Object({
 
 export const ManifestResponse = Type.Object({
   assets: Type.Array(ManifestAsset),
-  vastXml: Type.String({
-    description: 'Original VAST XML received from adserver'
+  xml: Type.String({
+    description: 'Original VAST/VMAP XML received from adserver'
   })
 });
 
@@ -81,13 +81,13 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
           {
             regex: /^application\/xml/,
             serializer: (data: ManifestResponse) => {
-              return replaceMediaFiles(data.vastXml, data.assets);
+              return replaceMediaFiles(data.xml, data.assets);
             }
           },
           {
             regex: /^application\/json/,
             serializer: (data: ManifestResponse) => {
-              return createAssetList(data.vastXml, data.assets);
+              return createAssetList(data.xml, data.assets);
             }
           }
         ]
@@ -117,13 +117,13 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
           {
             regex: /^application\/xml/,
             serializer: (data: ManifestResponse) => {
-              return replaceMediaFiles(data.vastXml, data.assets);
+              return replaceMediaFiles(data.xml, data.assets);
             }
           },
           {
             regex: /^application\/json/,
             serializer: (data: ManifestResponse) => {
-              return createAssetList(data.vastXml, data.assets);
+              return createAssetList(data.xml, data.assets);
             }
           }
         ]
@@ -232,7 +232,7 @@ const findMissingAndDispatchJobs = async (
   });
   const builder = new XMLBuilder({ format: true, ignoreAttributes: false });
   const vastXml = builder.build(vastXmlObj);
-  return { assets: withBaseUrl, vastXml: vastXml };
+  return { assets: withBaseUrl, xml: vastXml };
 };
 
 const getVastXml = async (

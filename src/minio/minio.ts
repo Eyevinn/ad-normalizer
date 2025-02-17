@@ -56,7 +56,7 @@ export class MinioClient {
     if (poller == undefined) {
       logger.error('Failed to create poller');
     }
-    poller?.on('notification', (record) => {
+    poller?.on('notification', (record: any) => {
       logger.debug('Received notification', record);
       onNotification(record as MinioNotification);
       poller.stop();
