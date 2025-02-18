@@ -37,7 +37,7 @@ export class MinioClient {
     bucketName: string,
     assetId: string,
     masterPlaylistName: string,
-    onNotification: (r: any) => Promise<void>
+    onNotification: (r: unknown) => Promise<void>
   ) => {
     logger.debug('Listening for notifications', {
       bucketName,
@@ -56,7 +56,7 @@ export class MinioClient {
     if (poller == undefined) {
       logger.error('Failed to create poller');
     }
-    poller?.on('notification', (record: any) => {
+    poller?.on('notification', (record: unknown) => {
       logger.debug('Received notification', record);
       onNotification(record as MinioNotification);
       poller.stop();

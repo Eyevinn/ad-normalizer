@@ -1,6 +1,15 @@
 import { RedisClient } from './redisclient';
-import { createClient } from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import logger from '../util/logger';
+
+// Define a type for our mocked Redis client
+type MockRedisClient = {
+  get: jest.Mock;
+  set: jest.Mock;
+  expire: jest.Mock;
+  expireTime?: jest.Mock;
+  persist?: jest.Mock;
+};
 
 jest.mock('redis', () => ({
   createClient: jest.fn(() => ({
@@ -42,7 +51,7 @@ describe('RedisClient', () => {
     const mockValue = 'testValue';
     redisClient['client'] = {
       get: jest.fn().mockResolvedValue(mockValue)
-    } as any;
+    } as unknown as RedisClientType;
 
     const value = await redisClient.get(mockKey);
     expect(redisClient['client']?.get).toHaveBeenCalledWith(mockKey);
@@ -55,7 +64,7 @@ describe('RedisClient', () => {
     redisClient['client'] = {
       set: jest.fn(),
       expire: jest.fn()
-    } as any;
+    } as unknown as RedisClientType;
 
     await redisClient.set(mockKey, mockValue, 10);
     expect(redisClient['client']?.set).toHaveBeenCalledWith(mockKey, mockValue);
@@ -65,32 +74,37 @@ describe('RedisClient', () => {
   it('should set a value in Redis and persist if it has an expire time', async () => {
     const mockKey = 'testKey';
     const mockValue = 'testValue';
-    redisClient['client'] = {
+    const mockClient: MockRedisClient = {
+      get: jest.fn(),
       set: jest.fn(),
       expire: jest.fn(),
       expireTime: jest.fn().mockResolvedValue(10),
       persist: jest.fn()
-    } as any;
+    };
+    redisClient['client'] = mockClient as unknown as RedisClientType;
 
     await redisClient.set(mockKey, mockValue, 0);
-    expect(redisClient['client']?.set).toHaveBeenCalledWith(mockKey, mockValue);
-    expect(redisClient['client']?.expireTime).toHaveBeenCalledWith(mockKey);
-    expect(redisClient['client']?.persist).toHaveBeenCalledWith(mockKey);
+    expect(mockClient.set).toHaveBeenCalledWith(mockKey, mockValue);
+    expect(mockClient.expireTime).toHaveBeenCalledWith(mockKey);
+    expect(mockClient.persist).toHaveBeenCalledWith(mockKey);
   });
 
   it('should set a value in Redis and not persist if expire time is -1', async () => {
     const mockKey = 'testKey';
     const mockValue = 'testValue';
-    redisClient['client'] = {
+    const mockClient: MockRedisClient = {
+      get: jest.fn(),
       set: jest.fn(),
       expire: jest.fn(),
       expireTime: jest.fn().mockResolvedValue(-1),
       persist: jest.fn()
-    } as any;
+    };
+    redisClient['client'] = mockClient as unknown as RedisClientType;
 
     await redisClient.set(mockKey, mockValue, 0);
-    expect(redisClient['client']?.set).toHaveBeenCalledWith(mockKey, mockValue);
-    expect(redisClient['client']?.expireTime).toHaveBeenCalledWith(mockKey);
+    expect(mockClient.set).toHaveBeenCalledWith(mockKey, mockValue);
+    expect(mockClient.expireTime).toHaveBeenCalledWith(mockKey);
+    expect(mockClient.persist).not.toHaveBeenCalled();
   });
 
   it('should log an error if client is not connected when getting a key', async () => {

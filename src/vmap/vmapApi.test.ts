@@ -1,10 +1,13 @@
-import { ManifestAsset } from '../vast/vastApi';
+import {
+  ManifestAsset,
+  getBestMediaFileFromVastAd,
+  VastAd
+} from '../vast/vastApi';
 
 jest.mock('../util/logger');
 
 describe('VMAP API', () => {
-  const { replaceMediaFiles, getMediaFile, getCreatives } =
-    jest.requireActual('./vmapApi');
+  const { replaceMediaFiles, getCreatives } = jest.requireActual('./vmapApi');
 
   describe('replaceMediaFiles', () => {
     it('should replace media files in VMAP XML with transcoded assets', () => {
@@ -211,12 +214,15 @@ describe('VMAP API', () => {
     });
   });
 
-  describe('getMediaFile', () => {
+  describe('getBestMediaFileFromVastAd', () => {
     it('should return the highest bitrate media file', () => {
-      const vastAd = {
+      const vastAd: VastAd = {
         InLine: {
           Creatives: {
             Creative: {
+              UniversalAdId: {
+                '#text': 'test-ad-id'
+              },
               Linear: {
                 MediaFiles: {
                   MediaFile: [
@@ -236,23 +242,27 @@ describe('VMAP API', () => {
                       '@_type': 'video/mp4'
                     }
                   ]
-                }
+                },
+                Duration: '00:00:30'
               }
             }
           }
         }
       };
 
-      const result = getMediaFile(vastAd);
+      const result = getBestMediaFileFromVastAd(vastAd);
       expect(result['#text']).toBe('http://example.com/high.mp4');
       expect(result['@_bitrate']).toBe('3000');
     });
 
     it('should handle single media file', () => {
-      const vastAd = {
+      const vastAd: VastAd = {
         InLine: {
           Creatives: {
             Creative: {
+              UniversalAdId: {
+                '#text': 'test-ad-id'
+              },
               Linear: {
                 MediaFiles: {
                   MediaFile: {
@@ -260,23 +270,27 @@ describe('VMAP API', () => {
                     '@_bitrate': '2000',
                     '@_type': 'video/mp4'
                   }
-                }
+                },
+                Duration: '00:00:30'
               }
             }
           }
         }
       };
 
-      const result = getMediaFile(vastAd);
+      const result = getBestMediaFileFromVastAd(vastAd);
       expect(result['#text']).toBe('http://example.com/video.mp4');
       expect(result['@_bitrate']).toBe('2000');
     });
 
     it('should handle media files without bitrate', () => {
-      const vastAd = {
+      const vastAd: VastAd = {
         InLine: {
           Creatives: {
             Creative: {
+              UniversalAdId: {
+                '#text': 'test-ad-id'
+              },
               Linear: {
                 MediaFiles: {
                   MediaFile: [
@@ -290,23 +304,27 @@ describe('VMAP API', () => {
                       '@_type': 'video/mp4'
                     }
                   ]
-                }
+                },
+                Duration: '00:00:30'
               }
             }
           }
         }
       };
 
-      const result = getMediaFile(vastAd);
+      const result = getBestMediaFileFromVastAd(vastAd);
       expect(result['#text']).toBe('http://example.com/video2.mp4');
       expect(result['@_bitrate']).toBe('2000');
     });
 
     it('should return first media file when none have bitrate', () => {
-      const vastAd = {
+      const vastAd: VastAd = {
         InLine: {
           Creatives: {
             Creative: {
+              UniversalAdId: {
+                '#text': 'test-ad-id'
+              },
               Linear: {
                 MediaFiles: {
                   MediaFile: [
@@ -319,14 +337,15 @@ describe('VMAP API', () => {
                       '@_type': 'video/mp4'
                     }
                   ]
-                }
+                },
+                Duration: '00:00:30'
               }
             }
           }
         }
       };
 
-      const result = getMediaFile(vastAd);
+      const result = getBestMediaFileFromVastAd(vastAd);
       expect(result['#text']).toBe('http://example.com/video1.mp4');
       expect(result['@_type']).toBe('video/mp4');
     });

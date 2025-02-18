@@ -3,20 +3,32 @@ import { default as PathUtils } from 'path';
 import { Static } from '@sinclair/typebox';
 import fastifyAcceptsSerializer from '@fastify/accepts-serializer';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
-import { ManifestAsset, AdApiOptions, ManifestResponse } from '../vast/vastApi';
+import {
+  ManifestAsset,
+  AdApiOptions,
+  ManifestResponse,
+  getBestMediaFileFromVastAd,
+  MediaFile,
+  EncoreJob,
+  isArray,
+  VastAd
+} from '../vast/vastApi';
 import logger from '../util/logger';
 import { IN_PROGRESS } from '../redis/redisclient';
 
-const alwaysArray = ['vmap:VMAP.vmap:AdBreak', 'vmap:AdBreak.vmap:AdSource'];
+interface VmapAdBreak {
+  'vmap:AdSource'?: {
+    'vast:VAST'?: {
+      Ad?: VastAd | VastAd[];
+    };
+  };
+}
 
-const isArray = (
-  name: string,
-  jpath: string,
-  isLeafNode: boolean,
-  isAttribute: boolean
-): boolean => {
-  return alwaysArray.includes(jpath);
-};
+interface VmapXmlObject {
+  'vmap:VMAP': {
+    'vmap:AdBreak'?: VmapAdBreak[];
+  };
+}
 
 export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
   fastify,
@@ -63,12 +75,15 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
       const path = req.url;
       const vmapStr = await getVmapXml(opts.adServerUrl, path);
       const vmapXml = parseVmap(vmapStr);
-      const response = await findMissingAndDispatchJobs(vmapXml, opts);
+      const response = await findMissingAndDispatchJobs(
+        vmapXml as VmapXmlObject,
+        opts
+      );
       reply.send(response);
     }
   );
 
-  fastify.post<{ Body: XMLDocument }>(
+  fastify.post<{ Body: VmapXmlObject }>(
     '/api/v1/vmap',
     {
       config: {
@@ -124,7 +139,7 @@ const partitionCreatives = async (
 };
 
 const findMissingAndDispatchJobs = async (
-  vmapXmlObj: any,
+  vmapXmlObj: VmapXmlObject,
   opts: AdApiOptions
 ): Promise<ManifestResponse> => {
   const creatives = await getCreatives(vmapXmlObj);
@@ -143,9 +158,9 @@ const findMissingAndDispatchJobs = async (
           if (!response.ok) {
             throw new Error(`Failed to submit job: ${response.statusText}`);
           }
-          return response.json();
+          return response.json() as Promise<EncoreJob>;
         })
-        .then((data: any) => {
+        .then((data) => {
           logger.info('Submitted transcode job', { jobId: data.id, creative });
           if (opts.setupNotification) {
             opts.setupNotification(creative);
@@ -199,24 +214,9 @@ const getVmapXml = async (
   }
 };
 
-export const getMediaFile = (vastAd: any): Record<string, string> => {
-  const mediaFiles =
-    vastAd.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile;
-  const mediaFileArray = Array.isArray(mediaFiles) ? mediaFiles : [mediaFiles];
-  let highestBitrateMediaFile = mediaFileArray[0];
-  for (const mediaFile of mediaFileArray) {
-    const currentBitrate = parseInt(mediaFile['@_bitrate'] || '0');
-    const highestBitrate = parseInt(
-      highestBitrateMediaFile['@_bitrate'] || '0'
-    );
-    if (currentBitrate > highestBitrate) {
-      highestBitrateMediaFile = mediaFile;
-    }
-  }
-  return highestBitrateMediaFile;
-};
-
-export const getCreatives = async (vmapXml: any): Promise<ManifestAsset[]> => {
+export const getCreatives = async (
+  vmapXml: VmapXmlObject
+): Promise<ManifestAsset[]> => {
   try {
     const creatives: ManifestAsset[] = [];
     if (vmapXml['vmap:VMAP']['vmap:AdBreak']) {
@@ -232,7 +232,7 @@ export const getCreatives = async (vmapXml: any): Promise<ManifestAsset[]> => {
             const adId = vastAd.InLine.Creatives.Creative.UniversalAdId[
               '#text'
             ].replace(/[^a-zA-Z0-9]/g, '');
-            const mediaFile: Record<string, string> = getMediaFile(vastAd);
+            const mediaFile: MediaFile = getBestMediaFileFromVastAd(vastAd);
             const mediaFileUrl = mediaFile['#text'];
             creatives.push({
               creativeId: adId,
@@ -266,7 +266,7 @@ export const replaceMediaFiles = (
             : [adBreak['vmap:AdSource']['vast:VAST'].Ad];
 
           adBreak['vmap:AdSource']['vast:VAST'].Ad = vastAds.reduce(
-            (acc: any[], vastAd: any) => {
+            (acc: VastAd[], vastAd: VastAd) => {
               const universalAdId =
                 vastAd.InLine.Creatives.Creative.UniversalAdId;
               const adId = (
@@ -276,7 +276,7 @@ export const replaceMediaFiles = (
               ).replace(/[^a-zA-Z0-9]/g, '');
               const asset = assets.find((a) => a.creativeId === adId);
               if (asset) {
-                const mediaFile: Record<string, string> = getMediaFile(vastAd);
+                const mediaFile: MediaFile = getBestMediaFileFromVastAd(vastAd);
                 mediaFile['#text'] = asset.masterPlaylistUrl;
                 mediaFile['@_type'] = 'application/x-mpegURL';
                 vastAd.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile =
@@ -299,12 +299,14 @@ export const replaceMediaFiles = (
   }
 };
 
-const parseVmap = (vmapXml: string): any => {
+const parseVmap = (vmapXml: string): VmapXmlObject | object => {
   try {
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
     return parser.parse(vmapXml);
   } catch (error) {
     logger.error('Failed to parse VMAP XML', { error });
-    return {};
+    return {
+      'vmap:VMAP': {}
+    };
   }
 };

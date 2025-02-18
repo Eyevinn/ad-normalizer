@@ -7,6 +7,12 @@ import logger from '../util/logger';
 import { timestampToSeconds } from '../util/time';
 import { IN_PROGRESS } from '../redis/redisclient';
 
+export interface EncoreJob {
+  id: string;
+  status?: string;
+  creativeId?: string;
+}
+
 export const ManifestAsset = Type.Object({
   creativeId: Type.String(),
   masterPlaylistUrl: Type.String()
@@ -43,16 +49,54 @@ export interface AdApiOptions {
   setupNotification?: (asset: ManifestAsset) => void;
 }
 
-const alwaysArray = ['VAST.Ad'];
+export const AlwaysArray = [
+  'VAST.Ad',
+  'vmap:VMAP.vmap:AdBreak',
+  'vmap:AdBreak.vmap:AdSource'
+];
 
-const isArray = (
+export const isArray = (
   name: string,
   jpath: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isLeafNode: boolean,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isAttribute: boolean
 ): boolean => {
-  return alwaysArray.includes(jpath);
+  return AlwaysArray.includes(jpath);
 };
+
+export interface VastAd {
+  InLine: {
+    Creatives: {
+      Creative: {
+        UniversalAdId: {
+          '#text': string;
+        };
+        Linear: {
+          MediaFiles: VastAdMediaFiles;
+          Duration: string;
+        };
+      };
+    };
+  };
+}
+
+interface VastXml {
+  VAST: {
+    Ad?: VastAd[];
+  };
+}
+
+interface VastAdMediaFiles {
+  MediaFile: MediaFile | MediaFile[];
+}
+
+export interface MediaFile {
+  '#text': string;
+  '@_type'?: string;
+  '@_bitrate'?: string;
+}
 
 export const vastApi: FastifyPluginCallback<AdApiOptions> = (
   fastify,
@@ -109,7 +153,7 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
     }
   );
 
-  fastify.post<{ Body: XMLDocument }>(
+  fastify.post<{ Body: VastXml }>(
     '/api/v1/vast',
     {
       config: {
@@ -172,7 +216,7 @@ const partitionCreatives = async (
 };
 
 const findMissingAndDispatchJobs = async (
-  vastXmlObj: any,
+  vastXmlObj: VastXml,
   opts: AdApiOptions
 ): Promise<ManifestResponse> => {
   const creatives = await getCreatives(vastXmlObj);
@@ -205,7 +249,7 @@ const findMissingAndDispatchJobs = async (
             }
             throw new Error('Failed to submit encore job');
           }
-          return response.json();
+          return response.json() as Promise<EncoreJob>;
         })
         .then((data) => {
           const encoreJobId = data.id;
@@ -262,17 +306,19 @@ const getVastXml = async (
   }
 };
 
-const getCreatives = async (vastXml: any): Promise<ManifestAsset[]> => {
+const getCreatives = async (vastXml: VastXml): Promise<ManifestAsset[]> => {
   try {
     if (vastXml.VAST.Ad) {
       const creatives = vastXml.VAST.Ad.reduce(
-        (acc: ManifestAsset[], ad: any) => {
+        (acc: ManifestAsset[], ad: VastAd) => {
           const adId = ad.InLine.Creatives.Creative.UniversalAdId[
             '#text'
           ].replace(/[^a-zA-Z0-9]/g, '');
-          const mediaFile =
-            ad.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile['#text'];
-          return [...acc, { creativeId: adId, masterPlaylistUrl: mediaFile }];
+          const mediaFile = getBestMediaFileFromVastAd(ad);
+          return [
+            ...acc,
+            { creativeId: adId, masterPlaylistUrl: mediaFile['#text'] }
+          ];
         },
         []
       );
@@ -285,33 +331,61 @@ const getCreatives = async (vastXml: any): Promise<ManifestAsset[]> => {
   }
 };
 
-const replaceMediaFiles = (vastXml: string, assets: ManifestAsset[]) => {
+const replaceMediaFiles = (
+  vastXml: string,
+  assets: ManifestAsset[]
+): string => {
   try {
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
     const parsedVAST = parser.parse(vastXml);
     if (parsedVAST.VAST.Ad) {
-      parsedVAST.VAST.Ad = parsedVAST.VAST.Ad.reduce((acc: any[], ad: any) => {
-        const adId = ad.InLine.Creatives.Creative.UniversalAdId[
-          '#text'
-        ].replace(/[^a-zA-Z0-9]/g, '');
-        const asset = assets.find((asset) => asset.creativeId === adId);
+      const vastAds = Array.isArray(parsedVAST.VAST.Ad)
+        ? parsedVAST.VAST.Ad
+        : [parsedVAST.VAST.Ad];
+
+      parsedVAST.VAST.Ad = vastAds.reduce((acc: VastAd[], vastAd: VastAd) => {
+        const universalAdId = vastAd.InLine.Creatives.Creative.UniversalAdId;
+        const adId = (
+          typeof universalAdId === 'string'
+            ? universalAdId
+            : universalAdId['#text']
+        ).replace(/[^a-zA-Z0-9]/g, '');
+        const asset = assets.find((a) => a.creativeId === adId);
         if (asset) {
-          ad.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile['#text'] =
-            asset.masterPlaylistUrl;
-          ad.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile['@_type'] =
-            'application/x-mpegURL';
-          acc.push(ad);
+          const mediaFile = getBestMediaFileFromVastAd(vastAd);
+          mediaFile['#text'] = asset.masterPlaylistUrl;
+          mediaFile['@_type'] = 'application/x-mpegURL';
+          vastAd.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile =
+            mediaFile;
+          acc.push(vastAd);
         }
         return acc;
       }, []);
     }
+
     const builder = new XMLBuilder({ format: true, ignoreAttributes: false });
-    const modifiedVastXml = builder.build(parsedVAST);
-    return modifiedVastXml;
+    return builder.build(parsedVAST);
   } catch (error) {
-    logger.error('Failed to replace media files', error);
+    logger.error('Failed to replace media files in VAST', error);
     return vastXml;
   }
+};
+
+export const getBestMediaFileFromVastAd = (vastAd: VastAd): MediaFile => {
+  const mediaFiles =
+    vastAd.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile;
+  const mediaFileArray = Array.isArray(mediaFiles) ? mediaFiles : [mediaFiles];
+  let highestBitrateMediaFile = mediaFileArray[0];
+  for (const mediaFile of mediaFileArray) {
+    const currentBitrate = parseInt(mediaFile['@_bitrate'] || '0');
+    const highestBitrate = parseInt(
+      highestBitrateMediaFile['@_bitrate'] || '0'
+    );
+    if (currentBitrate > highestBitrate) {
+      highestBitrateMediaFile = mediaFile;
+    }
+  }
+  return highestBitrateMediaFile;
 };
 
 const parseVast = (vastXml: string) => {
@@ -331,7 +405,7 @@ const createAssetList = (vastXml: string, assets: ManifestAsset[]) => {
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
     const parsedVAST = parser.parse(vastXml);
     if (parsedVAST.VAST.Ad) {
-      assetDescriptions = parsedVAST.VAST.Ad.map((ad: any) => {
+      assetDescriptions = parsedVAST.VAST.Ad.map((ad: VastAd) => {
         const adId = ad.InLine.Creatives.Creative.UniversalAdId[
           '#text'
         ].replace(/[^a-zA-Z0-9]/g, '');
