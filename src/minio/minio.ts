@@ -37,7 +37,7 @@ export class MinioClient {
     bucketName: string,
     assetId: string,
     masterPlaylistName: string,
-    onNotification: (r: unknown) => Promise<void>
+    onNotification: (r: MinioNotification) => Promise<void>
   ) => {
     logger.debug('Listening for notifications', {
       bucketName,
