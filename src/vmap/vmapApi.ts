@@ -17,9 +17,16 @@ import logger from '../util/logger';
 import { IN_PROGRESS } from '../redis/redisclient';
 
 interface VmapAdBreak {
+  '@_breakId'?: string;
+  '@_breakType'?: string;
+  '@_timeOffset'?: string;
   'vmap:AdSource'?: {
-    'vast:VAST'?: {
-      Ad?: VastAd | VastAd[];
+    '@_id'?: string;
+    'vmap:VASTAdData'?: {
+      VAST: {
+        '@_version'?: string;
+        Ad: VastAd | VastAd[];
+      };
     };
   };
 }
@@ -221,12 +228,12 @@ export const getCreatives = async (
     const creatives: ManifestAsset[] = [];
     if (vmapXml['vmap:VMAP']['vmap:AdBreak']) {
       for (const adBreak of vmapXml['vmap:VMAP']['vmap:AdBreak']) {
-        if (adBreak['vmap:AdSource']?.['vast:VAST']?.Ad) {
+        if (adBreak['vmap:AdSource']?.['vmap:VASTAdData']?.['VAST']?.Ad) {
           const vastAds = Array.isArray(
-            adBreak['vmap:AdSource']['vast:VAST'].Ad
+            adBreak['vmap:AdSource']['vmap:VASTAdData']['VAST'].Ad
           )
-            ? adBreak['vmap:AdSource']['vast:VAST'].Ad
-            : [adBreak['vmap:AdSource']['vast:VAST'].Ad];
+            ? adBreak['vmap:AdSource']['vmap:VASTAdData']['VAST'].Ad
+            : [adBreak['vmap:AdSource']['vmap:VASTAdData']['VAST'].Ad];
 
           for (const vastAd of vastAds) {
             const adId = vastAd.InLine.Creatives.Creative.UniversalAdId[

@@ -358,25 +358,30 @@ describe('VMAP API', () => {
           'vmap:AdBreak': [
             {
               'vmap:AdSource': {
-                'vast:VAST': {
-                  Ad: {
-                    InLine: {
-                      Creatives: {
-                        Creative: {
-                          UniversalAdId: {
-                            '#text': 'ad123'
-                          },
-                          Linear: {
-                            MediaFiles: {
-                              MediaFile: {
-                                '#text': 'http://example.com/video.mp4',
-                                '@_bitrate': '2000'
+                'vmap:VASTAdData': {
+                  VAST: {
+                    Ad: [
+                      {
+                        InLine: {
+                          Creatives: {
+                            Creative: {
+                              UniversalAdId: {
+                                '#text': 'ad123'
+                              },
+                              Linear: {
+                                MediaFiles: {
+                                  MediaFile: {
+                                    '#text': 'http://example.com/video.mp4',
+                                    '@_bitrate': '2000',
+                                    '@_type': 'video/mp4'
+                                  }
+                                }
                               }
                             }
                           }
                         }
                       }
-                    }
+                    ]
                   }
                 }
               }
@@ -399,19 +404,22 @@ describe('VMAP API', () => {
           'vmap:AdBreak': [
             {
               'vmap:AdSource': {
-                'vast:VAST': {
-                  Ad: {
-                    InLine: {
-                      Creatives: {
-                        Creative: {
-                          UniversalAdId: {
-                            '#text': 'ad123'
-                          },
-                          Linear: {
-                            MediaFiles: {
-                              MediaFile: {
-                                '#text': 'http://example.com/video1.mp4',
-                                '@_bitrate': '2000'
+                'vmap:VASTAdData': {
+                  VAST: {
+                    Ad: {
+                      InLine: {
+                        Creatives: {
+                          Creative: {
+                            UniversalAdId: {
+                              '#text': 'ad123'
+                            },
+                            Linear: {
+                              MediaFiles: {
+                                MediaFile: {
+                                  '#text': 'http://example.com/video1.mp4',
+                                  '@_bitrate': '2000',
+                                  '@_type': 'video/mp4'
+                                }
                               }
                             }
                           }
@@ -424,19 +432,22 @@ describe('VMAP API', () => {
             },
             {
               'vmap:AdSource': {
-                'vast:VAST': {
-                  Ad: {
-                    InLine: {
-                      Creatives: {
-                        Creative: {
-                          UniversalAdId: {
-                            '#text': 'ad456'
-                          },
-                          Linear: {
-                            MediaFiles: {
-                              MediaFile: {
-                                '#text': 'http://example.com/video2.mp4',
-                                '@_bitrate': '2000'
+                'vmap:VASTAdData': {
+                  VAST: {
+                    Ad: {
+                      InLine: {
+                        Creatives: {
+                          Creative: {
+                            UniversalAdId: {
+                              '#text': 'ad456'
+                            },
+                            Linear: {
+                              MediaFiles: {
+                                MediaFile: {
+                                  '#text': 'http://example.com/video2.mp4',
+                                  '@_bitrate': '2000',
+                                  '@_type': 'video/mp4'
+                                }
                               }
                             }
                           }
@@ -469,47 +480,51 @@ describe('VMAP API', () => {
           'vmap:AdBreak': [
             {
               'vmap:AdSource': {
-                'vast:VAST': {
-                  Ad: [
-                    {
-                      InLine: {
-                        Creatives: {
-                          Creative: {
-                            UniversalAdId: {
-                              '#text': 'ad123'
-                            },
-                            Linear: {
-                              MediaFiles: {
-                                MediaFile: {
-                                  '#text': 'http://example.com/video1.mp4',
-                                  '@_bitrate': '2000'
+                'vmap:VASTAdData': {
+                  VAST: {
+                    Ad: [
+                      {
+                        InLine: {
+                          Creatives: {
+                            Creative: {
+                              UniversalAdId: {
+                                '#text': 'ad123'
+                              },
+                              Linear: {
+                                MediaFiles: {
+                                  MediaFile: {
+                                    '#text': 'http://example.com/video1.mp4',
+                                    '@_bitrate': '2000',
+                                    '@_type': 'video/mp4'
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        InLine: {
+                          Creatives: {
+                            Creative: {
+                              UniversalAdId: {
+                                '#text': 'ad456'
+                              },
+                              Linear: {
+                                MediaFiles: {
+                                  MediaFile: {
+                                    '#text': 'http://example.com/video2.mp4',
+                                    '@_bitrate': '2000',
+                                    '@_type': 'video/mp4'
+                                  }
                                 }
                               }
                             }
                           }
                         }
                       }
-                    },
-                    {
-                      InLine: {
-                        Creatives: {
-                          Creative: {
-                            UniversalAdId: {
-                              '#text': 'ad456'
-                            },
-                            Linear: {
-                              MediaFiles: {
-                                MediaFile: {
-                                  '#text': 'http://example.com/video2.mp4',
-                                  '@_bitrate': '2000'
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
+                    ]
+                  }
                 }
               }
             }
