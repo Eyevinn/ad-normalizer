@@ -65,7 +65,12 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
           {
             regex: /^application\/xml/,
             serializer: (data: ManifestResponse) => {
-              return replaceMediaFiles(data.xml, data.assets);
+              return replaceMediaFiles(
+                data.xml,
+                data.assets,
+                opts.keyRegex,
+                opts.keyField
+              );
             }
           }
         ]
@@ -98,7 +103,12 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
           {
             regex: /^application\/xml/,
             serializer: (data: ManifestResponse) => {
-              return replaceMediaFiles(data.xml, data.assets);
+              return replaceMediaFiles(
+                data.xml,
+                data.assets,
+                opts.keyRegex,
+                opts.keyField
+              );
             }
           }
         ]
@@ -149,7 +159,11 @@ const findMissingAndDispatchJobs = async (
   vmapXmlObj: VmapXmlObject,
   opts: AdApiOptions
 ): Promise<ManifestResponse> => {
-  const creatives = await getCreatives(vmapXmlObj);
+  const creatives = await getCreatives(
+    vmapXmlObj,
+    opts.keyRegex,
+    opts.keyField
+  );
   const [found, missing] = await partitionCreatives(
     creatives,
     opts.lookUpAsset
@@ -222,7 +236,9 @@ const getVmapXml = async (
 };
 
 export const getCreatives = async (
-  vmapXml: VmapXmlObject
+  vmapXml: VmapXmlObject,
+  keyRegex: RegExp,
+  keyField: string
 ): Promise<ManifestAsset[]> => {
   try {
     const creatives: ManifestAsset[] = [];
@@ -238,7 +254,7 @@ export const getCreatives = async (
           for (const vastAd of vastAds) {
             const adId = vastAd.InLine.Creatives.Creative.UniversalAdId[
               '#text'
-            ].replace(/[^a-zA-Z0-9]/g, '');
+            ].replace(keyRegex, '');
             const mediaFile: MediaFile = getBestMediaFileFromVastAd(vastAd);
             const mediaFileUrl = mediaFile['#text'];
             creatives.push({
@@ -258,7 +274,9 @@ export const getCreatives = async (
 
 export const replaceMediaFiles = (
   vmapXml: string,
-  assets: ManifestAsset[]
+  assets: ManifestAsset[],
+  keyRegex: RegExp,
+  keyField: string
 ): string => {
   try {
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
@@ -280,7 +298,7 @@ export const replaceMediaFiles = (
                 typeof universalAdId === 'string'
                   ? universalAdId
                   : universalAdId['#text']
-              ).replace(/[^a-zA-Z0-9]/g, '');
+              ).replace(keyRegex, '');
               const asset = assets.find((a) => a.creativeId === adId);
               if (asset) {
                 const mediaFile: MediaFile = getBestMediaFileFromVastAd(vastAd);

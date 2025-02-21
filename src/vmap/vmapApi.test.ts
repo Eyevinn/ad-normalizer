@@ -229,17 +229,26 @@ describe('VMAP API', () => {
                     {
                       '#text': 'http://example.com/low.mp4',
                       '@_bitrate': '1000',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_delivery': 'progressive',
+                      '@_width': '1920',
+                      '@_height': '1080'
                     },
                     {
                       '#text': 'http://example.com/high.mp4',
                       '@_bitrate': '3000',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_delivery': 'progressive',
+                      '@_width': '1920',
+                      '@_height': '1080'
                     },
                     {
                       '#text': 'http://example.com/medium.mp4',
                       '@_bitrate': '2000',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_delivery': 'progressive',
+                      '@_width': '1920',
+                      '@_height': '1080'
                     }
                   ]
                 },
@@ -268,7 +277,10 @@ describe('VMAP API', () => {
                   MediaFile: {
                     '#text': 'http://example.com/video.mp4',
                     '@_bitrate': '2000',
-                    '@_type': 'video/mp4'
+                    '@_type': 'video/mp4',
+                    '@_delivery': 'progressive',
+                    '@_width': '1920',
+                    '@_height': '1080'
                   }
                 },
                 Duration: '00:00:30'
@@ -296,12 +308,18 @@ describe('VMAP API', () => {
                   MediaFile: [
                     {
                       '#text': 'http://example.com/video1.mp4',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_height': '1080',
+                      '@_width': '1920',
+                      '@_delivery': 'progressive'
                     },
                     {
                       '#text': 'http://example.com/video2.mp4',
                       '@_bitrate': '2000',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_height': '1080',
+                      '@_width': '1920',
+                      '@_delivery': 'progressive'
                     }
                   ]
                 },
@@ -330,11 +348,17 @@ describe('VMAP API', () => {
                   MediaFile: [
                     {
                       '#text': 'http://example.com/video1.mp4',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_delivery': 'progressive',
+                      '@_width': '1920',
+                      '@_height': '1080'
                     },
                     {
                       '#text': 'http://example.com/video2.mp4',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_delivery': 'progressive',
+                      '@_width': '1920',
+                      '@_height': '1080'
                     }
                   ]
                 },
