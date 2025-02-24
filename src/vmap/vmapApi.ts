@@ -11,7 +11,8 @@ import {
   MediaFile,
   EncoreJob,
   isArray,
-  VastAd
+  VastAd,
+  getKey
 } from '../vast/vastApi';
 import logger from '../util/logger';
 import { IN_PROGRESS } from '../redis/redisclient';
@@ -65,7 +66,12 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
           {
             regex: /^application\/xml/,
             serializer: (data: ManifestResponse) => {
-              return replaceMediaFiles(data.xml, data.assets);
+              return replaceMediaFiles(
+                data.xml,
+                data.assets,
+                opts.keyRegex,
+                opts.keyField
+              );
             }
           }
         ]
@@ -98,7 +104,12 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
           {
             regex: /^application\/xml/,
             serializer: (data: ManifestResponse) => {
-              return replaceMediaFiles(data.xml, data.assets);
+              return replaceMediaFiles(
+                data.xml,
+                data.assets,
+                opts.keyRegex,
+                opts.keyField
+              );
             }
           }
         ]
@@ -149,7 +160,11 @@ const findMissingAndDispatchJobs = async (
   vmapXmlObj: VmapXmlObject,
   opts: AdApiOptions
 ): Promise<ManifestResponse> => {
-  const creatives = await getCreatives(vmapXmlObj);
+  const creatives = await getCreatives(
+    vmapXmlObj,
+    opts.keyRegex,
+    opts.keyField
+  );
   const [found, missing] = await partitionCreatives(
     creatives,
     opts.lookUpAsset
@@ -199,7 +214,8 @@ const getVmapXml = async (
   path: string
 ): Promise<string> => {
   try {
-    const url = new URL(adServerUrl);
+    const url = new URL(adServerUrl); // TODO: Should append a VMAP endpoint here
+    url.pathname += '/vmap';
     const params = new URLSearchParams(path.split('?')[1]);
     for (const [key, value] of params) {
       url.searchParams.append(key, value);
@@ -222,23 +238,23 @@ const getVmapXml = async (
 };
 
 export const getCreatives = async (
-  vmapXml: VmapXmlObject
+  vmapXml: VmapXmlObject,
+  keyRegex: RegExp,
+  keyField: string
 ): Promise<ManifestAsset[]> => {
   try {
     const creatives: ManifestAsset[] = [];
     if (vmapXml['vmap:VMAP']['vmap:AdBreak']) {
       for (const adBreak of vmapXml['vmap:VMAP']['vmap:AdBreak']) {
-        if (adBreak['vmap:AdSource']?.['vmap:VASTAdData']?.['VAST']?.Ad) {
+        if (adBreak['vmap:AdSource']?.['vmap:VASTAdData']?.VAST.Ad) {
           const vastAds = Array.isArray(
-            adBreak['vmap:AdSource']['vmap:VASTAdData']['VAST'].Ad
+            adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
           )
-            ? adBreak['vmap:AdSource']['vmap:VASTAdData']['VAST'].Ad
-            : [adBreak['vmap:AdSource']['vmap:VASTAdData']['VAST'].Ad];
+            ? adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
+            : [adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad];
 
           for (const vastAd of vastAds) {
-            const adId = vastAd.InLine.Creatives.Creative.UniversalAdId[
-              '#text'
-            ].replace(/[^a-zA-Z0-9]/g, '');
+            const adId = getKey(keyField, keyRegex, vastAd);
             const mediaFile: MediaFile = getBestMediaFileFromVastAd(vastAd);
             const mediaFileUrl = mediaFile['#text'];
             creatives.push({
@@ -258,29 +274,25 @@ export const getCreatives = async (
 
 export const replaceMediaFiles = (
   vmapXml: string,
-  assets: ManifestAsset[]
+  assets: ManifestAsset[],
+  keyRegex: RegExp,
+  keyField: string
 ): string => {
   try {
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
     const parsedVMAP = parser.parse(vmapXml);
     if (parsedVMAP['vmap:VMAP']['vmap:AdBreak']) {
       for (const adBreak of parsedVMAP['vmap:VMAP']['vmap:AdBreak']) {
-        if (adBreak['vmap:AdSource']?.['vast:VAST']?.Ad) {
+        if (adBreak['vmap:AdSource']?.['vmap:VASTAdData'].VAST.Ad) {
           const vastAds = Array.isArray(
-            adBreak['vmap:AdSource']['vast:VAST'].Ad
+            adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
           )
-            ? adBreak['vmap:AdSource']['vast:VAST'].Ad
-            : [adBreak['vmap:AdSource']['vast:VAST'].Ad];
+            ? adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
+            : [adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad];
 
-          adBreak['vmap:AdSource']['vast:VAST'].Ad = vastAds.reduce(
+          adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad = vastAds.reduce(
             (acc: VastAd[], vastAd: VastAd) => {
-              const universalAdId =
-                vastAd.InLine.Creatives.Creative.UniversalAdId;
-              const adId = (
-                typeof universalAdId === 'string'
-                  ? universalAdId
-                  : universalAdId['#text']
-              ).replace(/[^a-zA-Z0-9]/g, '');
+              const adId = getKey(keyField, keyRegex, vastAd);
               const asset = assets.find((a) => a.creativeId === adId);
               if (asset) {
                 const mediaFile: MediaFile = getBestMediaFileFromVastAd(vastAd);

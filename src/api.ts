@@ -111,6 +111,8 @@ export default (opts: ApiOptions) => {
   api.register(vastApi, {
     adServerUrl: config.adServerUrl,
     assetServerUrl: `https://${config.s3Endpoint}/${config.bucket}/`,
+    keyField: config.keyField,
+    keyRegex: new RegExp(config.keyRegex, 'g'),
     lookUpAsset: async (mediaFile: string) => redisclient.get(mediaFile),
     onMissingAsset: async (asset: ManifestAsset) => {
       saveToRedis(
@@ -135,6 +137,8 @@ export default (opts: ApiOptions) => {
   api.register(vmapApi, {
     adServerUrl: config.adServerUrl,
     assetServerUrl: `https://${config.s3Endpoint}/${config.bucket}/`,
+    keyField: config.keyField,
+    keyRegex: new RegExp(config.keyRegex, 'g'),
     lookUpAsset: async (mediaFile: string) => redisclient.get(mediaFile),
     onMissingAsset: async (asset: ManifestAsset) => {
       saveToRedis(

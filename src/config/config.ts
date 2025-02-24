@@ -12,6 +12,8 @@ export interface AdNormalizerConfiguration {
   redisUrl: string;
   oscToken?: string;
   inFlightTtl?: number;
+  keyField: string;
+  keyRegex: string;
 }
 
 let config: AdNormalizerConfiguration | null = null;
@@ -52,6 +54,10 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
       : bucket.hostname;
   const oscToken = process.env.OSC_ACCESS_TOKEN;
   const inFlightTtl = process.env.IN_FLIGHT_TTL;
+
+  const keyField = process.env.KEY_FIELD;
+  const keyRegex = process.env.KEY_REGEX;
+
   const configuration = {
     encoreUrl: removeTrailingSlash(encoreUrl.toString()),
     callbackListenerUrl: callbackListenerUrl.toString(),
@@ -62,7 +68,9 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     redisUrl: redisUrl,
     bucket: removeTrailingSlash(bucketPath),
     oscToken: oscToken,
-    inFlightTtl: inFlightTtl ? parseInt(inFlightTtl) : null
+    inFlightTtl: inFlightTtl ? parseInt(inFlightTtl) : null,
+    keyField: keyField ? keyField.toLowerCase() : 'UniversalAdId'.toLowerCase(),
+    keyRegex: keyRegex ? keyRegex : '[^a-zA-Z0-9]'
   } as AdNormalizerConfiguration;
 
   return configuration;

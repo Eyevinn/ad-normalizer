@@ -44,6 +44,8 @@ export type InterstitialResponse = Static<typeof InterstitialResponse>;
 export interface AdApiOptions {
   adServerUrl: string;
   assetServerUrl: string;
+  keyField: string;
+  keyRegex: RegExp;
   lookUpAsset: (mediaFile: string) => Promise<string | null | undefined>;
   onMissingAsset?: (asset: ManifestAsset) => Promise<Response>;
   setupNotification?: (asset: ManifestAsset) => void;
@@ -72,6 +74,7 @@ export interface VastAd {
       Creative: {
         UniversalAdId: {
           '#text': string;
+          '@_idRegistry': string;
         };
         Linear: {
           MediaFiles: VastAdMediaFiles;
@@ -94,8 +97,13 @@ interface VastAdMediaFiles {
 
 export interface MediaFile {
   '#text': string;
-  '@_type'?: string;
+  '@_type': string;
   '@_bitrate'?: string;
+  '@_width': string;
+  '@_height': string;
+  '@_codec'?: string;
+  '@_id'?: string;
+  '@_delivery': string;
 }
 
 export const vastApi: FastifyPluginCallback<AdApiOptions> = (
@@ -125,13 +133,23 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
           {
             regex: /^application\/xml/,
             serializer: (data: ManifestResponse) => {
-              return replaceMediaFiles(data.xml, data.assets);
+              return replaceMediaFiles(
+                data.xml,
+                data.assets,
+                opts.keyRegex,
+                opts.keyField
+              );
             }
           },
           {
             regex: /^application\/json/,
             serializer: (data: ManifestResponse) => {
-              return createAssetList(data.xml, data.assets);
+              return createAssetList(
+                data.xml,
+                data.assets,
+                opts.keyRegex,
+                opts.keyField
+              );
             }
           }
         ]
@@ -161,13 +179,23 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
           {
             regex: /^application\/xml/,
             serializer: (data: ManifestResponse) => {
-              return replaceMediaFiles(data.xml, data.assets);
+              return replaceMediaFiles(
+                data.xml,
+                data.assets,
+                opts.keyRegex,
+                opts.keyField
+              );
             }
           },
           {
             regex: /^application\/json/,
             serializer: (data: ManifestResponse) => {
-              return createAssetList(data.xml, data.assets);
+              return createAssetList(
+                data.xml,
+                data.assets,
+                opts.keyRegex,
+                opts.keyField
+              );
             }
           }
         ]
@@ -219,7 +247,11 @@ const findMissingAndDispatchJobs = async (
   vastXmlObj: VastXml,
   opts: AdApiOptions
 ): Promise<ManifestResponse> => {
-  const creatives = await getCreatives(vastXmlObj);
+  const creatives = await getCreatives(
+    vastXmlObj,
+    opts.keyField,
+    opts.keyRegex
+  );
   const [found, missing] = await partitionCreatives(
     creatives,
     opts.lookUpAsset
@@ -285,6 +317,7 @@ const getVastXml = async (
 ): Promise<string> => {
   try {
     const url = new URL(adServerUrl);
+    url.pathname += '/vast';
     const params = new URLSearchParams(path.split('?')[1]);
     for (const [key, value] of params) {
       url.searchParams.append(key, value);
@@ -306,14 +339,16 @@ const getVastXml = async (
   }
 };
 
-const getCreatives = async (vastXml: VastXml): Promise<ManifestAsset[]> => {
+const getCreatives = async (
+  vastXml: VastXml,
+  keyField: string,
+  keyRegex: RegExp
+): Promise<ManifestAsset[]> => {
   try {
     if (vastXml.VAST.Ad) {
       const creatives = vastXml.VAST.Ad.reduce(
         (acc: ManifestAsset[], ad: VastAd) => {
-          const adId = ad.InLine.Creatives.Creative.UniversalAdId[
-            '#text'
-          ].replace(/[^a-zA-Z0-9]/g, '');
+          const adId = getKey(keyField, keyRegex, ad);
           const mediaFile = getBestMediaFileFromVastAd(ad);
           return [
             ...acc,
@@ -333,7 +368,9 @@ const getCreatives = async (vastXml: VastXml): Promise<ManifestAsset[]> => {
 
 const replaceMediaFiles = (
   vastXml: string,
-  assets: ManifestAsset[]
+  assets: ManifestAsset[],
+  keyRegex: RegExp,
+  keyField: string
 ): string => {
   try {
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
@@ -344,12 +381,7 @@ const replaceMediaFiles = (
         : [parsedVAST.VAST.Ad];
 
       parsedVAST.VAST.Ad = vastAds.reduce((acc: VastAd[], vastAd: VastAd) => {
-        const universalAdId = vastAd.InLine.Creatives.Creative.UniversalAdId;
-        const adId = (
-          typeof universalAdId === 'string'
-            ? universalAdId
-            : universalAdId['#text']
-        ).replace(/[^a-zA-Z0-9]/g, '');
+        const adId = getKey(keyField, keyRegex, vastAd);
         const asset = assets.find((a) => a.creativeId === adId);
         if (asset) {
           const mediaFile = getBestMediaFileFromVastAd(vastAd);
@@ -399,16 +431,19 @@ const parseVast = (vastXml: string) => {
   }
 };
 
-const createAssetList = (vastXml: string, assets: ManifestAsset[]) => {
+const createAssetList = (
+  vastXml: string,
+  assets: ManifestAsset[],
+  keyRegex: RegExp,
+  keyField: string
+) => {
   let assetDescriptions = [];
   try {
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
     const parsedVAST = parser.parse(vastXml);
     if (parsedVAST.VAST.Ad) {
       assetDescriptions = parsedVAST.VAST.Ad.map((ad: VastAd) => {
-        const adId = ad.InLine.Creatives.Creative.UniversalAdId[
-          '#text'
-        ].replace(/[^a-zA-Z0-9]/g, '');
+        const adId = getKey(keyField, keyRegex, ad);
         const asset = assets.find((asset) => asset.creativeId === adId);
         if (asset) {
           return {
@@ -434,4 +469,26 @@ const createAssetList = (vastXml: string, assets: ManifestAsset[]) => {
   return JSON.stringify({
     ASSETS: assetDescriptions
   } as InterstitialResponse);
+};
+
+export const getKey = (
+  keyString: string,
+  keyRegex: RegExp,
+  vastAd: VastAd
+): string => {
+  switch (keyString) {
+    case 'resolution':
+      return (
+        getBestMediaFileFromVastAd(vastAd)['@_width'] +
+        'x' +
+        getBestMediaFileFromVastAd(vastAd)['@_height']
+      );
+    case 'url':
+      return getBestMediaFileFromVastAd(vastAd)['#text'].replace(keyRegex, '');
+    default:
+      return vastAd.InLine.Creatives.Creative.UniversalAdId['#text'].replace(
+        keyRegex,
+        ''
+      );
+  }
 };

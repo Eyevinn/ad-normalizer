@@ -3,6 +3,7 @@ import {
   getBestMediaFileFromVastAd,
   VastAd
 } from '../vast/vastApi';
+import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
 jest.mock('../util/logger');
 
@@ -15,24 +16,26 @@ describe('VMAP API', () => {
         <vmap:VMAP xmlns:vmap="http://www.iab.net/vmap-1.0" version="1.0">
           <vmap:AdBreak timeOffset="start" breakType="linear">
             <vmap:AdSource>
-              <vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0">
-                <Ad>
-                  <InLine>
-                    <Creatives>
-                      <Creative>
-                        <UniversalAdId>ad123</UniversalAdId>
-                        <Linear>
-                          <MediaFiles>
-                            <MediaFile type="video/mp4" bitrate="2000">
-                              http://example.com/original.mp4
-                            </MediaFile>
-                          </MediaFiles>
-                        </Linear>
-                      </Creative>
-                    </Creatives>
-                  </InLine>
-                </Ad>
-              </vast:VAST>
+              <vmap:VASTAdData xmlns:vast="http://www.iab.net/VAST" version="4.0">
+                <VAST version="4.0">  
+                  <Ad>
+                    <InLine>
+                      <Creatives>
+                        <Creative>
+                          <UniversalAdId idRegistry="test-registry">ad123</UniversalAdId>
+                          <Linear>
+                            <MediaFiles>
+                              <MediaFile type="video/mp4" bitrate="2000">
+                                http://example.com/original.mp4
+                              </MediaFile>
+                            </MediaFiles>
+                          </Linear>
+                        </Creative>
+                      </Creatives>
+                    </InLine>
+                  </Ad>
+                </VAST>
+              </vmap:VASTAdData>
             </vmap:AdSource>
           </vmap:AdBreak>
         </vmap:VMAP>`;
@@ -44,7 +47,12 @@ describe('VMAP API', () => {
         }
       ];
 
-      const result = replaceMediaFiles(vmapXml, assets);
+      const result = replaceMediaFiles(
+        vmapXml,
+        assets,
+        /[^a-zA-Z0-9]g/,
+        'universaladid'
+      );
 
       expect(result).toContain('https://example.com/transcoded/index.m3u8');
       expect(result).toContain('application/x-mpegURL');
@@ -57,12 +65,13 @@ describe('VMAP API', () => {
         <vmap:VMAP xmlns:vmap="http://www.iab.net/vmap-1.0" version="1.0">
           <vmap:AdBreak timeOffset="start" breakType="linear">
             <vmap:AdSource>
-              <vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0">
+              <vmap:VASTAdData xmlns:vast="http://www.iab.net/VAST" version="4.0">
+              <VAST version="4.0">
                 <Ad>
                   <InLine>
                     <Creatives>
                       <Creative>
-                        <UniversalAdId>ad123</UniversalAdId>
+                        <UniversalAdId idRegistry="test-registry">ad123</UniversalAdId>
                         <Linear>
                           <MediaFiles>
                             <MediaFile type="video/mp4" bitrate="2000">
@@ -78,7 +87,7 @@ describe('VMAP API', () => {
                   <InLine>
                     <Creatives>
                       <Creative>
-                        <UniversalAdId>ad456</UniversalAdId>
+                        <UniversalAdId idRegistry="test-registry">ad456</UniversalAdId>
                         <Linear>
                           <MediaFiles>
                             <MediaFile type="video/mp4" bitrate="2000">
@@ -90,7 +99,8 @@ describe('VMAP API', () => {
                     </Creatives>
                   </InLine>
                 </Ad>
-              </vast:VAST>
+                </VAST>
+              </vmap:VASTAdData>
             </vmap:AdSource>
           </vmap:AdBreak>
         </vmap:VMAP>`;
@@ -106,7 +116,12 @@ describe('VMAP API', () => {
         }
       ];
 
-      const result = replaceMediaFiles(vmapXml, assets);
+      const result = replaceMediaFiles(
+        vmapXml,
+        assets,
+        /[^a-zA-Z0-9]g/,
+        'universaladid'
+      );
       const mediaTypeCount = (result.match(/application\/x-mpegURL/g) || [])
         .length;
 
@@ -120,30 +135,32 @@ describe('VMAP API', () => {
         <vmap:VMAP xmlns:vmap="http://www.iab.net/vmap-1.0" version="1.0">
           <vmap:AdBreak timeOffset="start" breakType="linear">
             <vmap:AdSource>
-              <vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0">
-                <Ad>
-                  <InLine>
-                    <Creatives>
-                      <Creative>
-                        <UniversalAdId>ad123</UniversalAdId>
-                        <Linear>
-                          <MediaFiles>
-                            <MediaFile type="video/mp4" bitrate="1000">
-                              http://example.com/low.mp4
-                            </MediaFile>
-                            <MediaFile type="video/mp4" bitrate="2000">
-                              http://example.com/medium.mp4
-                            </MediaFile>
-                            <MediaFile type="video/mp4" bitrate="3000">
-                              http://example.com/high.mp4
-                            </MediaFile>
-                          </MediaFiles>
-                        </Linear>
-                      </Creative>
-                    </Creatives>
-                  </InLine>
-                </Ad>
-              </vast:VAST>
+              <vmap:VASTAdData xmlns:vast="http://www.iab.net/VAST" version="4.0">
+                <VAST version="4.0">
+                    <Ad>
+                      <InLine>
+                        <Creatives>
+                          <Creative>
+                            <UniversalAdId idRegistry="test-registry">ad123</UniversalAdId>
+                            <Linear>
+                              <MediaFiles>
+                                <MediaFile type="video/mp4" bitrate="1000">
+                                  http://example.com/low.mp4
+                                </MediaFile>
+                                <MediaFile type="video/mp4" bitrate="2000">
+                                  http://example.com/medium.mp4
+                                </MediaFile>
+                                <MediaFile type="video/mp4" bitrate="3000">
+                                  http://example.com/high.mp4
+                                </MediaFile>
+                              </MediaFiles>
+                            </Linear>
+                          </Creative>
+                        </Creatives>
+                      </InLine>
+                    </Ad>
+                  </VAST>
+              </vmap:VASTAdData>
             </vmap:AdSource>
           </vmap:AdBreak>
         </vmap:VMAP>`;
@@ -155,7 +172,12 @@ describe('VMAP API', () => {
         }
       ];
 
-      const result = replaceMediaFiles(vmapXml, assets);
+      const result = replaceMediaFiles(
+        vmapXml,
+        assets,
+        /[^a-zA-Z0-9]g/,
+        'universaladid'
+      );
       const mediaFileCount = (result.match(/<\/MediaFile>/g) || []).length;
 
       expect(result).toContain('https://example.com/transcoded/index.m3u8');
@@ -167,12 +189,13 @@ describe('VMAP API', () => {
         <vmap:VMAP xmlns:vmap="http://www.iab.net/vmap-1.0" version="1.0">
           <vmap:AdBreak timeOffset="start" breakType="linear">
             <vmap:AdSource>
-              <vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0">
+              <vmap:VASTAdData>
+              <VAST xmlns:vast="http://www.iab.net/VAST" version="4.0">
                 <Ad>
                   <InLine>
                     <Creatives>
                       <Creative>
-                        <UniversalAdId>ad123</UniversalAdId>
+                        <UniversalAdId idRegistry="test-registry">ad123</UniversalAdId>
                         <Linear>
                           <MediaFiles>
                             <MediaFile type="video/mp4" bitrate="2000">
@@ -184,7 +207,8 @@ describe('VMAP API', () => {
                     </Creatives>
                   </InLine>
                 </Ad>
-              </vast:VAST>
+                </VAST> 
+              </vmap:VASTAdData>
             </vmap:AdSource>
           </vmap:AdBreak>
         </vmap:VMAP>`;
@@ -193,7 +217,9 @@ describe('VMAP API', () => {
 <vmap:VMAP xmlns:vmap="http://www.iab.net/vmap-1.0" version="1.0">
   <vmap:AdBreak timeOffset="start" breakType="linear">
     <vmap:AdSource>
-      <vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0"></vast:VAST>
+      <vmap:VASTAdData>
+        <VAST xmlns:vast="http://www.iab.net/VAST" version="4.0"></VAST>
+      </vmap:VASTAdData>
     </vmap:AdSource>
   </vmap:AdBreak>
 </vmap:VMAP>
@@ -206,9 +232,14 @@ describe('VMAP API', () => {
         }
       ];
 
-      const result = replaceMediaFiles(vmapXml, assets);
+      const result = replaceMediaFiles(
+        vmapXml,
+        assets,
+        /[^a-zA-Z0-9]g/,
+        'universaladid'
+      );
       expect(result).toContain(
-        '<vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0"></vast:VAST>'
+        '<VAST xmlns:vast="http://www.iab.net/VAST" version="4.0"></VAST>'
       );
       expect(result).toBe(expectedXml);
     });
@@ -221,7 +252,8 @@ describe('VMAP API', () => {
           Creatives: {
             Creative: {
               UniversalAdId: {
-                '#text': 'test-ad-id'
+                '#text': 'test-ad-id',
+                '@_idRegistry': 'test-id-registry'
               },
               Linear: {
                 MediaFiles: {
@@ -229,17 +261,26 @@ describe('VMAP API', () => {
                     {
                       '#text': 'http://example.com/low.mp4',
                       '@_bitrate': '1000',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_delivery': 'progressive',
+                      '@_width': '1920',
+                      '@_height': '1080'
                     },
                     {
                       '#text': 'http://example.com/high.mp4',
                       '@_bitrate': '3000',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_delivery': 'progressive',
+                      '@_width': '1920',
+                      '@_height': '1080'
                     },
                     {
                       '#text': 'http://example.com/medium.mp4',
                       '@_bitrate': '2000',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_delivery': 'progressive',
+                      '@_width': '1920',
+                      '@_height': '1080'
                     }
                   ]
                 },
@@ -261,14 +302,18 @@ describe('VMAP API', () => {
           Creatives: {
             Creative: {
               UniversalAdId: {
-                '#text': 'test-ad-id'
+                '#text': 'test-ad-id',
+                '@_idRegistry': 'test-id-registry'
               },
               Linear: {
                 MediaFiles: {
                   MediaFile: {
                     '#text': 'http://example.com/video.mp4',
                     '@_bitrate': '2000',
-                    '@_type': 'video/mp4'
+                    '@_type': 'video/mp4',
+                    '@_delivery': 'progressive',
+                    '@_width': '1920',
+                    '@_height': '1080'
                   }
                 },
                 Duration: '00:00:30'
@@ -289,19 +334,26 @@ describe('VMAP API', () => {
           Creatives: {
             Creative: {
               UniversalAdId: {
-                '#text': 'test-ad-id'
+                '#text': 'test-ad-id',
+                '@_idRegistry': 'test-id-registry'
               },
               Linear: {
                 MediaFiles: {
                   MediaFile: [
                     {
                       '#text': 'http://example.com/video1.mp4',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_height': '1080',
+                      '@_width': '1920',
+                      '@_delivery': 'progressive'
                     },
                     {
                       '#text': 'http://example.com/video2.mp4',
                       '@_bitrate': '2000',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_height': '1080',
+                      '@_width': '1920',
+                      '@_delivery': 'progressive'
                     }
                   ]
                 },
@@ -323,18 +375,25 @@ describe('VMAP API', () => {
           Creatives: {
             Creative: {
               UniversalAdId: {
-                '#text': 'test-ad-id'
+                '#text': 'test-ad-id',
+                '@_idRegistry': 'test-id-registry'
               },
               Linear: {
                 MediaFiles: {
                   MediaFile: [
                     {
                       '#text': 'http://example.com/video1.mp4',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_delivery': 'progressive',
+                      '@_width': '1920',
+                      '@_height': '1080'
                     },
                     {
                       '#text': 'http://example.com/video2.mp4',
-                      '@_type': 'video/mp4'
+                      '@_type': 'video/mp4',
+                      '@_delivery': 'progressive',
+                      '@_width': '1920',
+                      '@_height': '1080'
                     }
                   ]
                 },
@@ -366,7 +425,8 @@ describe('VMAP API', () => {
                           Creatives: {
                             Creative: {
                               UniversalAdId: {
-                                '#text': 'ad123'
+                                '#text': 'ad123',
+                                '@_idRegistry': 'test-id-registry'
                               },
                               Linear: {
                                 MediaFiles: {
@@ -411,7 +471,8 @@ describe('VMAP API', () => {
                         Creatives: {
                           Creative: {
                             UniversalAdId: {
-                              '#text': 'ad123'
+                              '#text': 'ad123',
+                              '@_idRegistry': 'test-id-registry'
                             },
                             Linear: {
                               MediaFiles: {
@@ -439,7 +500,8 @@ describe('VMAP API', () => {
                         Creatives: {
                           Creative: {
                             UniversalAdId: {
-                              '#text': 'ad456'
+                              '#text': 'ad456',
+                              '@_idRegistry': 'test-id-registry'
                             },
                             Linear: {
                               MediaFiles: {
@@ -488,7 +550,8 @@ describe('VMAP API', () => {
                           Creatives: {
                             Creative: {
                               UniversalAdId: {
-                                '#text': 'ad123'
+                                '#text': 'ad123',
+                                '@_idRegistry': 'test-id-registry'
                               },
                               Linear: {
                                 MediaFiles: {
@@ -508,7 +571,8 @@ describe('VMAP API', () => {
                           Creatives: {
                             Creative: {
                               UniversalAdId: {
-                                '#text': 'ad456'
+                                '#text': 'ad456',
+                                '@_idRegistry': 'test-id-registry'
                               },
                               Linear: {
                                 MediaFiles: {
@@ -579,7 +643,10 @@ describe('VMAP API', () => {
                 'vast:VAST': {
                   Ad: {
                     // Missing required InLine structure
-                    UniversalAdId: 'ad123'
+                    UniversalAdId: {
+                      '#text': 'ad123',
+                      '@_idRegistry': 'test-id-registry'
+                    }
                   }
                 }
               }
