@@ -22,7 +22,7 @@ describe('VMAP API', () => {
                     <InLine>
                       <Creatives>
                         <Creative>
-                          <UniversalAdId>ad123</UniversalAdId>
+                          <UniversalAdId idRegistry="test-registry">ad123</UniversalAdId>
                           <Linear>
                             <MediaFiles>
                               <MediaFile type="video/mp4" bitrate="2000">
@@ -71,7 +71,7 @@ describe('VMAP API', () => {
                   <InLine>
                     <Creatives>
                       <Creative>
-                        <UniversalAdId>ad123</UniversalAdId>
+                        <UniversalAdId idRegistry="test-registry">ad123</UniversalAdId>
                         <Linear>
                           <MediaFiles>
                             <MediaFile type="video/mp4" bitrate="2000">
@@ -87,7 +87,7 @@ describe('VMAP API', () => {
                   <InLine>
                     <Creatives>
                       <Creative>
-                        <UniversalAdId>ad456</UniversalAdId>
+                        <UniversalAdId idRegistry="test-registry">ad456</UniversalAdId>
                         <Linear>
                           <MediaFiles>
                             <MediaFile type="video/mp4" bitrate="2000">
@@ -141,7 +141,7 @@ describe('VMAP API', () => {
                       <InLine>
                         <Creatives>
                           <Creative>
-                            <UniversalAdId>ad123</UniversalAdId>
+                            <UniversalAdId idRegistry="test-registry">ad123</UniversalAdId>
                             <Linear>
                               <MediaFiles>
                                 <MediaFile type="video/mp4" bitrate="1000">
@@ -195,7 +195,7 @@ describe('VMAP API', () => {
                   <InLine>
                     <Creatives>
                       <Creative>
-                        <UniversalAdId>ad123</UniversalAdId>
+                        <UniversalAdId idRegistry="test-registry">ad123</UniversalAdId>
                         <Linear>
                           <MediaFiles>
                             <MediaFile type="video/mp4" bitrate="2000">
@@ -251,7 +251,10 @@ describe('VMAP API', () => {
         InLine: {
           Creatives: {
             Creative: {
-              UniversalAdId: 'test-ad-id',
+              UniversalAdId: {
+                '#text': 'test-ad-id',
+                '@_idRegistry': 'test-id-registry'
+              },
               Linear: {
                 MediaFiles: {
                   MediaFile: [
@@ -298,7 +301,10 @@ describe('VMAP API', () => {
         InLine: {
           Creatives: {
             Creative: {
-              UniversalAdId: 'test-ad-id',
+              UniversalAdId: {
+                '#text': 'test-ad-id',
+                '@_idRegistry': 'test-id-registry'
+              },
               Linear: {
                 MediaFiles: {
                   MediaFile: {
@@ -327,7 +333,10 @@ describe('VMAP API', () => {
         InLine: {
           Creatives: {
             Creative: {
-              UniversalAdId: 'test-ad-id',
+              UniversalAdId: {
+                '#text': 'test-ad-id',
+                '@_idRegistry': 'test-id-registry'
+              },
               Linear: {
                 MediaFiles: {
                   MediaFile: [
@@ -365,7 +374,10 @@ describe('VMAP API', () => {
         InLine: {
           Creatives: {
             Creative: {
-              UniversalAdId: 'test-ad-id',
+              UniversalAdId: {
+                '#text': 'test-ad-id',
+                '@_idRegistry': 'test-id-registry'
+              },
               Linear: {
                 MediaFiles: {
                   MediaFile: [
@@ -412,7 +424,10 @@ describe('VMAP API', () => {
                         InLine: {
                           Creatives: {
                             Creative: {
-                              UniversalAdId: 'ad123',
+                              UniversalAdId: {
+                                '#text': 'ad123',
+                                '@_idRegistry': 'test-id-registry'
+                              },
                               Linear: {
                                 MediaFiles: {
                                   MediaFile: {
@@ -455,7 +470,10 @@ describe('VMAP API', () => {
                       InLine: {
                         Creatives: {
                           Creative: {
-                            UniversalAdId: 'ad123',
+                            UniversalAdId: {
+                              '#text': 'ad123',
+                              '@_idRegistry': 'test-id-registry'
+                            },
                             Linear: {
                               MediaFiles: {
                                 MediaFile: {
@@ -481,7 +499,10 @@ describe('VMAP API', () => {
                       InLine: {
                         Creatives: {
                           Creative: {
-                            UniversalAdId: 'ad456',
+                            UniversalAdId: {
+                              '#text': 'ad456',
+                              '@_idRegistry': 'test-id-registry'
+                            },
                             Linear: {
                               MediaFiles: {
                                 MediaFile: {
@@ -528,7 +549,10 @@ describe('VMAP API', () => {
                         InLine: {
                           Creatives: {
                             Creative: {
-                              UniversalAdId: 'ad123',
+                              UniversalAdId: {
+                                '#text': 'ad123',
+                                '@_idRegistry': 'test-id-registry'
+                              },
                               Linear: {
                                 MediaFiles: {
                                   MediaFile: {
@@ -546,7 +570,10 @@ describe('VMAP API', () => {
                         InLine: {
                           Creatives: {
                             Creative: {
-                              UniversalAdId: 'ad456',
+                              UniversalAdId: {
+                                '#text': 'ad456',
+                                '@_idRegistry': 'test-id-registry'
+                              },
                               Linear: {
                                 MediaFiles: {
                                   MediaFile: {
@@ -616,7 +643,10 @@ describe('VMAP API', () => {
                 'vast:VAST': {
                   Ad: {
                     // Missing required InLine structure
-                    UniversalAdId: 'ad123'
+                    UniversalAdId: {
+                      '#text': 'ad123',
+                      '@_idRegistry': 'test-id-registry'
+                    }
                   }
                 }
               }

@@ -214,7 +214,7 @@ const getVmapXml = async (
   path: string
 ): Promise<string> => {
   try {
-    const url = new URL(adServerUrl);
+    const url = new URL(adServerUrl); // TODO: Should append a VMAP endpoint here
     const params = new URLSearchParams(path.split('?')[1]);
     for (const [key, value] of params) {
       url.searchParams.append(key, value);
@@ -291,7 +291,6 @@ export const replaceMediaFiles = (
 
           adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad = vastAds.reduce(
             (acc: VastAd[], vastAd: VastAd) => {
-              console.log('vastAd', vastAd.InLine.Creatives.Creative);
               const adId = getKey(keyField, keyRegex, vastAd);
               const asset = assets.find((a) => a.creativeId === adId);
               if (asset) {
