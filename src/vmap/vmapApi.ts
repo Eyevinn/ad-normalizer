@@ -215,6 +215,7 @@ const getVmapXml = async (
 ): Promise<string> => {
   try {
     const url = new URL(adServerUrl); // TODO: Should append a VMAP endpoint here
+    url.pathname += '/vmap';
     const params = new URLSearchParams(path.split('?')[1]);
     for (const [key, value] of params) {
       url.searchParams.append(key, value);
