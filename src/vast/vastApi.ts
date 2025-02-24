@@ -482,7 +482,7 @@ export const getKey = (
         'x' +
         getBestMediaFileFromVastAd(vastAd)['@_height']
       );
-    case 'Url':
+    case 'url':
       return getBestMediaFileFromVastAd(vastAd)['#text'].replace(keyRegex, '');
     default:
       return vastAd.InLine.Creatives.Creative.UniversalAdId['#text'].replace(

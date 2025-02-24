@@ -69,7 +69,7 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     bucket: removeTrailingSlash(bucketPath),
     oscToken: oscToken,
     inFlightTtl: inFlightTtl ? parseInt(inFlightTtl) : null,
-    keyField: keyField ? keyField : 'UniversalAdId',
+    keyField: keyField ? keyField.toLowerCase() : 'UniversalAdId'.toLowerCase(),
     keyRegex: keyRegex ? keyRegex : '[a-zA-Z0-9]'
   } as AdNormalizerConfiguration;
 
