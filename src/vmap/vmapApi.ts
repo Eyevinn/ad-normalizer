@@ -244,12 +244,12 @@ export const getCreatives = async (
     const creatives: ManifestAsset[] = [];
     if (vmapXml['vmap:VMAP']['vmap:AdBreak']) {
       for (const adBreak of vmapXml['vmap:VMAP']['vmap:AdBreak']) {
-        if (adBreak['vmap:AdSource']?.['vmap:VASTAdData']?.['VAST']?.Ad) {
+        if (adBreak['vmap:AdSource']?.['vmap:VASTAdData']?.VAST.Ad) {
           const vastAds = Array.isArray(
-            adBreak['vmap:AdSource']['vmap:VASTAdData']['VAST'].Ad
+            adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
           )
-            ? adBreak['vmap:AdSource']['vmap:VASTAdData']['VAST'].Ad
-            : [adBreak['vmap:AdSource']['vmap:VASTAdData']['VAST'].Ad];
+            ? adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
+            : [adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad];
 
           for (const vastAd of vastAds) {
             const adId = vastAd.InLine.Creatives.Creative.UniversalAdId[
@@ -283,14 +283,14 @@ export const replaceMediaFiles = (
     const parsedVMAP = parser.parse(vmapXml);
     if (parsedVMAP['vmap:VMAP']['vmap:AdBreak']) {
       for (const adBreak of parsedVMAP['vmap:VMAP']['vmap:AdBreak']) {
-        if (adBreak['vmap:AdSource']?.['vast:VAST']?.Ad) {
+        if (adBreak['vmap:AdSource']?.['vmap:VASTAdData'].VAST.Ad) {
           const vastAds = Array.isArray(
-            adBreak['vmap:AdSource']['vast:VAST'].Ad
+            adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
           )
-            ? adBreak['vmap:AdSource']['vast:VAST'].Ad
-            : [adBreak['vmap:AdSource']['vast:VAST'].Ad];
+            ? adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
+            : [adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad];
 
-          adBreak['vmap:AdSource']['vast:VAST'].Ad = vastAds.reduce(
+          adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad = vastAds.reduce(
             (acc: VastAd[], vastAd: VastAd) => {
               const universalAdId =
                 vastAd.InLine.Creatives.Creative.UniversalAdId;

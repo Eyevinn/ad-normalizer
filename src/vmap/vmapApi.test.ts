@@ -15,24 +15,26 @@ describe('VMAP API', () => {
         <vmap:VMAP xmlns:vmap="http://www.iab.net/vmap-1.0" version="1.0">
           <vmap:AdBreak timeOffset="start" breakType="linear">
             <vmap:AdSource>
-              <vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0">
-                <Ad>
-                  <InLine>
-                    <Creatives>
-                      <Creative>
-                        <UniversalAdId>ad123</UniversalAdId>
-                        <Linear>
-                          <MediaFiles>
-                            <MediaFile type="video/mp4" bitrate="2000">
-                              http://example.com/original.mp4
-                            </MediaFile>
-                          </MediaFiles>
-                        </Linear>
-                      </Creative>
-                    </Creatives>
-                  </InLine>
-                </Ad>
-              </vast:VAST>
+              <vmap:VASTAdData xmlns:vast="http://www.iab.net/VAST" version="4.0">
+                <VAST version="4.0">  
+                  <Ad>
+                    <InLine>
+                      <Creatives>
+                        <Creative>
+                          <UniversalAdId>ad123</UniversalAdId>
+                          <Linear>
+                            <MediaFiles>
+                              <MediaFile type="video/mp4" bitrate="2000">
+                                http://example.com/original.mp4
+                              </MediaFile>
+                            </MediaFiles>
+                          </Linear>
+                        </Creative>
+                      </Creatives>
+                    </InLine>
+                  </Ad>
+                </VAST>
+              </vmap:VASTAdData>
             </vmap:AdSource>
           </vmap:AdBreak>
         </vmap:VMAP>`;
@@ -57,7 +59,8 @@ describe('VMAP API', () => {
         <vmap:VMAP xmlns:vmap="http://www.iab.net/vmap-1.0" version="1.0">
           <vmap:AdBreak timeOffset="start" breakType="linear">
             <vmap:AdSource>
-              <vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0">
+              <vmap:VASTAdData xmlns:vast="http://www.iab.net/VAST" version="4.0">
+              <VAST version="4.0">
                 <Ad>
                   <InLine>
                     <Creatives>
@@ -90,7 +93,8 @@ describe('VMAP API', () => {
                     </Creatives>
                   </InLine>
                 </Ad>
-              </vast:VAST>
+                </VAST>
+              </vmap:VASTAdData>
             </vmap:AdSource>
           </vmap:AdBreak>
         </vmap:VMAP>`;
@@ -120,30 +124,32 @@ describe('VMAP API', () => {
         <vmap:VMAP xmlns:vmap="http://www.iab.net/vmap-1.0" version="1.0">
           <vmap:AdBreak timeOffset="start" breakType="linear">
             <vmap:AdSource>
-              <vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0">
-                <Ad>
-                  <InLine>
-                    <Creatives>
-                      <Creative>
-                        <UniversalAdId>ad123</UniversalAdId>
-                        <Linear>
-                          <MediaFiles>
-                            <MediaFile type="video/mp4" bitrate="1000">
-                              http://example.com/low.mp4
-                            </MediaFile>
-                            <MediaFile type="video/mp4" bitrate="2000">
-                              http://example.com/medium.mp4
-                            </MediaFile>
-                            <MediaFile type="video/mp4" bitrate="3000">
-                              http://example.com/high.mp4
-                            </MediaFile>
-                          </MediaFiles>
-                        </Linear>
-                      </Creative>
-                    </Creatives>
-                  </InLine>
-                </Ad>
-              </vast:VAST>
+              <vmap:VASTAdData xmlns:vast="http://www.iab.net/VAST" version="4.0">
+                <VAST version="4.0">
+                    <Ad>
+                      <InLine>
+                        <Creatives>
+                          <Creative>
+                            <UniversalAdId>ad123</UniversalAdId>
+                            <Linear>
+                              <MediaFiles>
+                                <MediaFile type="video/mp4" bitrate="1000">
+                                  http://example.com/low.mp4
+                                </MediaFile>
+                                <MediaFile type="video/mp4" bitrate="2000">
+                                  http://example.com/medium.mp4
+                                </MediaFile>
+                                <MediaFile type="video/mp4" bitrate="3000">
+                                  http://example.com/high.mp4
+                                </MediaFile>
+                              </MediaFiles>
+                            </Linear>
+                          </Creative>
+                        </Creatives>
+                      </InLine>
+                    </Ad>
+                  </VAST>
+              </vmap:VASTAdData>
             </vmap:AdSource>
           </vmap:AdBreak>
         </vmap:VMAP>`;
@@ -167,7 +173,8 @@ describe('VMAP API', () => {
         <vmap:VMAP xmlns:vmap="http://www.iab.net/vmap-1.0" version="1.0">
           <vmap:AdBreak timeOffset="start" breakType="linear">
             <vmap:AdSource>
-              <vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0">
+              <vmap:VASTAdData>
+              <VAST xmlns:vast="http://www.iab.net/VAST" version="4.0">
                 <Ad>
                   <InLine>
                     <Creatives>
@@ -184,7 +191,8 @@ describe('VMAP API', () => {
                     </Creatives>
                   </InLine>
                 </Ad>
-              </vast:VAST>
+                </VAST> 
+              </vmap:VASTAdData>
             </vmap:AdSource>
           </vmap:AdBreak>
         </vmap:VMAP>`;
@@ -193,7 +201,9 @@ describe('VMAP API', () => {
 <vmap:VMAP xmlns:vmap="http://www.iab.net/vmap-1.0" version="1.0">
   <vmap:AdBreak timeOffset="start" breakType="linear">
     <vmap:AdSource>
-      <vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0"></vast:VAST>
+      <vmap:VASTAdData>
+        <VAST xmlns:vast="http://www.iab.net/VAST" version="4.0"></VAST>
+      </vmap:VASTAdData>
     </vmap:AdSource>
   </vmap:AdBreak>
 </vmap:VMAP>
@@ -208,7 +218,7 @@ describe('VMAP API', () => {
 
       const result = replaceMediaFiles(vmapXml, assets);
       expect(result).toContain(
-        '<vast:VAST xmlns:vast="http://www.iab.net/VAST" version="4.0"></vast:VAST>'
+        '<VAST xmlns:vast="http://www.iab.net/VAST" version="4.0"></VAST>'
       );
       expect(result).toBe(expectedXml);
     });
