@@ -72,9 +72,7 @@ export interface VastAd {
   InLine: {
     Creatives: {
       Creative: {
-        UniversalAdId: {
-          '#text': string;
-        };
+        UniversalAdId: string;
         Linear: {
           MediaFiles: VastAdMediaFiles;
           Duration: string;
@@ -379,8 +377,8 @@ const replaceMediaFiles = (
         : [parsedVAST.VAST.Ad];
 
       parsedVAST.VAST.Ad = vastAds.reduce((acc: VastAd[], vastAd: VastAd) => {
-        const universalAdId = vastAd.InLine.Creatives.Creative.UniversalAdId;
         const adId = getKey(keyField, keyRegex, vastAd);
+        console.log(adId)
         const asset = assets.find((a) => a.creativeId === adId);
         if (asset) {
           const mediaFile = getBestMediaFileFromVastAd(vastAd);
@@ -485,7 +483,8 @@ export const getKey = (
     case 'url':
       return getBestMediaFileFromVastAd(vastAd)['#text'].replace(keyRegex, '');
     default:
-      return vastAd.InLine.Creatives.Creative.UniversalAdId['#text'].replace(
+      console.log(vastAd.InLine.Creatives.Creative.UniversalAdId)
+      return vastAd.InLine.Creatives.Creative.UniversalAdId.replace(
         keyRegex,
         ''
       );

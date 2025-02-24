@@ -3,6 +3,7 @@ import {
   getBestMediaFileFromVastAd,
   VastAd
 } from '../vast/vastApi';
+import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
 jest.mock('../util/logger');
 
@@ -46,7 +47,12 @@ describe('VMAP API', () => {
         }
       ];
 
-      const result = replaceMediaFiles(vmapXml, assets);
+      const result = replaceMediaFiles(
+        vmapXml,
+        assets,
+        /[^a-zA-Z0-9]g/,
+        'universaladid'
+      );
 
       expect(result).toContain('https://example.com/transcoded/index.m3u8');
       expect(result).toContain('application/x-mpegURL');
@@ -110,7 +116,12 @@ describe('VMAP API', () => {
         }
       ];
 
-      const result = replaceMediaFiles(vmapXml, assets);
+      const result = replaceMediaFiles(
+        vmapXml,
+        assets,
+        /[^a-zA-Z0-9]g/,
+        'universaladid'
+      );
       const mediaTypeCount = (result.match(/application\/x-mpegURL/g) || [])
         .length;
 
@@ -161,7 +172,12 @@ describe('VMAP API', () => {
         }
       ];
 
-      const result = replaceMediaFiles(vmapXml, assets);
+      const result = replaceMediaFiles(
+        vmapXml,
+        assets,
+        /[^a-zA-Z0-9]g/,
+        'universaladid'
+      );
       const mediaFileCount = (result.match(/<\/MediaFile>/g) || []).length;
 
       expect(result).toContain('https://example.com/transcoded/index.m3u8');
@@ -216,7 +232,12 @@ describe('VMAP API', () => {
         }
       ];
 
-      const result = replaceMediaFiles(vmapXml, assets);
+      const result = replaceMediaFiles(
+        vmapXml,
+        assets,
+        /[^a-zA-Z0-9]g/,
+        'universaladid'
+      );
       expect(result).toContain(
         '<VAST xmlns:vast="http://www.iab.net/VAST" version="4.0"></VAST>'
       );
@@ -230,9 +251,7 @@ describe('VMAP API', () => {
         InLine: {
           Creatives: {
             Creative: {
-              UniversalAdId: {
-                '#text': 'test-ad-id'
-              },
+              UniversalAdId: 'test-ad-id',
               Linear: {
                 MediaFiles: {
                   MediaFile: [
@@ -279,9 +298,7 @@ describe('VMAP API', () => {
         InLine: {
           Creatives: {
             Creative: {
-              UniversalAdId: {
-                '#text': 'test-ad-id'
-              },
+              UniversalAdId: 'test-ad-id',
               Linear: {
                 MediaFiles: {
                   MediaFile: {
@@ -310,9 +327,7 @@ describe('VMAP API', () => {
         InLine: {
           Creatives: {
             Creative: {
-              UniversalAdId: {
-                '#text': 'test-ad-id'
-              },
+              UniversalAdId: 'test-ad-id',
               Linear: {
                 MediaFiles: {
                   MediaFile: [
@@ -350,9 +365,7 @@ describe('VMAP API', () => {
         InLine: {
           Creatives: {
             Creative: {
-              UniversalAdId: {
-                '#text': 'test-ad-id'
-              },
+              UniversalAdId: 'test-ad-id',
               Linear: {
                 MediaFiles: {
                   MediaFile: [
@@ -399,9 +412,7 @@ describe('VMAP API', () => {
                         InLine: {
                           Creatives: {
                             Creative: {
-                              UniversalAdId: {
-                                '#text': 'ad123'
-                              },
+                              UniversalAdId: 'ad123',
                               Linear: {
                                 MediaFiles: {
                                   MediaFile: {
@@ -444,9 +455,7 @@ describe('VMAP API', () => {
                       InLine: {
                         Creatives: {
                           Creative: {
-                            UniversalAdId: {
-                              '#text': 'ad123'
-                            },
+                            UniversalAdId: 'ad123',
                             Linear: {
                               MediaFiles: {
                                 MediaFile: {
@@ -472,9 +481,7 @@ describe('VMAP API', () => {
                       InLine: {
                         Creatives: {
                           Creative: {
-                            UniversalAdId: {
-                              '#text': 'ad456'
-                            },
+                            UniversalAdId: 'ad456',
                             Linear: {
                               MediaFiles: {
                                 MediaFile: {
@@ -521,9 +528,7 @@ describe('VMAP API', () => {
                         InLine: {
                           Creatives: {
                             Creative: {
-                              UniversalAdId: {
-                                '#text': 'ad123'
-                              },
+                              UniversalAdId: 'ad123',
                               Linear: {
                                 MediaFiles: {
                                   MediaFile: {
@@ -541,9 +546,7 @@ describe('VMAP API', () => {
                         InLine: {
                           Creatives: {
                             Creative: {
-                              UniversalAdId: {
-                                '#text': 'ad456'
-                              },
+                              UniversalAdId: 'ad456',
                               Linear: {
                                 MediaFiles: {
                                   MediaFile: {

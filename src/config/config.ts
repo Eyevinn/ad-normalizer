@@ -70,7 +70,7 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     oscToken: oscToken,
     inFlightTtl: inFlightTtl ? parseInt(inFlightTtl) : null,
     keyField: keyField ? keyField.toLowerCase() : 'UniversalAdId'.toLowerCase(),
-    keyRegex: keyRegex ? keyRegex : '[a-zA-Z0-9]'
+    keyRegex: keyRegex ? keyRegex : '[^a-zA-Z0-9]'
   } as AdNormalizerConfiguration;
 
   return configuration;

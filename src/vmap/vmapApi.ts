@@ -11,7 +11,8 @@ import {
   MediaFile,
   EncoreJob,
   isArray,
-  VastAd
+  VastAd,
+  getKey
 } from '../vast/vastApi';
 import logger from '../util/logger';
 import { IN_PROGRESS } from '../redis/redisclient';
@@ -252,9 +253,7 @@ export const getCreatives = async (
             : [adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad];
 
           for (const vastAd of vastAds) {
-            const adId = vastAd.InLine.Creatives.Creative.UniversalAdId[
-              '#text'
-            ].replace(keyRegex, '');
+            const adId = getKey(keyField, keyRegex, vastAd);
             const mediaFile: MediaFile = getBestMediaFileFromVastAd(vastAd);
             const mediaFileUrl = mediaFile['#text'];
             creatives.push({
@@ -292,13 +291,8 @@ export const replaceMediaFiles = (
 
           adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad = vastAds.reduce(
             (acc: VastAd[], vastAd: VastAd) => {
-              const universalAdId =
-                vastAd.InLine.Creatives.Creative.UniversalAdId;
-              const adId = (
-                typeof universalAdId === 'string'
-                  ? universalAdId
-                  : universalAdId['#text']
-              ).replace(keyRegex, '');
+              console.log('vastAd', vastAd.InLine.Creatives.Creative);
+              const adId = getKey(keyField, keyRegex, vastAd);
               const asset = assets.find((a) => a.creativeId === adId);
               if (asset) {
                 const mediaFile: MediaFile = getBestMediaFileFromVastAd(vastAd);
