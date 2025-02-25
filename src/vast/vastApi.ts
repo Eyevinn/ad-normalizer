@@ -317,7 +317,6 @@ const getVastXml = async (
 ): Promise<string> => {
   try {
     const url = new URL(adServerUrl);
-    url.pathname += '/vast';
     const params = new URLSearchParams(path.split('?')[1]);
     for (const [key, value] of params) {
       url.searchParams.append(key, value);
