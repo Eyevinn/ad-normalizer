@@ -13,6 +13,7 @@ describe('config loading behavior', () => {
     process.env.OSC_ACCESS_TOKEN = 'token';
     process.env.KEY_FIELD = 'Url';
     process.env.KEY_REGEX = '[a-zA-Z]';
+    process.env.ENCORE_PROFILE = 'test-profile';
 
     const config = getConfiguration();
     const expectedBucketName = 'ads';
@@ -22,5 +23,6 @@ describe('config loading behavior', () => {
     expect(config.encoreUrl).toEqual(expectedEncoreUrl);
     expect(config.keyRegex).toEqual('[a-zA-Z]');
     expect(config.keyField).toEqual('url');
+    expect(config.encoreProfile).toEqual('test-profile');
   });
 });

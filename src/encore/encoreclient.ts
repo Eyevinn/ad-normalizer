@@ -7,6 +7,7 @@ export class EncoreClient {
   constructor(
     private url: string,
     private callbackUrl: string,
+    private profile: string,
     private oscToken?: string
   ) {}
 
@@ -38,7 +39,7 @@ export class EncoreClient {
     }
     const job: EncoreJob = {
       externalId: creative.creativeId,
-      profile: 'program',
+      profile: this.profile,
       outputFolder: '/usercontent/',
       baseName: creative.creativeId,
       progressCallbackUri: this.callbackUrl,

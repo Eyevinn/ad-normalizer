@@ -73,6 +73,7 @@ export default (opts: ApiOptions) => {
   const encoreClient = new EncoreClient(
     config.encoreUrl,
     config.callbackListenerUrl,
+    config.encoreProfile,
     config.oscToken
   );
 

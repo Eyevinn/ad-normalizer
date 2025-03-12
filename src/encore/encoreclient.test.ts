@@ -56,7 +56,7 @@ describe('EncoreClient', () => {
   });
 
   it('Should not append access token if none is provided', async () => {
-    encoreClient = new EncoreClient(url, callbackUrl);
+    encoreClient = new EncoreClient(url, callbackUrl, 'test-profile');
     const job: EncoreJob = {
       externalId: '123',
       profile: 'program',
