@@ -7,7 +7,7 @@ export class EncoreClient {
   constructor(
     private url: string,
     private callbackUrl: string,
-    private profile: string,
+    public profile: string,
     private oscToken?: string
   ) {}
 
@@ -29,7 +29,7 @@ export class EncoreClient {
     });
   }
 
-  async createEncoreJob(creative: ManifestAsset): Promise<Response> {
+  async createEncoreJob(job: EncoreJob): Promise<Response> {
     let sat;
     if (this.oscToken) {
       const ctx = new Context({
@@ -37,21 +37,19 @@ export class EncoreClient {
       });
       sat = await ctx.getServiceAccessToken('encore');
     }
-    const job: EncoreJob = {
-      externalId: creative.creativeId,
-      profile: this.profile,
-      outputFolder: '/usercontent/',
-      baseName: creative.creativeId,
-      progressCallbackUri: this.callbackUrl,
-      inputs: [
-        {
-          uri: creative.masterPlaylistUrl,
-          seekTo: 0,
-          copyTs: true,
-          type: InputType.AUDIO_VIDEO
-        }
-      ]
-    };
     return this.submitJob(job, sat);
+  }
+
+  async getEncoreJob(
+    jobId: string,
+    serviceAccessToken?: string // TODO: Add the SAT when needed
+  ): Promise<EncoreJob> {
+    const response = await fetch(`${this.url}/encoreJobs/${jobId}`, {
+      headers: {}
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to get encore job: ${response.statusText}`);
+    }
+    return (await response.json()) as EncoreJob;
   }
 }

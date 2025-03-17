@@ -1,12 +1,13 @@
 import { createClient } from 'redis';
 import logger from '../util/logger';
+import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
 
 export const IN_PROGRESS = 'IN_PROGRESS';
 export const DEFAULT_TTL = 1800; // TTL of 30 minutes to account for queue time
 
 export class RedisClient {
   private client: Awaited<ReturnType<typeof createClient>> | null = null;
-  constructor(private url: string) {}
+  constructor(private url: string, private packagingQueueName?: string) {}
 
   async connect() {
     if (this.client != null) {
@@ -32,6 +33,15 @@ export class RedisClient {
     }
     logger.info('Getting key', { key });
     return this.client?.get(key);
+  }
+
+  async getTranscodeStatus(key: string): Promise<TranscodeInfo | null> {
+    const value = await this.get(key);
+    if (value == null) {
+      return null;
+    } else {
+      return JSON.parse(value);
+    }
   }
 
   async set(key: string, value: string, ttl: number): Promise<void> {
@@ -60,5 +70,28 @@ export class RedisClient {
         }
       }
     }
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.connect();
+    await this.client?.del(key);
+  }
+
+  async saveTranscodeStatus(
+    key: string,
+    status: TranscodeInfo,
+    ttl: number
+  ): Promise<void> {
+    const stringifiedStatus = JSON.stringify(status);
+    await this.set(key, stringifiedStatus, ttl);
+  }
+
+  async enqueuePackagingJob(stringifiedJob: string): Promise<void> {
+    await this.connect();
+    // Null check below needs to be handled way better
+    this.client?.zAdd(this.packagingQueueName!!, {
+      score: Date.now(),
+      value: stringifiedJob
+    });
   }
 }

@@ -31,7 +31,7 @@ describe('RedisClient', () => {
   const mockUrl = 'redis://localhost:6379';
 
   beforeEach(() => {
-    redisClient = new RedisClient(mockUrl);
+    redisClient = new RedisClient(mockUrl, 'test-queue');
   });
 
   afterEach(() => {

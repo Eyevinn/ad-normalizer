@@ -9,13 +9,15 @@ import {
   ManifestResponse,
   getBestMediaFileFromVastAd,
   MediaFile,
-  EncoreJob,
   isArray,
   VastAd,
   getKey
 } from '../vast/vastApi';
 import logger from '../util/logger';
-import { IN_PROGRESS } from '../redis/redisclient';
+import { IN_PROGRESS, RedisClient } from '../redis/redisclient';
+import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
+import { EncoreJob } from '../encore/types';
+import { EncoreService } from '../encore/encoreservice';
 
 interface VmapAdBreak {
   '@_breakId'?: string;
@@ -133,17 +135,17 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
 
 const partitionCreatives = async (
   creatives: ManifestAsset[],
-  lookUpAsset: (mediaFile: string) => Promise<string | null | undefined>
+  lookUpAsset: (mediaFile: string) => Promise<TranscodeInfo | null | undefined>
 ): Promise<ManifestAsset[][]> => {
   const [found, missing]: [ManifestAsset[], ManifestAsset[]] = [[], []];
   for (const creative of creatives) {
     const asset = await lookUpAsset(creative.creativeId);
     logger.debug('Looking up asset', { creative, asset });
     if (asset) {
-      if (asset !== IN_PROGRESS) {
+      if (asset.status == IN_PROGRESS) {
         found.push({
           creativeId: creative.creativeId,
-          masterPlaylistUrl: asset
+          masterPlaylistUrl: asset.url
         });
       }
     } else {
@@ -176,16 +178,16 @@ const findMissingAndDispatchJobs = async (
     if (opts.onMissingAsset) {
       opts
         .onMissingAsset(creative)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`Failed to submit job: ${response.statusText}`);
-          }
-          return response.json() as Promise<EncoreJob>;
-        })
-        .then((data) => {
-          logger.info('Submitted transcode job', { jobId: data.id, creative });
-          if (opts.setupNotification) {
-            opts.setupNotification(creative);
+        .then((data: TranscodeInfo | null | undefined) => {
+          if (data) {
+            logger.info('Submitted encore job', {
+              creative
+            });
+          } else {
+            logger.error('Failed to submit encore job', {
+              creative
+            });
+            throw new Error('Failed to submit encore job');
           }
         })
         .catch((error) => {

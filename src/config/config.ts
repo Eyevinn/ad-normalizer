@@ -15,6 +15,8 @@ export interface AdNormalizerConfiguration {
   keyField: string;
   keyRegex: string;
   encoreProfile: string;
+  jitPackaging: boolean;
+  packagingQueueName?: string;
 }
 
 let config: AdNormalizerConfiguration | null = null;
@@ -60,6 +62,8 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
   const keyRegex = process.env.KEY_REGEX;
 
   const encoreProfile = process.env.ENCORE_PROFILE;
+  const jitPackaging = process.env.JIT_PACKAGING === 'true';
+  const packagingQueueName = process.env.PACKAGING_QUEUE;
 
   const configuration = {
     encoreUrl: removeTrailingSlash(encoreUrl.toString()),
@@ -74,7 +78,9 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     inFlightTtl: inFlightTtl ? parseInt(inFlightTtl) : null,
     keyField: keyField ? keyField.toLowerCase() : 'UniversalAdId'.toLowerCase(),
     keyRegex: keyRegex ? keyRegex : '[^a-zA-Z0-9]',
-    encoreProfile: encoreProfile ? encoreProfile : 'program'
+    encoreProfile: encoreProfile ? encoreProfile : 'program',
+    jitPackaging: jitPackaging,
+    packagingQueueName: packagingQueueName
   } as AdNormalizerConfiguration;
 
   return configuration;

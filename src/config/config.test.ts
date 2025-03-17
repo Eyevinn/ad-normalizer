@@ -14,6 +14,7 @@ describe('config loading behavior', () => {
     process.env.KEY_FIELD = 'Url';
     process.env.KEY_REGEX = '[a-zA-Z]';
     process.env.ENCORE_PROFILE = 'test-profile';
+    process.env.JIT_PACKAGING = 'true';
 
     const config = getConfiguration();
     const expectedBucketName = 'ads';
@@ -24,5 +25,6 @@ describe('config loading behavior', () => {
     expect(config.keyRegex).toEqual('[a-zA-Z]');
     expect(config.keyField).toEqual('url');
     expect(config.encoreProfile).toEqual('test-profile');
+    expect(config.jitPackaging).toEqual(true);
   });
 });

@@ -12,6 +12,9 @@ import { IN_PROGRESS, DEFAULT_TTL, RedisClient } from './redis/redisclient';
 import logger from './util/logger';
 import { EncoreClient } from './encore/encoreclient';
 import { MinioClient, MinioNotification } from './minio/minio';
+import { TranscodeInfo, TranscodeStatus } from './data/transcodeinfo';
+import { EncoreService } from './encore/encoreservice';
+import { EncoreJob } from './encore/types';
 
 const HelloWorld = Type.String({
   status: 'HEALTHY'
@@ -61,7 +64,10 @@ export default (opts: ApiOptions) => {
     );
   }
 
-  const redisclient = new RedisClient(config.redisUrl);
+  const redisclient = new RedisClient(
+    config.redisUrl,
+    config.packagingQueueName
+  );
 
   redisclient.connect();
 
@@ -81,6 +87,14 @@ export default (opts: ApiOptions) => {
     config.s3Endpoint,
     config.s3AccessKey,
     config.s3SecretKey
+  );
+
+  const encoreService = new EncoreService(
+    encoreClient,
+    config.jitPackaging,
+    redisclient,
+    `https://${config.s3Endpoint}/${config.bucket}/`,
+    config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
   );
 
   minioClient.setupClient();
@@ -114,24 +128,29 @@ export default (opts: ApiOptions) => {
     assetServerUrl: `https://${config.s3Endpoint}/${config.bucket}/`,
     keyField: config.keyField,
     keyRegex: new RegExp(config.keyRegex, 'g'),
-    lookUpAsset: async (mediaFile: string) => redisclient.get(mediaFile),
+    encoreService: encoreService,
+    lookUpAsset: async (mediaFile: string) =>
+      redisclient.getTranscodeStatus(mediaFile),
     onMissingAsset: async (asset: ManifestAsset) => {
-      saveToRedis(
-        asset.creativeId,
-        IN_PROGRESS,
-        config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
-      ); // Use the key as a lock to avoid multiple jobs being started
-      return encoreClient.createEncoreJob(asset);
-    },
-    setupNotification: (asset: ManifestAsset) => {
-      logger.debug('Setting up notification for asset', { asset });
-      minioClient.listenForNotifications(
-        config.bucket,
-        asset.creativeId + '/', // TODO: Pass encore job id and add as part of the prefix
-        'index.m3u8',
-        async (notification: MinioNotification) =>
-          await saveToRedis(asset.creativeId, notification.s3.object.key, 0)
-      );
+      const inProgressInfo: TranscodeInfo = {
+        url: '',
+        aspectRatio: '',
+        framerates: [],
+        status: TranscodeStatus.IN_PROGRESS
+      };
+      return encoreService.createEncoreJob(asset).then((res: Response) => {
+        if (res.ok) {
+          redisclient.saveTranscodeStatus(
+            asset.creativeId,
+            inProgressInfo,
+            config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
+          );
+          return Promise.resolve(inProgressInfo);
+        } else {
+          logger.error('Failed to start job', { asset });
+          return Promise.resolve(null);
+        }
+      });
     }
   });
 
@@ -140,25 +159,31 @@ export default (opts: ApiOptions) => {
     assetServerUrl: `https://${config.s3Endpoint}/${config.bucket}/`,
     keyField: config.keyField,
     keyRegex: new RegExp(config.keyRegex, 'g'),
-    lookUpAsset: async (mediaFile: string) => redisclient.get(mediaFile),
+    encoreService: encoreService,
+    lookUpAsset: async (mediaFile: string) =>
+      redisclient.getTranscodeStatus(mediaFile),
     onMissingAsset: async (asset: ManifestAsset) => {
-      saveToRedis(
-        asset.creativeId,
-        IN_PROGRESS,
-        config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
-      );
-      return encoreClient.createEncoreJob(asset);
-    },
-    setupNotification: (asset: ManifestAsset) => {
-      logger.debug('Setting up notification for asset', { asset });
-      minioClient.listenForNotifications(
-        config.bucket,
-        asset.creativeId + '/',
-        'index.m3u8',
-        async (notification: MinioNotification) =>
-          await saveToRedis(asset.creativeId, notification.s3.object.key, 0)
-      );
+      const inProgressInfo: TranscodeInfo = {
+        url: '',
+        aspectRatio: '',
+        framerates: [],
+        status: TranscodeStatus.IN_PROGRESS
+      };
+      return encoreService.createEncoreJob(asset).then((res: Response) => {
+        if (res.ok) {
+          redisclient.saveTranscodeStatus(
+            asset.creativeId,
+            inProgressInfo,
+            config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
+          );
+          return Promise.resolve(inProgressInfo);
+        } else {
+          logger.error('Failed to start job', { asset });
+          return Promise.resolve(null);
+        }
+      });
     }
   });
+
   return api;
 };
