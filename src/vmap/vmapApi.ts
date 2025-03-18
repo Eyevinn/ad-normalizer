@@ -14,10 +14,8 @@ import {
   getKey
 } from '../vast/vastApi';
 import logger from '../util/logger';
-import { IN_PROGRESS, RedisClient } from '../redis/redisclient';
-import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
-import { EncoreJob } from '../encore/types';
-import { EncoreService } from '../encore/encoreservice';
+import { IN_PROGRESS } from '../redis/redisclient';
+import { TranscodeInfo } from '../data/transcodeinfo';
 
 interface VmapAdBreak {
   '@_breakId'?: string;

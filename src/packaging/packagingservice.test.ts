@@ -1,9 +1,4 @@
-import exp from 'constants';
-import {
-  JobProgress,
-  TranscodeInfo,
-  TranscodeStatus
-} from '../data/transcodeinfo';
+import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
 import { RedisClient } from '../redis/redisclient';
 import { PackagingProgress, PackagingService } from './packagingservice';
 

@@ -3,7 +3,6 @@ import {
   getBestMediaFileFromVastAd,
   VastAd
 } from '../vast/vastApi';
-import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
 jest.mock('../util/logger');
 

@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
 import logger from '../util/logger';
-import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
+import { TranscodeInfo } from '../data/transcodeinfo';
 
 export const IN_PROGRESS = 'IN_PROGRESS';
 export const DEFAULT_TTL = 1800; // TTL of 30 minutes to account for queue time

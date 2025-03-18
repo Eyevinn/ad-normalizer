@@ -1,9 +1,4 @@
-import { create } from 'domain';
-import {
-  JobProgress,
-  TranscodeInfo,
-  TranscodeStatus
-} from '../data/transcodeinfo';
+import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
 import { RedisClient } from '../redis/redisclient';
 import logger from '../util/logger';
 import { createPackageUrl } from '../util/string';

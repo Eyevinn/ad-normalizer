@@ -1,13 +1,10 @@
 import { FastifyPluginCallback } from 'fastify';
-import { default as PathUtils } from 'path';
 import { Static, Type } from '@sinclair/typebox';
 import fastifyAcceptsSerializer from '@fastify/accepts-serializer';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import logger from '../util/logger';
 import { timestampToSeconds } from '../util/time';
-import { IN_PROGRESS } from '../redis/redisclient';
 import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
-import { EncoreJob } from '../encore/types';
 import { EncoreService } from '../encore/encoreservice';
 
 export const ManifestAsset = Type.Object({

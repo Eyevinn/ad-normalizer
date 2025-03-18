@@ -1,6 +1,5 @@
 import logger from '../util/logger';
-import { ManifestAsset } from '../vast/vastApi';
-import { EncoreJob, InputType } from './types';
+import { EncoreJob } from './types';
 import { Context } from '@osaas/client-core';
 
 export class EncoreClient {

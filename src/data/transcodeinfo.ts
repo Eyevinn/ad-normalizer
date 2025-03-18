@@ -1,5 +1,3 @@
-import { RedisClient } from '../redis/redisclient';
-
 export type TranscodeInfo = {
   url: string;
   aspectRatio: string;
