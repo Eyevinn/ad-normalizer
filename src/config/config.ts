@@ -17,6 +17,7 @@ export interface AdNormalizerConfiguration {
   encoreProfile: string;
   jitPackaging: boolean;
   packagingQueueName?: string;
+  rootUrl: string;
 }
 
 let config: AdNormalizerConfiguration | null = null;
@@ -65,6 +66,13 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
   const jitPackaging = process.env.JIT_PACKAGING === 'true';
   const packagingQueueName = process.env.PACKAGING_QUEUE;
 
+  const rootUrl = process.env.ROOT_URL;
+  if (!rootUrl) {
+    throw new Error(
+      'ROOT_URL is required, otherwise encore callbacks will not work'
+    );
+  }
+
   const configuration = {
     encoreUrl: removeTrailingSlash(encoreUrl.toString()),
     callbackListenerUrl: callbackListenerUrl.toString(),
@@ -80,7 +88,8 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     keyRegex: keyRegex ? keyRegex : '[^a-zA-Z0-9]',
     encoreProfile: encoreProfile ? encoreProfile : 'program',
     jitPackaging: jitPackaging,
-    packagingQueueName: packagingQueueName
+    packagingQueueName: packagingQueueName,
+    rootUrl: rootUrl
   } as AdNormalizerConfiguration;
 
   return configuration;
