@@ -14,8 +14,7 @@ import {
   getKey
 } from '../vast/vastApi';
 import logger from '../util/logger';
-import { IN_PROGRESS } from '../redis/redisclient';
-import { TranscodeInfo } from '../data/transcodeinfo';
+import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
 
 interface VmapAdBreak {
   '@_breakId'?: string;
@@ -140,7 +139,7 @@ const partitionCreatives = async (
     const asset = await lookUpAsset(creative.creativeId);
     logger.debug('Looking up asset', { creative, asset });
     if (asset) {
-      if (asset.status == IN_PROGRESS) {
+      if (asset.status == TranscodeStatus.COMPLETED) {
         found.push({
           creativeId: creative.creativeId,
           masterPlaylistUrl: asset.url
