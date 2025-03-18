@@ -47,7 +47,6 @@ export class EncoreService {
   async handleCallback(jobProgress: JobProgress): Promise<void> {
     switch (jobProgress.status) {
       case 'SUCCESSFUL':
-        console.log('Job successful');
         return this.handleTranscodeCompleted(jobProgress);
       case 'FAILED':
         return this.handleTranscodeFailed(jobProgress);
