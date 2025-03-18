@@ -15,6 +15,9 @@ import { MinioClient, MinioNotification } from './minio/minio';
 import { TranscodeInfo, TranscodeStatus } from './data/transcodeinfo';
 import { EncoreService } from './encore/encoreservice';
 import { EncoreJob } from './encore/types';
+import { PackagingService } from './packaging/packagingservice';
+import { encoreCallbackApi } from './encore/encorecallbackapi';
+import { packagingCallbackApi } from './packaging/packagingcallbackapi';
 
 const HelloWorld = Type.String({
   status: 'HEALTHY'
@@ -92,6 +95,12 @@ export default (opts: ApiOptions) => {
   const encoreService = new EncoreService(
     encoreClient,
     config.jitPackaging,
+    redisclient,
+    `https://${config.s3Endpoint}/${config.bucket}/`,
+    config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
+  );
+
+  const packagingService = new PackagingService(
     redisclient,
     `https://${config.s3Endpoint}/${config.bucket}/`,
     config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
@@ -183,6 +192,14 @@ export default (opts: ApiOptions) => {
         }
       });
     }
+  });
+
+  api.register(encoreCallbackApi, {
+    encoreService: encoreService
+  });
+
+  api.register(packagingCallbackApi, {
+    packagingService: packagingService
   });
 
   return api;

@@ -111,7 +111,7 @@ describe('encore service with JIT packaging', () => {
       encoreClient,
       true,
       redisClient,
-      'assetServerUrl',
+      'http://assetServerUrl',
       1000
     );
   });
@@ -136,7 +136,7 @@ describe('encore service with JIT packaging', () => {
     expect(redisClient.set).toHaveBeenCalledWith(
       'test-external-id',
       JSON.stringify({
-        url: 'assetServerUrl/usercontent/test-base-name.m3u8',
+        url: 'http://assetserverurl/usercontent/test-base-name.m3u8',
         aspectRatio: '16:9',
         framerates: [],
         status: TranscodeStatus.COMPLETED

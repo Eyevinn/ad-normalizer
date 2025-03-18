@@ -1,4 +1,5 @@
 import { calculateAspectRatio } from './aspectratio';
+import { createPackageUrl } from './string';
 import { timestampToSeconds } from './time';
 
 describe('time utils', () => {
@@ -42,5 +43,17 @@ describe('aspect ratio utils', () => {
     height = 2160;
     aspectRatio = calculateAspectRatio(width, height);
     expect(aspectRatio).toBe('16:9');
+  });
+});
+
+describe('string utils', () => {
+  it('constructs a package URL correctly', () => {
+    const expected = 'http://test-server.com/test-folder/test-base.m3u8';
+    const actual = createPackageUrl(
+      'http://test-Server.com',
+      'test-folder',
+      'test-base'
+    );
+    expect(actual).toBe(expected);
   });
 });

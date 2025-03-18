@@ -4,9 +4,6 @@ import { EncoreService } from './encoreservice';
 
 export interface EncoreCallbackOptions {
   encoreService: EncoreService;
-  onCallback: (job: JobProgress) => void;
-  onFail: (job: JobProgress) => void;
-  onSuccess: (job: JobProgress) => void;
 }
 
 export const encoreCallbackApi: FastifyPluginCallback<EncoreCallbackOptions> = (

@@ -3,19 +3,13 @@ import {
   TranscodeInfo,
   TranscodeStatus
 } from '../data/transcodeinfo';
-import { default as PathUtils } from 'path';
 import { RedisClient } from '../redis/redisclient';
 import { EncoreClient } from './encoreclient';
 import logger from '../util/logger';
-import {
-  EncoreJob,
-  EncoreStatus,
-  InputType,
-  Output,
-  VideoStream
-} from './types';
+import { EncoreJob, EncoreStatus, InputType, VideoStream } from './types';
 import { calculateAspectRatio } from '../util/aspectratio';
 import { ManifestAsset } from '../vast/vastApi';
+import { createPackageUrl } from '../util/string';
 export class EncoreService {
   constructor(
     private client: EncoreClient,
@@ -97,19 +91,13 @@ export class EncoreService {
       firstVideoStream?.width || 1080
     ); // fallback to 16:9
     return {
-      url: this.jitPackaging ? this.createPackageUrl(job) : '', // If packaging is not JIT, we shouldn't set URL here
+      url: this.jitPackaging
+        ? createPackageUrl(this.assetServerUrl, job.outputFolder, job.baseName)
+        : '', // If packaging is not JIT, we shouldn't set URL here
       aspectRatio: aspectRatio,
       framerates: this.getFrameRates(job),
       status: jobStatus
     };
-  }
-
-  createPackageUrl(job: EncoreJob): string {
-    return PathUtils.join(
-      this.assetServerUrl,
-      job.outputFolder,
-      job.baseName + '.m3u8'
-    );
   }
 
   getTranscodeStatus(job: EncoreJob): TranscodeStatus {
