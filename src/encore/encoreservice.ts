@@ -16,7 +16,8 @@ export class EncoreService {
     private jitPackaging: boolean,
     private redisClient: RedisClient,
     private assetServerUrl: string,
-    private redisTtl: number
+    private redisTtl: number,
+    private rootUrl: string
   ) {}
 
   async createEncoreJob(creative: ManifestAsset): Promise<Response> {
@@ -25,7 +26,7 @@ export class EncoreService {
       profile: this.client.profile,
       outputFolder: '/usercontent/', // TODO: Dynamic
       baseName: creative.creativeId,
-      progressCallbackUri: '/encoreCallback', // Should figure out how to set this for the configured server
+      progressCallbackUri: this.rootUrl + '/encoreCallback', // Should figure out how to set this for the configured server
       inputs: [
         {
           uri: creative.masterPlaylistUrl,

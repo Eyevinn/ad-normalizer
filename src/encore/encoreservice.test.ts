@@ -25,7 +25,8 @@ describe('encore service with static packaging', () => {
       false,
       redisClient,
       'assetServerUrl',
-      1000
+      1000,
+      'https://eyevinn-ad-normalizer.osaas.io'
     );
   });
   it('should react to success callbacks', async () => {
@@ -112,7 +113,8 @@ describe('encore service with JIT packaging', () => {
       true,
       redisClient,
       'http://assetServerUrl',
-      1000
+      1000,
+      'https://eyevinn-ad-normalizer.osaas.io'
     );
   });
   it('Should mark successful jobs as completed', async () => {
