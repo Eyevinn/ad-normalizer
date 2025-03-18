@@ -37,7 +37,7 @@ describe('encore service with static packaging', () => {
     } as EncoreJob);
 
     jest.spyOn(redisClient, 'set').mockResolvedValue(Promise.resolve());
-    let callback: JobProgress = {
+    const callback: JobProgress = {
       jobId: 'test-job-id',
       status: 'SUCCESSFUL',
       progress: 0.5,
@@ -63,7 +63,7 @@ describe('encore service with static packaging', () => {
       id: 'test-job-id'
     } as EncoreJob);
     jest.spyOn(redisClient, 'delete').mockResolvedValue(Promise.resolve());
-    let callback: JobProgress = {
+    const callback: JobProgress = {
       externalId: 'test-external-id',
       status: 'FAILED',
       progress: 0.5,
@@ -80,7 +80,7 @@ describe('encore service with static packaging', () => {
       id: 'test-job-id'
     } as EncoreJob);
     jest.spyOn(redisClient, 'delete').mockResolvedValue(Promise.resolve());
-    let callback: JobProgress = {
+    const callback: JobProgress = {
       externalId: 'test-external-id',
       status: 'IN_PROGRESS',
       progress: 0.5,
@@ -127,7 +127,7 @@ describe('encore service with JIT packaging', () => {
     } as EncoreJob);
 
     jest.spyOn(redisClient, 'set').mockResolvedValue(Promise.resolve());
-    let callback: JobProgress = {
+    const callback: JobProgress = {
       jobId: 'test-job-id',
       status: 'SUCCESSFUL',
       progress: 0.5,

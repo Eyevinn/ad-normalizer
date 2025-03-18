@@ -88,8 +88,12 @@ export class RedisClient {
 
   async enqueuePackagingJob(stringifiedJob: string): Promise<void> {
     await this.connect();
+    if (!this.packagingQueueName) {
+      logger.error('No packaging queue name provided');
+      return;
+    }
     // Null check below needs to be handled way better
-    this.client?.zAdd(this.packagingQueueName!!, {
+    this.client?.zAdd(this.packagingQueueName, {
       score: Date.now(),
       value: stringifiedJob
     });

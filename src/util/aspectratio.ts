@@ -5,7 +5,7 @@ export const calculateAspectRatio = (width: number, height: number): string => {
 
 const gcd = (a: number, b: number): number => {
   while (b != 0) {
-    let t = b;
+    const t = b;
     b = a % b;
     a = t;
   }
