@@ -1,6 +1,6 @@
 import { FastifyPluginCallback } from 'fastify';
 import logger from '../util/logger';
-import { PackagingProgress, PackagingService } from './packagingservice';
+import {  PackagingFailureBody, PackagingService, PackagingSuccessBody } from './packagingservice';
 
 export interface PackagerCallbackOptions {
   packagingService: PackagingService;
@@ -9,21 +9,21 @@ export interface PackagerCallbackOptions {
 export const packagingCallbackApi: FastifyPluginCallback<
   PackagerCallbackOptions
 > = (fastify, opts, next) => {
-  fastify.post<{ Body: PackagingProgress }>(
+  fastify.post<{ Body: PackagingSuccessBody }>(
     '/packagerCallback/success',
     async (request, reply) => {
       logger.info('Packager callback received');
-      const job = request.body;
-      await opts.packagingService.handlePackagingCompleted(job);
+      const event = request.body;
+      await opts.packagingService.handlePackagingCompleted(event);
       reply.send();
     }
   );
-  fastify.post<{ Body: PackagingProgress }>(
+  fastify.post<{ Body: PackagingFailureBody }>(
     '/packagerCallback/failure',
     async (request, reply) => {
       logger.info('Packager callback received');
-      const job = request.body;
-      await opts.packagingService.handlePackagingFailed(job);
+      const event = request.body;
+      await opts.packagingService.handlePackagingFailed(event);
       reply.send();
     }
   );
