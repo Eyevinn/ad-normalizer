@@ -1,18 +1,31 @@
 import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
+import { EncoreClient } from '../encore/encoreclient';
 import { RedisClient } from '../redis/redisclient';
-import { PackagingProgress, PackagingService } from './packagingservice';
+import {
+  PackagingFailureBody,
+  PackagingService,
+  PackagingSuccessBody
+} from './packagingservice';
+import { EncoreJob } from '../encore/types';
 
 describe('packaging service', () => {
   let redisClient: jest.Mocked<RedisClient>;
+  let encoreClient: jest.Mocked<EncoreClient>;
   let packagingService: PackagingService;
   beforeEach(() => {
     redisClient = new RedisClient(
       'redis://test-url',
       'ad-packaging'
     ) as jest.Mocked<RedisClient>;
+    encoreClient = new EncoreClient(
+      'http://encore-url',
+      'http://normalizer/callback',
+      'ad-profile'
+    ) as jest.Mocked<EncoreClient>;
     jest.spyOn(redisClient, 'connect').mockResolvedValue(Promise.resolve());
     packagingService = new PackagingService(
       redisClient,
+      encoreClient,
       'http://asset-server-url',
       1000
     );
@@ -30,15 +43,17 @@ describe('packaging service', () => {
     jest
       .spyOn(redisClient, 'saveTranscodeStatus')
       .mockResolvedValue(Promise.resolve());
-    const progress: PackagingProgress = {
-      externalId: 'test-external-id',
-      jobId: 'test-job-id',
-      status: 'FAILED',
-      progress: 0,
-      outputFolder: 'output-folder',
-      baseName: 'base-name'
+    const failureEvent: PackagingFailureBody = {
+      message: JSON.stringify({
+        jobId: 'test-job-id',
+        url: 'https://encore-instance'
+      })
     };
-    await packagingService.handleCallback(progress);
+    jest.spyOn(encoreClient, 'getEncoreJob').mockResolvedValue({
+      id: 'test-job-id',
+      externalId: 'test-external-id'
+    } as EncoreJob);
+    await packagingService.handlePackagingFailed(failureEvent);
     expect(redisClient.get).toHaveBeenCalledWith('test-external-id');
     expect(redisClient.delete).toHaveBeenCalledWith('test-external-id');
     expect(redisClient.saveTranscodeStatus).not.toHaveBeenCalled();
@@ -55,15 +70,17 @@ describe('packaging service', () => {
     jest
       .spyOn(redisClient, 'saveTranscodeStatus')
       .mockResolvedValue(Promise.resolve());
-    const progress: PackagingProgress = {
+    jest.spyOn(encoreClient, 'getEncoreJob').mockResolvedValue({
+      id: 'test-job-id',
       externalId: 'test-external-id',
-      jobId: 'test-job-id',
-      status: 'COMPLETED',
-      progress: 1,
       outputFolder: 'output-folder',
       baseName: 'base-name'
+    } as EncoreJob);
+    const progress: PackagingSuccessBody = {
+      jobId: 'test-job-id',
+      url: 'https://encore-instance'
     };
-    await packagingService.handleCallback(progress);
+    await packagingService.handlePackagingCompleted(progress);
     expect(redisClient.get).toHaveBeenCalledWith('test-external-id');
     const expectedTcInfo: TranscodeInfo = {
       ...tcInfo,

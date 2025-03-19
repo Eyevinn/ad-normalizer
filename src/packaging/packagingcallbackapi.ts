@@ -10,11 +10,20 @@ export const packagingCallbackApi: FastifyPluginCallback<
   PackagerCallbackOptions
 > = (fastify, opts, next) => {
   fastify.post<{ Body: PackagingProgress }>(
-    '/packagerCallback',
+    '/packagerCallback/success',
     async (request, reply) => {
       logger.info('Packager callback received');
       const job = request.body;
-      await opts.packagingService.handleCallback(job);
+      await opts.packagingService.handlePackagingCompleted(job);
+      reply.send();
+    }
+  );
+  fastify.post<{ Body: PackagingProgress }>(
+    '/packagerCallback/failure',
+    async (request, reply) => {
+      logger.info('Packager callback received');
+      const job = request.body;
+      await opts.packagingService.handlePackagingFailed(job);
       reply.send();
     }
   );

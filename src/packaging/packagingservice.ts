@@ -1,63 +1,65 @@
 import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
+import { EncoreClient } from '../encore/encoreclient';
+import { EncoreJob } from '../encore/types';
 import { RedisClient } from '../redis/redisclient';
 import logger from '../util/logger';
 import { createPackageUrl } from '../util/string';
 
-export type PackagingProgress = {
-  externalId: string;
+export type PackagingSuccessBody = {
+  url: string;
   jobId: string;
-  status: string;
-  progress: number;
-  outputFolder: string;
-  baseName: string;
+};
+
+export type PackagingFailureBody = {
+  message: string;
 };
 
 export class PackagingService {
   constructor(
     private redisClient: RedisClient,
+    private encoreClient: EncoreClient,
     private assetServerUrl: string,
     private redisTtl: number
   ) {}
 
-  // We can use the same job progress type as the encore service
-  async handleCallback(jobProgress: PackagingProgress): Promise<void> {
-    switch (jobProgress.status) {
-      case 'COMPLETED':
-        return this.handlePackagingCompleted(jobProgress);
-      case 'FAILED':
-        return this.handlePackagingFailed(jobProgress);
-      default:
-        logger.info("Job status doesn't match any known status", jobProgress);
-        return Promise.resolve();
+  async handlePackagingFailed(fail: PackagingFailureBody): Promise<void> {
+    const parsedMsg = JSON.parse(fail.message);
+    if (parsedMsg.jobId) {
+      const encoreJob = await this.encoreClient.getEncoreJob(parsedMsg.jobId);
+      if (encoreJob.externalId) {
+        const job = await this.redisClient.get(encoreJob.externalId);
+        if (!job) {
+          logger.error('Job not found in Redis', encoreJob.externalId);
+          return;
+        }
+
+        return this.redisClient.delete(encoreJob.externalId);
+      }
     }
   }
-
-  async handlePackagingFailed(jobProgress: PackagingProgress): Promise<void> {
-    const job = await this.redisClient.get(jobProgress.externalId);
-    if (!job) {
-      logger.error('Job not found in Redis', jobProgress);
+  async handlePackagingCompleted(success: PackagingSuccessBody): Promise<void> {
+    const encoreJob: EncoreJob = await this.encoreClient.getEncoreJob(
+      success.jobId
+    );
+    if (!encoreJob.externalId) {
+      logger.error('Encore job has no external ID', encoreJob.id);
       return;
     }
-    return this.redisClient.delete(jobProgress.externalId);
-  }
-  async handlePackagingCompleted(
-    jobProgress: PackagingProgress
-  ): Promise<void> {
-    const job = await this.redisClient.get(jobProgress.externalId);
+    const job = await this.redisClient.get(encoreJob.externalId);
     if (!job) {
-      logger.error('Job not found in Redis', jobProgress);
+      logger.error('Job not found in Redis', success.jobId);
       return;
     }
     const transcodeInfo = JSON.parse(job) as TranscodeInfo;
     const packageUrl = createPackageUrl(
       this.assetServerUrl,
-      jobProgress.outputFolder,
-      jobProgress.baseName
+      encoreJob.outputFolder,
+      encoreJob.baseName
     );
     transcodeInfo.url = packageUrl;
     transcodeInfo.status = TranscodeStatus.COMPLETED;
     return this.redisClient.saveTranscodeStatus(
-      jobProgress.externalId,
+      encoreJob.externalId,
       transcodeInfo,
       this.redisTtl
     );
