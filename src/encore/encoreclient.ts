@@ -43,8 +43,14 @@ export class EncoreClient {
     jobId: string,
     serviceAccessToken?: string // TODO: Add the SAT when needed
   ): Promise<EncoreJob> {
+    const contentHeaders = {
+      'Content-Type': 'application/json',
+      Accept: 'application/hal+json'
+    };
+    const jwtHeader: { 'x-jwt': string } | Record<string, never> =
+      serviceAccessToken ? { 'x-jwt': `Bearer ${serviceAccessToken}` } : {};
     const response = await fetch(`${this.url}/encoreJobs/${jobId}`, {
-      headers: {}
+      headers: { ...contentHeaders, ...jwtHeader }
     });
     if (!response.ok) {
       throw new Error(`Failed to get encore job: ${response.statusText}`);

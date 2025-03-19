@@ -97,7 +97,8 @@ export default (opts: ApiOptions) => {
     redisclient,
     `https://${config.s3Endpoint}/${config.bucket}/`,
     config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL,
-    config.rootUrl
+    config.rootUrl,
+    config.encoreUrl
   );
 
   const packagingService = new PackagingService(

@@ -17,7 +17,8 @@ export class EncoreService {
     private redisClient: RedisClient,
     private assetServerUrl: string,
     private redisTtl: number,
-    private rootUrl: string
+    private rootUrl: string,
+    private encoreUrl: string
   ) {}
 
   async createEncoreJob(creative: ManifestAsset): Promise<Response> {
@@ -62,7 +63,13 @@ export class EncoreService {
         this.redisTtl
       );
       if (!this.jitPackaging) {
-        this.redisClient.enqueuePackagingJob(JSON.stringify(job));
+        const packagingQueueMessage = {
+          jobId: jobProgress.jobId,
+          url: `${this.encoreUrl}/encoreJobs/${jobProgress.jobId}`
+        };
+        this.redisClient.enqueuePackagingJob(
+          JSON.stringify(packagingQueueMessage)
+        );
       }
     });
   }
