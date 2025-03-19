@@ -19,5 +19,5 @@ export const encoreCallbackApi: FastifyPluginCallback<EncoreCallbackOptions> = (
       reply.send();
     }
   );
-  next;
+  next();
 };

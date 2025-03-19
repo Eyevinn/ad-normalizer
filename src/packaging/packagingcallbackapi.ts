@@ -31,5 +31,5 @@ export const packagingCallbackApi: FastifyPluginCallback<
       reply.send();
     }
   );
-  next;
+  next();
 };
