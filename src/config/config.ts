@@ -1,5 +1,6 @@
 import path from 'path';
 import { removeTrailingSlash } from '../util/string';
+import logger from '../util/logger';
 
 export interface AdNormalizerConfiguration {
   encoreUrl: string;
@@ -18,6 +19,7 @@ export interface AdNormalizerConfiguration {
   jitPackaging: boolean;
   packagingQueueName?: string;
   rootUrl: string;
+  bucketUrl: URL;
 }
 
 let config: AdNormalizerConfiguration | null = null;
@@ -89,7 +91,8 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     encoreProfile: encoreProfile ? encoreProfile : 'program',
     jitPackaging: jitPackaging,
     packagingQueueName: packagingQueueName,
-    rootUrl: rootUrl
+    rootUrl: rootUrl,
+    bucketUrl: bucket
   } as AdNormalizerConfiguration;
 
   return configuration;

@@ -27,7 +27,8 @@ describe('encore service with static packaging', () => {
       'assetServerUrl',
       1000,
       'https://eyevinn-ad-normalizer.osaas.io',
-      'https://encore-url'
+      'https://encore-url',
+      new URL('s3://test-bucket')
     );
   });
   it('should react to success callbacks', async () => {
@@ -116,7 +117,8 @@ describe('encore service with JIT packaging', () => {
       'http://assetServerUrl',
       1000,
       'https://eyevinn-ad-normalizer.osaas.io',
-      'https://encore-url'
+      'https://encore-url',
+      new URL('s3://test-bucket')
     );
   });
   it('Should mark successful jobs as completed', async () => {

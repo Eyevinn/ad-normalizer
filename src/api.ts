@@ -99,7 +99,8 @@ export default (opts: ApiOptions) => {
     `https://${config.s3Endpoint}/${config.bucket}/`,
     config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL,
     config.rootUrl,
-    config.encoreUrl
+    config.encoreUrl,
+    config.bucketUrl
   );
 
   const packagingService = new PackagingService(

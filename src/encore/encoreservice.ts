@@ -10,6 +10,7 @@ import { EncoreJob, EncoreStatus, InputType, VideoStream } from './types';
 import { calculateAspectRatio } from '../util/aspectratio';
 import { ManifestAsset } from '../vast/vastApi';
 import { createPackageUrl } from '../util/string';
+import { default as PathUtils } from 'path';
 export class EncoreService {
   constructor(
     private client: EncoreClient,
@@ -18,14 +19,18 @@ export class EncoreService {
     private assetServerUrl: string,
     private redisTtl: number,
     private rootUrl: string,
-    private encoreUrl: string
+    private encoreUrl: string,
+    private outputBucket: URL
   ) {}
 
   async createEncoreJob(creative: ManifestAsset): Promise<Response> {
     const job: EncoreJob = {
       externalId: creative.creativeId,
       profile: this.client.profile,
-      outputFolder: '/usercontent/', // TODO: Dynamic
+      outputFolder: new URL(
+        PathUtils.join(this.outputBucket.pathname, creative.creativeId),
+        this.outputBucket
+      ).href,
       baseName: creative.creativeId,
       progressCallbackUri: this.rootUrl + '/encoreCallback', // Should figure out how to set this for the configured server
       inputs: [
