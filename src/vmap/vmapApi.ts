@@ -218,6 +218,7 @@ const getVmapXml = async (
     for (const [key, value] of params) {
       url.searchParams.append(key, value);
     }
+    url.searchParams.append('rt', 'vmap');
     logger.info(`Fetching VMAP request from ${url.toString()}`);
     const response = await fetch(url, {
       method: 'GET',

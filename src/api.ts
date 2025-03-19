@@ -17,6 +17,7 @@ import { EncoreService } from './encore/encoreservice';
 import { PackagingService } from './packaging/packagingservice';
 import { encoreCallbackApi } from './encore/encorecallbackapi';
 import { packagingCallbackApi } from './packaging/packagingcallbackapi';
+import { EncoreJob } from './encore/types';
 
 const HelloWorld = Type.String({
   status: 'HEALTHY'
@@ -156,6 +157,9 @@ export default (opts: ApiOptions) => {
             inProgressInfo,
             config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
           );
+          res.json().then((data: EncoreJob) => {
+            logger.info('Encore job created', { jobId: data.id });
+          });
           return Promise.resolve(inProgressInfo);
         } else {
           logger.error('Failed to start job', { asset });
@@ -187,6 +191,9 @@ export default (opts: ApiOptions) => {
             inProgressInfo,
             config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
           );
+          res.json().then((data: EncoreJob) => {
+            logger.info('Encore job created', { jobId: data.id });
+          });
           return Promise.resolve(inProgressInfo);
         } else {
           logger.error('Failed to start job', { asset });
