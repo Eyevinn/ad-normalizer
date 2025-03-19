@@ -1,6 +1,10 @@
 import { FastifyPluginCallback } from 'fastify';
 import logger from '../util/logger';
-import {  PackagingFailureBody, PackagingService, PackagingSuccessBody } from './packagingservice';
+import {
+  PackagingFailureBody,
+  PackagingService,
+  PackagingSuccessBody
+} from './packagingservice';
 
 export interface PackagerCallbackOptions {
   packagingService: PackagingService;
