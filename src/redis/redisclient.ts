@@ -93,7 +93,7 @@ export class RedisClient {
       return;
     }
     // Null check below needs to be handled way better
-    this.client?.zAdd(this.packagingQueueName, {
+    await this.client?.zAdd(this.packagingQueueName, {
       score: Date.now(),
       value: stringifiedJob
     });

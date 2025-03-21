@@ -1,6 +1,5 @@
 import path from 'path';
 import { removeTrailingSlash } from '../util/string';
-import logger from '../util/logger';
 
 export interface AdNormalizerConfiguration {
   encoreUrl: string;
