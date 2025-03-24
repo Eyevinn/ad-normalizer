@@ -91,26 +91,35 @@ export class EncoreService {
 
   transcodeInfoFromEncoreJob(job: EncoreJob): TranscodeInfo {
     const jobStatus = this.getTranscodeStatus(job);
-    const firstVideoStream = job.output?.reduce(
-      (videoStreams: VideoStream[], output) => {
-        return output.videoStreams
-          ? [...videoStreams, ...output.videoStreams]
-          : videoStreams;
-      },
-      []
-    )[0];
-    const aspectRatio = calculateAspectRatio(
-      firstVideoStream?.height || 1920,
-      firstVideoStream?.width || 1080
-    ); // fallback to 16:9
-    return {
-      url: this.jitPackaging
-        ? createPackageUrl(this.assetServerUrl, job.outputFolder, job.baseName)
-        : '', // If packaging is not JIT, we shouldn't set URL here
-      aspectRatio: aspectRatio,
-      framerates: this.getFrameRates(job),
-      status: jobStatus
-    };
+    try {
+      const firstVideoStream = job.output?.reduce(
+        (videoStreams: VideoStream[], output) => {
+          return output.videoStreams
+            ? [...videoStreams, ...output.videoStreams]
+            : videoStreams;
+        },
+        []
+      )[0];
+      const aspectRatio = calculateAspectRatio(
+        firstVideoStream?.height || 1920,
+        firstVideoStream?.width || 1080
+      ); // fallback to 16:9
+      return {
+        url: this.jitPackaging
+          ? createPackageUrl(
+              this.assetServerUrl,
+              job.outputFolder,
+              job.baseName
+            )
+          : '', // If packaging is not JIT, we shouldn't set URL here
+        aspectRatio: aspectRatio,
+        framerates: this.getFrameRates(job),
+        status: jobStatus
+      };
+    } catch (e) {
+      logger.error('Error creating transcode info', e);
+      throw new Error('Error creating transcode info');
+    }
   }
 
   getTranscodeStatus(job: EncoreJob): TranscodeStatus {

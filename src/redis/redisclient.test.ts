@@ -40,7 +40,10 @@ describe('RedisClient', () => {
 
   it('should connect to Redis', async () => {
     await redisClient.connect();
-    expect(createClient).toHaveBeenCalledWith({ url: mockUrl });
+    expect(createClient).toHaveBeenCalledWith({
+      url: mockUrl,
+      socket: { keepAlive: 1, reconnectStrategy: 1000 }
+    });
     expect(logger.info).toHaveBeenCalledWith('Connecting to Redis', {
       url: mockUrl
     });

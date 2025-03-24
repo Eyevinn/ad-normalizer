@@ -15,8 +15,14 @@ export class RedisClient {
       return;
     }
     logger.info('Connecting to Redis', { url: this.url });
-    this.client = await createClient({ url: this.url })
-      .on('error', (err) => logger.error('Redis error', err))
+    this.client = await createClient({
+      url: this.url,
+      socket: {
+        keepAlive: 1,
+        reconnectStrategy: 1000
+      }
+    })
+      .on('error', (err) => logger.error('Redis error:', err))
       .connect();
     return;
   }

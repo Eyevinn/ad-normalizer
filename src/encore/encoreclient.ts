@@ -41,7 +41,7 @@ export class EncoreClient {
 
   async getEncoreJob(
     jobId: string,
-    serviceAccessToken?: string // TODO: Add the SAT when needed
+    serviceAccessToken?: string
   ): Promise<EncoreJob> {
     const contentHeaders = {
       'Content-Type': 'application/json',
@@ -53,6 +53,7 @@ export class EncoreClient {
       headers: { ...contentHeaders, ...jwtHeader }
     });
     if (!response.ok) {
+      logger.error(`Failed to get encore job: ${response.statusText}`);
       throw new Error(`Failed to get encore job: ${response.statusText}`);
     }
     return (await response.json()) as EncoreJob;
