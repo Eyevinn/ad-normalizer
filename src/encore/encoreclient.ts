@@ -1,3 +1,4 @@
+import { Encore } from '@osaas/client-services';
 import logger from '../util/logger';
 import { EncoreJob } from './types';
 import { Context } from '@osaas/client-core';
@@ -39,7 +40,21 @@ export class EncoreClient {
     return this.submitJob(job, sat);
   }
 
-  async getEncoreJob(
+  async getEncoreJob(jobId: string): Promise<EncoreJob> {
+    let sat;
+    console.log(this.oscToken);
+    if (this.oscToken) {
+      const ctx = new Context({
+        personalAccessToken: this.oscToken
+      });
+      console.log(ctx)
+      console.log("Should call get service access token")
+      sat = await ctx.getServiceAccessToken('encore');
+    }
+    return this.fetchEncoreJob(jobId, sat);
+  }
+
+  async fetchEncoreJob(
     jobId: string,
     serviceAccessToken?: string
   ): Promise<EncoreJob> {

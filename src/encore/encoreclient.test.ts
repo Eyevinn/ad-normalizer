@@ -1,3 +1,4 @@
+import { Context } from '@osaas/client-core';
 import { EncoreClient } from './encoreclient';
 import { EncoreJob, InputType } from './types';
 
@@ -16,9 +17,21 @@ describe('EncoreClient', () => {
   const callbackUrl = 'http://callback-url.osaas.io';
   const serviceAccessToken = 'test-token';
   let encoreClient: EncoreClient;
+  let ctx: Context;
 
   beforeEach(() => {
-    encoreClient = new EncoreClient(url, callbackUrl, serviceAccessToken);
+    ctx = new Context({
+      personalAccessToken: 'test-pat'
+    });
+    jest
+      .spyOn(ctx, 'getServiceAccessToken')
+      .mockResolvedValue(serviceAccessToken);
+    encoreClient = new EncoreClient(
+      url,
+      callbackUrl,
+      'test-profle',
+      'my-token'
+    );
   });
 
   afterEach(() => {
@@ -56,7 +69,11 @@ describe('EncoreClient', () => {
   });
 
   it('Should not append access token if none is provided', async () => {
-    encoreClient = new EncoreClient(url, callbackUrl, 'test-profile');
+    const encoreClientNoSat = new EncoreClient(
+      url,
+      callbackUrl,
+      'test-profile'
+    );
     const job: EncoreJob = {
       externalId: '123',
       profile: 'program',
@@ -73,7 +90,7 @@ describe('EncoreClient', () => {
       ]
     };
 
-    await encoreClient.submitJob(job);
+    await encoreClientNoSat.submitJob(job);
 
     expect(global.fetch).toHaveBeenCalledWith(`${url}/encoreJobs`, {
       method: 'POST',
@@ -82,6 +99,41 @@ describe('EncoreClient', () => {
         Accept: 'application/hal+json'
       },
       body: JSON.stringify(job)
+    });
+  });
+
+  it('Should fetch an encore job', async () => {
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            externalId: '123',
+            profile: 'program',
+            outputFolder: '/usercontent/',
+            baseName: '123',
+            progressCallbackUri: callbackUrl,
+            inputs: [
+              {
+                uri: 'input.mp4',
+                seekTo: 0,
+                copyTs: true,
+                type: InputType.AUDIO_VIDEO
+              }
+            ]
+          })
+      } as unknown as Response)
+    ) as jest.Mock;
+
+    const jobId = '123';
+    await encoreClient.fetchEncoreJob(jobId, serviceAccessToken);
+
+    expect(global.fetch).toHaveBeenCalledWith(`${url}/encoreJobs/${jobId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/hal+json',
+        'x-jwt': `Bearer ${serviceAccessToken}`
+      }
     });
   });
 });
