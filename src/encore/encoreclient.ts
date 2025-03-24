@@ -42,13 +42,10 @@ export class EncoreClient {
 
   async getEncoreJob(jobId: string): Promise<EncoreJob> {
     let sat;
-    console.log(this.oscToken);
     if (this.oscToken) {
       const ctx = new Context({
         personalAccessToken: this.oscToken
       });
-      console.log(ctx)
-      console.log("Should call get service access token")
       sat = await ctx.getServiceAccessToken('encore');
     }
     return this.fetchEncoreJob(jobId, sat);
