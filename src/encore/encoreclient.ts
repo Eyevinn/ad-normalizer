@@ -1,4 +1,3 @@
-import { Encore } from '@osaas/client-services';
 import logger from '../util/logger';
 import { EncoreJob } from './types';
 import { Context } from '@osaas/client-core';

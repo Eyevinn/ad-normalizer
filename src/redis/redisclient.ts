@@ -18,9 +18,9 @@ export class RedisClient {
     this.client = await createClient({
       url: this.url,
       socket: {
-        keepAlive: 1,
         reconnectStrategy: 1000
-      }
+      },
+      pingInterval: 3000
     })
       .on('error', (err) => logger.error('Redis error:', err))
       .connect();
