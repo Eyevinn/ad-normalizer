@@ -1,4 +1,4 @@
-ARG NODE_IMAGE=node:21-alpine
+ARG NODE_IMAGE=node:23-alpine
 
 FROM ${NODE_IMAGE}
 ENV NODE_ENV=production

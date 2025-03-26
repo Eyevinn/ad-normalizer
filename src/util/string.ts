@@ -13,3 +13,8 @@ export const createPackageUrl = (
     assetServerUrl
   ).href;
 };
+
+export const createOutputUrl = (bucket: string, folder: string): string | null => {
+  const parsedUrl = URL.parse(folder, bucket);
+  return parsedUrl ? parsedUrl.href : null;
+}
