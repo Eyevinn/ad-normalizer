@@ -9,8 +9,7 @@ import logger from '../util/logger';
 import { EncoreJob, EncoreStatus, InputType, VideoStream } from './types';
 import { calculateAspectRatio } from '../util/aspectratio';
 import { ManifestAsset } from '../vast/vastApi';
-import { createPackageUrl } from '../util/string';
-import { default as PathUtils } from 'path';
+import { createOutputUrl, createPackageUrl } from '../util/string';
 export class EncoreService {
   constructor(
     private client: EncoreClient,
@@ -24,13 +23,21 @@ export class EncoreService {
   ) {}
 
   async createEncoreJob(creative: ManifestAsset): Promise<Response> {
+    const outputFolder = createOutputUrl(
+      this.outputBucket,
+      creative.creativeId
+    );
+    if (!outputFolder) {
+      logger.error('Error creating output URL', {
+        outputBucket: this.outputBucket,
+        creativeId: creative.creativeId
+      });
+      throw new Error('Error creating output URL');
+    }
     const job: EncoreJob = {
       externalId: creative.creativeId,
       profile: this.client.profile,
-      outputFolder: new URL(
-        PathUtils.join(this.outputBucket.pathname, creative.creativeId),
-        this.outputBucket
-      ).href,
+      outputFolder: outputFolder,
       baseName: creative.creativeId,
       progressCallbackUri: this.rootUrl + '/encoreCallback', // Should figure out how to set this for the configured server
       inputs: [
@@ -101,8 +108,8 @@ export class EncoreService {
         []
       )[0];
       const aspectRatio = calculateAspectRatio(
-        firstVideoStream?.height || 1920,
-        firstVideoStream?.width || 1080
+        firstVideoStream?.width || 1920,
+        firstVideoStream?.height || 1080
       ); // fallback to 16:9
       return {
         url: this.jitPackaging
@@ -144,15 +151,15 @@ export class EncoreService {
   }
 
   getFrameRates(job: EncoreJob): number[] {
-    return (
+    const allRates =
       job.output?.reduce((frameRates: number[], output) => {
         const videoStreams = output.videoStreams || [];
         const rates = videoStreams.map((stream) =>
           this.parseFrameRate(stream.frameRate)
         );
         return [...frameRates, ...rates];
-      }, []) || []
-    );
+      }, []) || [];
+    return Array.from(new Set(allRates));
   }
 
   parseFrameRate(frameRate: string): number {

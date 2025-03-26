@@ -57,7 +57,7 @@ describe('string utils', () => {
     expect(actual).toBe(expected);
   });
   it('constructs an output url correctly', () => {
-    const bucket = 's3://test-bucket.osaas.io';
+    const bucket = new URL('s3://test-bucket.osaas.io');
     const folder = 'test-folder';
     const expected = 's3://test-bucket.osaas.io/test-folder/';
     const actual = createOutputUrl(bucket, folder);

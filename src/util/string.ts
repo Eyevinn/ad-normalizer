@@ -14,7 +14,10 @@ export const createPackageUrl = (
   ).href;
 };
 
-export const createOutputUrl = (bucket: string, folder: string): string | null => {
-  const parsedUrl = URL.parse(folder, bucket);
-  return parsedUrl ? parsedUrl.href : null;
-}
+export const createOutputUrl = (bucket: URL, folder: string): string | null => {
+  try {
+    return new URL(PathUtils.join(bucket.pathname, folder), bucket).href + '/';
+  } catch (e) {
+    return null;
+  }
+};
