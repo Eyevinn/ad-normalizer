@@ -118,6 +118,7 @@ Note: the ad normalizer assumes that your packager is set up with the output sub
 | `KEY_FIELD`             | The VAST field used as key in the cache. possible non-default values are `resolution` and `url`. If no value is provided, it used the universal Ad Id | universalAdId  | no        |
 | `KEY_REGEX`             | RegExp string used to strip away unwanted characters from the key string                                                                              | `[^a-zA-Z0-9]` | no        |
 | `ENCORE_PROFILE`        | The transcoding profile used by encore when processing the ads                                                                                        | program        | no        |
+| `ASSET_SERVER_URL`      | Base URL used in the links created for manifests. Typical use case is a CDN URL. If not set, a https version of output bucket URL is used             | none           | no        |
 
 ### starting the service
 
