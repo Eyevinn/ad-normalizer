@@ -19,6 +19,7 @@ export interface AdNormalizerConfiguration {
   packagingQueueName?: string;
   rootUrl: string;
   bucketUrl: URL;
+  assetServerUrl?: string;
 }
 
 let config: AdNormalizerConfiguration | null = null;
@@ -91,7 +92,8 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     jitPackaging: jitPackaging,
     packagingQueueName: packagingQueueName,
     rootUrl: rootUrl,
-    bucketUrl: bucket
+    bucketUrl: bucket,
+    assetServerUrl: process.env.ASSET_SERVER_URL
   } as AdNormalizerConfiguration;
 
   return configuration;

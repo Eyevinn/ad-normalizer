@@ -78,13 +78,14 @@ describe('packaging service', () => {
     } as EncoreJob);
     const progress: PackagingSuccessBody = {
       jobId: 'test-job-id',
-      url: 'https://encore-instance'
+      url: 'https://encore-instance',
+      outputPath: '/output-folder/assetId/jobId/'
     };
     await packagingService.handlePackagingCompleted(progress);
     expect(redisClient.get).toHaveBeenCalledWith('test-external-id');
     const expectedTcInfo: TranscodeInfo = {
       ...tcInfo,
-      url: 'http://asset-server-url/output-folder/base-name.m3u8',
+      url: 'http://asset-server-url/output-folder/assetId/jobId/index.m3u8',
       status: TranscodeStatus.COMPLETED
     };
     expect(redisClient.saveTranscodeStatus).toHaveBeenCalledWith(

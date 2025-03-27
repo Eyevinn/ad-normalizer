@@ -106,7 +106,9 @@ export default (opts: ApiOptions) => {
   const packagingService = new PackagingService(
     redisclient,
     encoreClient,
-    `https://${config.s3Endpoint}/${config.bucket}/`,
+    config.assetServerUrl
+      ? config.assetServerUrl
+      : `https://${config.s3Endpoint}/${config.bucket}/`,
     config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
   );
 

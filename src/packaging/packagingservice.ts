@@ -8,6 +8,7 @@ import { createPackageUrl } from '../util/string';
 export type PackagingSuccessBody = {
   url: string;
   jobId: string;
+  outputPath: string;
 };
 
 export type PackagingFailureBody = {
@@ -53,8 +54,8 @@ export class PackagingService {
     const transcodeInfo = JSON.parse(job) as TranscodeInfo;
     const packageUrl = createPackageUrl(
       this.assetServerUrl,
-      encoreJob.outputFolder,
-      encoreJob.baseName
+      success.outputPath,
+      'index'
     );
     transcodeInfo.url = packageUrl;
     transcodeInfo.status = TranscodeStatus.COMPLETED;
