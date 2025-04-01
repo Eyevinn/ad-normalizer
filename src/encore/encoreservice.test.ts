@@ -147,7 +147,7 @@ describe('encore service with JIT packaging', () => {
         framerates: [],
         status: TranscodeStatus.COMPLETED
       }),
-      1000
+      0 // Should persist the key
     );
   });
 });

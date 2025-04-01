@@ -91,7 +91,7 @@ describe('packaging service', () => {
     expect(redisClient.saveTranscodeStatus).toHaveBeenCalledWith(
       'test-external-id',
       expectedTcInfo,
-      1000
+      0 // Key is now persistent
     );
   });
 });

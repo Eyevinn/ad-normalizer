@@ -72,7 +72,7 @@ export class EncoreService {
       this.redisClient.saveTranscodeStatus(
         jobProgress.externalId,
         transcodeInfo,
-        this.redisTtl
+        this.jitPackaging ? 0 : this.redisTtl // Persist if JIT packaging
       );
       if (!this.jitPackaging) {
         const packagingQueueMessage = {

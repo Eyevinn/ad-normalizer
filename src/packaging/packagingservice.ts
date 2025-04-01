@@ -62,7 +62,7 @@ export class PackagingService {
     return this.redisClient.saveTranscodeStatus(
       encoreJob.externalId,
       transcodeInfo,
-      this.redisTtl
+      0 // Remove TTL in redis
     );
   }
 }
