@@ -140,7 +140,9 @@ export default (opts: ApiOptions) => {
 
   api.register(vastApi, {
     adServerUrl: config.adServerUrl,
-    assetServerUrl: `https://${config.s3Endpoint}/${config.bucket}/`,
+    assetServerUrl: config.assetServerUrl
+      ? config.assetServerUrl
+      : `https://${config.s3Endpoint}/${config.bucket}/`,
     keyField: config.keyField,
     keyRegex: new RegExp(config.keyRegex, 'g'),
     encoreService: encoreService,
@@ -174,7 +176,9 @@ export default (opts: ApiOptions) => {
 
   api.register(vmapApi, {
     adServerUrl: config.adServerUrl,
-    assetServerUrl: `https://${config.s3Endpoint}/${config.bucket}/`,
+    assetServerUrl: config.assetServerUrl
+      ? config.assetServerUrl
+      : `https://${config.s3Endpoint}/${config.bucket}/`,
     keyField: config.keyField,
     keyRegex: new RegExp(config.keyRegex, 'g'),
     encoreService: encoreService,

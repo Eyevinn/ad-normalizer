@@ -1,5 +1,4 @@
 import { FastifyPluginCallback } from 'fastify';
-import { default as PathUtils } from 'path';
 import { Static } from '@sinclair/typebox';
 import fastifyAcceptsSerializer from '@fastify/accepts-serializer';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
@@ -193,19 +192,9 @@ const findMissingAndDispatchJobs = async (
     }
   });
 
-  const withBaseUrl = found.map((asset: ManifestAsset) => {
-    return {
-      creativeId: asset.creativeId,
-      masterPlaylistUrl: PathUtils.join(
-        opts.assetServerUrl,
-        asset.masterPlaylistUrl
-      )
-    };
-  });
-
   const builder = new XMLBuilder({ format: true, ignoreAttributes: false });
   const vmapXml = builder.build(vmapXmlObj);
-  return { assets: withBaseUrl, xml: vmapXml };
+  return { assets: found, xml: vmapXml };
 };
 
 const getVmapXml = async (

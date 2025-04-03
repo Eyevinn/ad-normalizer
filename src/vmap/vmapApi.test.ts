@@ -42,7 +42,7 @@ describe('VMAP API', () => {
       const assets: ManifestAsset[] = [
         {
           creativeId: 'ad123',
-          masterPlaylistUrl: 'https://example.com/transcoded/index.m3u8'
+          masterPlaylistUrl: 'https://example-cdn.com/transcoded/index.m3u8'
         }
       ];
 
@@ -53,7 +53,7 @@ describe('VMAP API', () => {
         'universaladid'
       );
 
-      expect(result).toContain('https://example.com/transcoded/index.m3u8');
+      expect(result).toContain('https://example-cdn.com/transcoded/index.m3u8');
       expect(result).toContain('application/x-mpegURL');
       expect(result).toContain('<vmap:VMAP');
       expect(result).toContain('</vmap:VMAP>');
@@ -107,11 +107,11 @@ describe('VMAP API', () => {
       const assets: ManifestAsset[] = [
         {
           creativeId: 'ad123',
-          masterPlaylistUrl: 'https://example.com/transcoded1/index.m3u8'
+          masterPlaylistUrl: 'https://example-cdn.com/transcoded1/index.m3u8'
         },
         {
           creativeId: 'ad456',
-          masterPlaylistUrl: 'https://example.com/transcoded2/index.m3u8'
+          masterPlaylistUrl: 'https://example-cdn.com/transcoded2/index.m3u8'
         }
       ];
 
@@ -124,8 +124,12 @@ describe('VMAP API', () => {
       const mediaTypeCount = (result.match(/application\/x-mpegURL/g) || [])
         .length;
 
-      expect(result).toContain('https://example.com/transcoded1/index.m3u8');
-      expect(result).toContain('https://example.com/transcoded2/index.m3u8');
+      expect(result).toContain(
+        'https://example-cdn.com/transcoded1/index.m3u8'
+      );
+      expect(result).toContain(
+        'https://example-cdn.com/transcoded2/index.m3u8'
+      );
       expect(mediaTypeCount).toBe(2);
     });
 
@@ -167,7 +171,7 @@ describe('VMAP API', () => {
       const assets: ManifestAsset[] = [
         {
           creativeId: 'ad123',
-          masterPlaylistUrl: 'https://example.com/transcoded/index.m3u8'
+          masterPlaylistUrl: 'https://example-cdn.com/transcoded/index.m3u8'
         }
       ];
 
@@ -179,7 +183,7 @@ describe('VMAP API', () => {
       );
       const mediaFileCount = (result.match(/<\/MediaFile>/g) || []).length;
 
-      expect(result).toContain('https://example.com/transcoded/index.m3u8');
+      expect(result).toContain('https://example-cdn.com/transcoded/index.m3u8');
       expect(mediaFileCount).toBe(1);
     });
 
@@ -227,7 +231,7 @@ describe('VMAP API', () => {
       const assets: ManifestAsset[] = [
         {
           creativeId: 'different-ad',
-          masterPlaylistUrl: 'https://example.com/transcoded/index.m3u8'
+          masterPlaylistUrl: 'https://example-cdn.com/transcoded/index.m3u8'
         }
       ];
 

@@ -11,7 +11,7 @@ const logFormat = format.printf(
 );
 
 export default createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: process.env.LOG_LEVEL ? process.env.LOG_LEVEL.toLowerCase() : 'info',
   format: format.combine(format.colorize(), format.timestamp(), logFormat),
   transports: [new transports.Console()]
 });
