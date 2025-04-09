@@ -1,4 +1,5 @@
 import { calculateAspectRatio } from './aspectratio';
+import { getHeaderValue } from './headers';
 import { createOutputUrl, createPackageUrl } from './string';
 import { timestampToSeconds } from './time';
 
@@ -62,5 +63,22 @@ describe('string utils', () => {
     const expected = 's3://test-bucket.osaas.io/test-folder/';
     const actual = createOutputUrl(bucket, folder);
     expect(actual).toBe(expected);
+  });
+});
+
+describe('header utils', () => {
+  it('gets the header value correctly', () => {
+    const headers = {
+      'x-test-header': 'test-value',
+      'x-another-header': ['value1', 'value2']
+    };
+    const result = getHeaderValue(headers, 'x-test-header');
+    expect(result).toBe('test-value');
+
+    const result2 = getHeaderValue(headers, 'x-another-header');
+    expect(result2).toBe('value1');
+
+    const result3 = getHeaderValue(headers, 'non-existent-header');
+    expect(result3).toBeUndefined();
   });
 });

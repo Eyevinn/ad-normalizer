@@ -6,6 +6,9 @@ import logger from '../util/logger';
 import { timestampToSeconds } from '../util/time';
 import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
 import { EncoreService } from '../encore/encoreservice';
+import { getHeaderValue } from '../util/headers';
+
+export const deviceUserAgentHeader = 'X-Device-User-Agent';
 
 export const ManifestAsset = Type.Object({
   creativeId: Type.String(),
@@ -160,7 +163,13 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
     },
     async (req, reply) => {
       const path = req.url;
-      const vastStr = await getVastXml(opts.adServerUrl, path);
+      const headers = req.headers;
+      const deviceUserAgent = getHeaderValue(headers, deviceUserAgentHeader);
+      const vastStr = await getVastXml(
+        opts.adServerUrl,
+        path,
+        deviceUserAgent ? { deviceUserAgentHeader: deviceUserAgent } : {}
+      );
       const vastXml = parseVast(vastStr);
       const response = await findMissingAndDispatchJobs(vastXml, opts);
       reply.send(response);
@@ -281,7 +290,8 @@ const findMissingAndDispatchJobs = async (
 
 const getVastXml = async (
   adServerUrl: string,
-  path: string
+  path: string,
+  headers: Record<string, string> = {}
 ): Promise<string> => {
   try {
     const url = new URL(adServerUrl);
@@ -294,6 +304,7 @@ const getVastXml = async (
     const response = await fetch(url, {
       method: 'GET',
       headers: {
+        ...headers,
         'Content-Type': 'application/xml'
       }
     });

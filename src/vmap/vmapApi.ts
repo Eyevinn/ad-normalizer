@@ -10,10 +10,12 @@ import {
   MediaFile,
   isArray,
   VastAd,
-  getKey
+  getKey,
+  deviceUserAgentHeader
 } from '../vast/vastApi';
 import logger from '../util/logger';
 import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
+import { getHeaderValue } from '../util/headers';
 
 interface VmapAdBreak {
   '@_breakId'?: string;
@@ -84,7 +86,13 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
     },
     async (req, reply) => {
       const path = req.url;
-      const vmapStr = await getVmapXml(opts.adServerUrl, path);
+      const headers = req.headers;
+      const deviceUserAgent = getHeaderValue(headers, deviceUserAgentHeader);
+      const vmapStr = await getVmapXml(
+        opts.adServerUrl,
+        path,
+        deviceUserAgent ? { deviceUserAgent: deviceUserAgent } : {}
+      );
       const vmapXml = parseVmap(vmapStr);
       const response = await findMissingAndDispatchJobs(
         vmapXml as VmapXmlObject,
@@ -197,9 +205,10 @@ const findMissingAndDispatchJobs = async (
   return { assets: found, xml: vmapXml };
 };
 
-const getVmapXml = async (
+export const getVmapXml = async (
   adServerUrl: string,
-  path: string
+  path: string,
+  headers: Record<string, string> = {}
 ): Promise<string> => {
   try {
     const url = new URL(adServerUrl);
@@ -211,9 +220,7 @@ const getVmapXml = async (
     logger.info(`Fetching VMAP request from ${url.toString()}`);
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/xml'
-      }
+      headers: { ...headers, 'Content-Type': 'application/xml' }
     });
     if (!response.ok) {
       throw new Error('Response from ad server was not OK');

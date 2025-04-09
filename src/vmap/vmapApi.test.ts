@@ -1,8 +1,10 @@
 import {
   ManifestAsset,
   getBestMediaFileFromVastAd,
-  VastAd
+  VastAd,
+  deviceUserAgentHeader
 } from '../vast/vastApi';
+import { getVmapXml } from './vmapApi';
 
 jest.mock('../util/logger');
 
@@ -660,6 +662,33 @@ describe('VMAP API', () => {
 
       const result = await getCreatives(vmapXml);
       expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('getVmapXml', () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockImplementation(
+      jest.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve('<vmap>Sample VMAP</vmap>')
+        } as Response)
+      ) as jest.Mock
+    );
+    it('should pass along user device header', async () => {
+      getVmapXml('http://ad-server-url/api', '/path/to/vmap?param=value', {
+        [deviceUserAgentHeader]: 'test-device'
+      });
+      const expectedUrl = new URL('http://ad-server-url/api');
+      expectedUrl.searchParams.append('param', 'value');
+      expectedUrl.searchParams.append('rt', 'vmap');
+      expect(fetchMock).toHaveBeenCalledWith(expectedUrl, {
+        headers: {
+          'Content-Type': 'application/xml',
+          'X-Device-User-Agent': 'test-device'
+        },
+        method: 'GET'
+      });
     });
   });
 });
