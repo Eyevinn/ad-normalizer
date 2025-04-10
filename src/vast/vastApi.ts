@@ -173,6 +173,7 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
       const vastXml = parseVast(vastStr);
       const response = await findMissingAndDispatchJobs(vastXml, opts);
       reply.send(response);
+      return reply;
     }
   );
 
@@ -218,6 +219,7 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
       const vastXml = req.body;
       const response = await findMissingAndDispatchJobs(vastXml, opts);
       reply.send(response);
+      return reply;
     }
   );
   next();

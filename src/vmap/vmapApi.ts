@@ -99,6 +99,7 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
         opts
       );
       reply.send(response);
+      return reply;
     }
   );
 
@@ -132,6 +133,7 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
       const vmapXml = req.body;
       const response = await findMissingAndDispatchJobs(vmapXml, opts);
       reply.send(response);
+      return reply;
     }
   );
   next();

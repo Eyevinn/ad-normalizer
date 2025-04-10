@@ -124,7 +124,7 @@ export default (opts: ApiOptions) => {
 
   api.register(compress, {
     encodings: ['gzip', 'deflate'],
-    removeContentLengthHeader: true,
+    removeContentLengthHeader: true
   });
 
   // register the swagger plugins, it will automagically do magic
