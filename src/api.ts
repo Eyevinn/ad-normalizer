@@ -1,5 +1,6 @@
 import fastify from 'fastify';
 import cors from '@fastify/cors';
+import compress from '@fastify/compress';
 import swagger from '@fastify/swagger';
 import swaggerUI from '@fastify/swagger-ui';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
@@ -121,6 +122,10 @@ export default (opts: ApiOptions) => {
   // register the cors plugin, configure it for better security
   api.register(cors);
 
+  api.register(compress, {
+    encodings: ['gzip', 'deflate']
+  });
+
   // register the swagger plugins, it will automagically do magic
   api.register(swagger, {
     swagger: {
@@ -167,7 +172,11 @@ export default (opts: ApiOptions) => {
           });
           return Promise.resolve(inProgressInfo);
         } else {
-          logger.error('Failed to start job', { asset });
+          logger.error('Failed to start job', {
+            asset: asset,
+            res: res.ok,
+            code: res.status
+          });
           return Promise.resolve(null);
         }
       });
