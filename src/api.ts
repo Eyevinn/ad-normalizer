@@ -123,7 +123,8 @@ export default (opts: ApiOptions) => {
   api.register(cors);
 
   api.register(compress, {
-    encodings: ['gzip', 'deflate']
+    encodings: ['gzip', 'deflate'],
+    removeContentLengthHeader: true,
   });
 
   // register the swagger plugins, it will automagically do magic
