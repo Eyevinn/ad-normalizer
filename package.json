@@ -25,6 +25,8 @@
     "@fastify/swagger": "^8.3.1",
     "@fastify/swagger-ui": "^1.5.0",
     "@fastify/type-provider-typebox": "^3.6.0",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.57.1",
     "@osaas/client-core": "^0.15.0",
     "@osaas/client-services": "^0.4.0",
     "@osaas/client-transcode": "^0.13.2",
