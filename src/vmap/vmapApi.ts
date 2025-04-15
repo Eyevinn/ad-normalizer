@@ -88,6 +88,15 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
       const path = req.url;
       const headers = req.headers;
       const deviceUserAgent = getHeaderValue(headers, deviceUserAgentHeader);
+      const traceparent = getHeaderValue(headers, 'traceparent');
+      if (traceparent) {
+        logger.info('traceparent', { traceparent });
+      }
+      const tracestate = getHeaderValue(headers, 'tracestate');
+      if (tracestate) {
+        logger.info('tracestate', { tracestate });
+      }
+
       const vmapStr = await getVmapXml(
         opts.adServerUrl,
         path,
