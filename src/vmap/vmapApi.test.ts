@@ -690,5 +690,20 @@ describe('VMAP API', () => {
         method: 'GET'
       });
     });
+    it('should pass along forwarded for header', async () => {
+      getVmapXml('http://ad-server-url/api', '/path/to/vmap?param=value', {
+        'X-Forwarded-For': 'test-ip'
+      });
+      const expectedUrl = new URL('http://ad-server-url/api');
+      expectedUrl.searchParams.append('param', 'value');
+      expectedUrl.searchParams.append('rt', 'vmap');
+      expect(fetchMock).toHaveBeenCalledWith(expectedUrl, {
+        headers: {
+          'Content-Type': 'application/xml',
+          'X-Forwarded-For': 'test-ip'
+        },
+        method: 'GET'
+      });
+    });
   });
 });

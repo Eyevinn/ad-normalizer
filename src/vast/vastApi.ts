@@ -164,12 +164,19 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
     async (req, reply) => {
       const path = req.url;
       const headers = req.headers;
+      let vastReqHeaders = {};
       const deviceUserAgent = getHeaderValue(headers, deviceUserAgentHeader);
-      const vastStr = await getVastXml(
-        opts.adServerUrl,
-        path,
-        deviceUserAgent ? { deviceUserAgentHeader: deviceUserAgent } : {}
-      );
+      const forwardedFor = getHeaderValue(headers, 'X-Forwarded-For');
+      if (deviceUserAgent) {
+        vastReqHeaders = {
+          ...vastReqHeaders,
+          [deviceUserAgentHeader]: deviceUserAgent
+        };
+      }
+      if (forwardedFor) {
+        vastReqHeaders = { ...vastReqHeaders, 'X-Forwarded-For': forwardedFor };
+      }
+      const vastStr = await getVastXml(opts.adServerUrl, path, vastReqHeaders);
       const vastXml = parseVast(vastStr);
       const response = await findMissingAndDispatchJobs(vastXml, opts);
       reply.send(response);

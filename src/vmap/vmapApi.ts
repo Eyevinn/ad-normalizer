@@ -88,11 +88,18 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
       const path = req.url;
       const headers = req.headers;
       const deviceUserAgent = getHeaderValue(headers, deviceUserAgentHeader);
-      const vmapStr = await getVmapXml(
-        opts.adServerUrl,
-        path,
-        deviceUserAgent ? { deviceUserAgent: deviceUserAgent } : {}
-      );
+      const forwardedFor = getHeaderValue(headers, 'X-Forwarded-For');
+      let vmapReqHeaders = {};
+      if (deviceUserAgent) {
+        vmapReqHeaders = {
+          ...vmapReqHeaders,
+          [deviceUserAgentHeader]: deviceUserAgent
+        };
+      }
+      if (forwardedFor) {
+        vmapReqHeaders = { ...vmapReqHeaders, 'X-Forwarded-For': forwardedFor };
+      }
+      const vmapStr = await getVmapXml(opts.adServerUrl, path, vmapReqHeaders);
       const vmapXml = parseVmap(vmapStr);
       const response = await findMissingAndDispatchJobs(
         vmapXml as VmapXmlObject,
