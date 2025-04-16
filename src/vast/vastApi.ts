@@ -308,7 +308,6 @@ const getVastXml = async (
     for (const [key, value] of params) {
       url.searchParams.append(key, value);
     }
-    url.searchParams.append('rt', 'vast');
     logger.info(`Fetching VAST request from ${url.toString()}`);
     const response = await fetch(url, {
       method: 'GET',
