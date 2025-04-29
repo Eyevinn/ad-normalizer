@@ -87,8 +87,8 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
     async (req, reply) => {
       const path = req.url;
       const headers = req.headers;
-      const deviceUserAgent = getHeaderValue(headers, deviceUserAgentHeader);
-      const forwardedFor = getHeaderValue(headers, 'X-Forwarded-For');
+      const deviceUserAgent = getHeaderValue(headers, deviceUserAgentHeader.toLowerCase());
+      const forwardedFor = getHeaderValue(headers, 'X-Forwarded-For'.toLowerCase());
       let vmapReqHeaders = {};
       if (deviceUserAgent) {
         logger.info('Device user agent header', { deviceUserAgent });
