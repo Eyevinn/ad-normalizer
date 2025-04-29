@@ -91,7 +91,6 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
       const forwardedFor = getHeaderValue(headers, 'X-Forwarded-For'.toLowerCase());
       let vmapReqHeaders = {};
       if (deviceUserAgent) {
-        logger.info('Device user agent header', { deviceUserAgent });
         vmapReqHeaders = {
           ...vmapReqHeaders,
           [deviceUserAgentHeader]: deviceUserAgent
@@ -100,7 +99,6 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
         logger.error('Missing device user agent header');
       }
       if (forwardedFor) {
-        logger.info('X-Forwarded-For header', { forwardedFor });
         vmapReqHeaders = { ...vmapReqHeaders, 'X-Forwarded-For': forwardedFor };
       } else {
         logger.error('Missing X-Forwarded-For header');

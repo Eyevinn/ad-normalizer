@@ -165,8 +165,8 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
       const path = req.url;
       const headers = req.headers;
       let vastReqHeaders = {};
-      const deviceUserAgent = getHeaderValue(headers, deviceUserAgentHeader);
-      const forwardedFor = getHeaderValue(headers, 'X-Forwarded-For');
+      const deviceUserAgent = getHeaderValue(headers, deviceUserAgentHeader.toLowerCase());
+      const forwardedFor = getHeaderValue(headers, 'X-Forwarded-For'.toLowerCase());
       if (deviceUserAgent) {
         vastReqHeaders = {
           ...vastReqHeaders,
