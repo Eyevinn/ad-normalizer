@@ -62,7 +62,8 @@ describe('EncoreClient', () => {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/hal+json',
-        'x-jwt': `Bearer ${serviceAccessToken}`
+        'x-jwt': `Bearer ${serviceAccessToken}`,
+        'User-Agent': 'eyevinn/ad-normalizer'
       },
       body: JSON.stringify(job)
     });
@@ -96,7 +97,8 @@ describe('EncoreClient', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Accept: 'application/hal+json'
+        Accept: 'application/hal+json',
+        'User-Agent': 'eyevinn/ad-normalizer'
       },
       body: JSON.stringify(job)
     });

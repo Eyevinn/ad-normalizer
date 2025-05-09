@@ -319,7 +319,8 @@ const getVastXml = async (
       method: 'GET',
       headers: {
         ...headers,
-        'Content-Type': 'application/xml'
+        'Content-Type': 'application/xml',
+        'User-Agent': 'eyevinn/ad-normalizer'
       }
     });
     if (!response.ok) {

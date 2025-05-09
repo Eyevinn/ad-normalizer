@@ -238,7 +238,11 @@ export const getVmapXml = async (
     logger.info(`Fetching VMAP request from ${url.toString()}`);
     const response = await fetch(url, {
       method: 'GET',
-      headers: { ...headers, 'Content-Type': 'application/xml' }
+      headers: {
+        ...headers,
+        'Content-Type': 'application/xml',
+        'User-Agent': 'eyevinn/ad-normalizer'
+      }
     });
     if (!response.ok) {
       throw new Error('Response from ad server was not OK');

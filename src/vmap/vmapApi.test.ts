@@ -685,7 +685,8 @@ describe('VMAP API', () => {
       expect(fetchMock).toHaveBeenCalledWith(expectedUrl, {
         headers: {
           'Content-Type': 'application/xml',
-          'X-Device-User-Agent': 'test-device'
+          'X-Device-User-Agent': 'test-device',
+          'User-Agent': 'eyevinn/ad-normalizer'
         },
         method: 'GET'
       });
@@ -700,7 +701,8 @@ describe('VMAP API', () => {
       expect(fetchMock).toHaveBeenCalledWith(expectedUrl, {
         headers: {
           'Content-Type': 'application/xml',
-          'X-Forwarded-For': 'test-ip'
+          'X-Forwarded-For': 'test-ip',
+          'User-Agent': 'eyevinn/ad-normalizer'
         },
         method: 'GET'
       });

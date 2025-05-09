@@ -23,7 +23,11 @@ export class EncoreClient {
       serviceAccessToken ? { 'x-jwt': `Bearer ${serviceAccessToken}` } : {};
     return fetch(`${this.url}/encoreJobs`, {
       method: 'POST',
-      headers: { ...contentHeaders, ...jwtHeader },
+      headers: {
+        ...contentHeaders,
+        ...jwtHeader,
+        'User-Agent': 'eyevinn/ad-normalizer'
+      },
       body: JSON.stringify(job)
     });
   }
