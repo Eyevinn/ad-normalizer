@@ -21,8 +21,8 @@ export class RedisClient {
       return;
     }
     logger.info('Connecting to Redis cluster', { url: this.url });
-    let urls = this.url.split(',');
-    let rootNodes = urls.map((url) => {
+    const urls = this.url.split(',');
+    const rootNodes = urls.map((url) => {
       return { url: url };
     });
     this.cluster = createCluster({
