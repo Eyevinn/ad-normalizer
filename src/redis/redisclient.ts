@@ -15,7 +15,7 @@ export class RedisClient {
   ) {}
 
   async connectCluster() {
-    console.log('Connecting to Redis cluster');
+    logger.info('Connecting to Redis cluster', { url: this.url });
     if (this.cluster != null) {
       logger.info('Redis cluster already connected');
       return;
@@ -34,9 +34,11 @@ export class RedisClient {
 
   async connect() {
     if (this.clusterMode) {
+      logger.info('Client is in cluster mode');
       await this.connectCluster();
       return;
     }
+    logger.info('Client is in standalone mode');
     if (this.client != null) {
       logger.info('Redis client already connected');
       return;
