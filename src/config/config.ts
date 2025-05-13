@@ -10,6 +10,7 @@ export interface AdNormalizerConfiguration {
   bucket: string;
   adServerUrl: string;
   redisUrl: string;
+  rediscluster: boolean;
   oscToken?: string;
   inFlightTtl?: number;
   keyField: string;
@@ -49,6 +50,7 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     throw new Error('REDIS_URL is required');
   }
   const redisUrl = process.env.REDIS_URL;
+  const redisCluster = process.env.REDIS_CLUSTER === 'true';
   if (!process.env.OUTPUT_BUCKET_URL) {
     throw new Error('OUTPUT_BUCKET_URL is required');
   }
@@ -83,6 +85,7 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     s3SecretKey: secretKey,
     adServerUrl: adServerUrl,
     redisUrl: redisUrl,
+    rediscluster: redisCluster,
     bucket: removeTrailingSlash(bucketPath),
     oscToken: oscToken,
     inFlightTtl: inFlightTtl ? parseInt(inFlightTtl) : null,

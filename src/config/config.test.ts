@@ -9,6 +9,7 @@ describe('config loading behavior', () => {
     process.env.S3_SECRET_KEY = 'secret';
     process.env.AD_SERVER_URL = 'http://adserver.com';
     process.env.REDIS_URL = 'http://redis.com';
+    process.env.REDIS_CLUSTER = 'true';
     process.env.OUTPUT_BUCKET_URL = 's3://ads/';
     process.env.OSC_ACCESS_TOKEN = 'token';
     process.env.KEY_FIELD = 'Url';
@@ -26,6 +27,7 @@ describe('config loading behavior', () => {
     expect(config.encoreUrl).toEqual(expectedEncoreUrl);
     expect(config.keyRegex).toEqual('[a-zA-Z]');
     expect(config.keyField).toEqual('url');
+    expect(config.rediscluster).toEqual(true);
     expect(config.encoreProfile).toEqual('test-profile');
     expect(config.jitPackaging).toEqual(true);
     expect(config.packagingQueueName).toEqual('ad-packaging');

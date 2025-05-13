@@ -70,7 +70,8 @@ export default (opts: ApiOptions) => {
 
   const redisclient = new RedisClient(
     config.redisUrl,
-    config.packagingQueueName
+    config.packagingQueueName,
+    config.rediscluster
   );
 
   redisclient.connect();
