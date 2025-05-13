@@ -1,6 +1,7 @@
 import { RedisClient } from './redisclient';
-import { createClient, RedisClientType } from 'redis';
+import { createClient, createCluster, RedisClientType } from 'redis';
 import logger from '../util/logger';
+import { create } from 'domain';
 
 // Define a type for our mocked Redis client
 type MockRedisClient = {
@@ -18,6 +19,13 @@ jest.mock('redis', () => ({
     disconnect: jest.fn(),
     get: jest.fn(),
     set: jest.fn()
+  })),
+  createCluster: jest.fn(() => ({
+    on: jest.fn().mockReturnThis(),
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    get: jest.fn(),
+    set: jest.fn()
   }))
 }));
 
@@ -25,6 +33,55 @@ jest.mock('../util/logger', () => ({
   info: jest.fn(),
   error: jest.fn()
 }));
+
+describe('Redis Cluster', () => {
+  let redisClient: RedisClient;
+  const mockUrl = 'redis://localhost:6379,redis://localhost:6380';
+  beforeEach(() => {
+    redisClient = new RedisClient(mockUrl, 'test-queue', true);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+  it('should connect to Redis cluster', async () => {
+    await redisClient.connect();
+    expect(createCluster).toHaveBeenCalledWith({
+      rootNodes: [
+        { url: 'redis://localhost:6379' },
+        { url: 'redis://localhost:6380' }
+      ]
+    });
+    expect(logger.info).toHaveBeenCalledWith('Connecting to Redis cluster', {
+      url: mockUrl
+    });
+  });
+  it('should connect to Redis cluster with only one url', async () => {
+    const confUrl = 'redis://cloudprovider.clustercfg.region.com:6379';
+    redisClient = new RedisClient(confUrl, 'test-queue', true);
+    await redisClient.connect();
+    expect(createCluster).toHaveBeenCalledWith({
+      rootNodes: [{ url: confUrl }]
+    });
+    expect(logger.info).toHaveBeenCalledWith('Connecting to Redis cluster', {
+      url: confUrl
+    });
+  });
+  it('should get a value from Redis cluster', async () => {
+    const mockKey = 'testKey';
+    const mockValue = 'testValue';
+    redisClient['cluster'] = {
+      get: jest.fn().mockResolvedValue(mockValue),
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      on: jest.fn()
+    } as unknown as ReturnType<typeof createCluster>;
+
+    const value = await redisClient.get(mockKey);
+    expect(redisClient['cluster']?.get).toHaveBeenCalledWith(mockKey);
+    expect(value).toBe(mockValue);
+  });
+});
 
 describe('RedisClient', () => {
   let redisClient: RedisClient;
