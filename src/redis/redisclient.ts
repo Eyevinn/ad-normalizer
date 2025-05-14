@@ -113,7 +113,9 @@ export class RedisClient {
 
   async delete(key: string): Promise<void> {
     await this.connect();
-    await this.client?.del(key);
+    this.clusterMode
+      ? await this.cluster?.del(key)
+      : await this.client?.del(key);
   }
 
   async saveTranscodeStatus(
@@ -132,9 +134,14 @@ export class RedisClient {
       return;
     }
     // Null check below needs to be handled way better
-    await this.client?.zAdd(this.packagingQueueName, {
-      score: Date.now(),
-      value: stringifiedJob
-    });
+    this.clusterMode
+      ? await this.cluster?.zAdd(this.packagingQueueName, {
+          score: Date.now(),
+          value: stringifiedJob
+        })
+      : await this.client?.zAdd(this.packagingQueueName, {
+          score: Date.now(),
+          value: stringifiedJob
+        });
   }
 }
