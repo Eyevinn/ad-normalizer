@@ -8,8 +8,13 @@ export const createPackageUrl = (
   outputFolder: string,
   baseName: string
 ): string => {
+  const parsedAssetServerUrl = new URL(assetServerUrl);
   return new URL(
-    PathUtils.join(outputFolder, baseName + '.m3u8'),
+    PathUtils.join(
+      parsedAssetServerUrl.pathname,
+      outputFolder,
+      baseName + '.m3u8'
+    ),
     assetServerUrl
   ).href;
 };
