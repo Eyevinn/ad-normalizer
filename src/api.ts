@@ -12,7 +12,6 @@ import getConfiguration from './config/config';
 import { DEFAULT_TTL, RedisClient } from './redis/redisclient';
 import logger from './util/logger';
 import { EncoreClient } from './encore/encoreclient';
-import { MinioClient } from './minio/minio';
 import { TranscodeInfo, TranscodeStatus } from './data/transcodeinfo';
 import { EncoreService } from './encore/encoreservice';
 import { PackagingService } from './packaging/packagingservice';
