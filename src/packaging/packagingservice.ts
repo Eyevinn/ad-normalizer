@@ -19,7 +19,7 @@ export class PackagingService {
   constructor(
     private redisClient: RedisClient,
     private encoreClient: EncoreClient,
-    private assetServerUrl: string,
+    private assetServerUrl: URL,
     private redisTtl: number
   ) {}
 
@@ -53,7 +53,7 @@ export class PackagingService {
     }
     const transcodeInfo = JSON.parse(job) as TranscodeInfo;
     const packageUrl = createPackageUrl(
-      this.assetServerUrl,
+      this.assetServerUrl.href,
       success.outputPath,
       'index'
     );

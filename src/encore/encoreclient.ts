@@ -5,7 +5,6 @@ import { Context } from '@osaas/client-core';
 export class EncoreClient {
   constructor(
     private url: string,
-    private callbackUrl: string,
     public profile: string,
     private oscToken?: string
   ) {}

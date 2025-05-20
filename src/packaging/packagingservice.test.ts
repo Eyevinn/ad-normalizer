@@ -26,7 +26,7 @@ describe('packaging service', () => {
     packagingService = new PackagingService(
       redisClient,
       encoreClient,
-      'http://asset-server-url',
+      new URL('http://asset-server-url'),
       1000
     );
   });

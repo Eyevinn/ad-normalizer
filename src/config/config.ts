@@ -3,10 +3,6 @@ import { removeTrailingSlash } from '../util/string';
 
 export interface AdNormalizerConfiguration {
   encoreUrl: string;
-  callbackListenerUrl: string;
-  s3Endpoint: string;
-  s3AccessKey: string;
-  s3SecretKey: string;
   bucket: string;
   adServerUrl: string;
   redisUrl: string;
@@ -20,7 +16,7 @@ export interface AdNormalizerConfiguration {
   packagingQueueName?: string;
   rootUrl: string;
   bucketUrl: URL;
-  assetServerUrl?: string;
+  assetServerUrl: URL;
 }
 
 let config: AdNormalizerConfiguration | null = null;
@@ -30,21 +26,13 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     throw new Error('ENCORE_URL is required');
   }
   const encoreUrl = new URL(removeTrailingSlash(process.env.ENCORE_URL));
-  if (!process.env.CALLBACK_LISTENER_URL) {
-    throw new Error('CALLBACK_LISTENER_URL is required');
+  if (!process.env.ASSET_SERVER_URL) {
+    throw new Error('ASSET_SERVER_URL is required');
   }
-  // Handle whether CALLBACK_LISTENER_URL contains /encoreCallback
-  // or not
-  const callbackListenerUrl = new URL(
-    '/encoreCallback',
-    process.env.CALLBACK_LISTENER_URL
+  const assetServerUrl = new URL(
+    removeTrailingSlash(process.env.ASSET_SERVER_URL)
   );
-  if (!process.env.S3_ENDPOINT) {
-    throw new Error('S3_ENDPOINT is required');
-  }
-  const endpoint = process.env.S3_ENDPOINT;
-  const accessKey = process.env.S3_ACCESS_KEY;
-  const secretKey = process.env.S3_SECRET_KEY;
+
   const adServerUrl = process.env.AD_SERVER_URL;
   if (!process.env.REDIS_URL) {
     throw new Error('REDIS_URL is required');
@@ -79,10 +67,6 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
 
   const configuration = {
     encoreUrl: removeTrailingSlash(encoreUrl.toString()),
-    callbackListenerUrl: callbackListenerUrl.toString(),
-    s3Endpoint: removeTrailingSlash(endpoint),
-    s3AccessKey: accessKey,
-    s3SecretKey: secretKey,
     adServerUrl: adServerUrl,
     redisUrl: redisUrl,
     rediscluster: redisCluster,
@@ -96,7 +80,7 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     packagingQueueName: packagingQueueName,
     rootUrl: rootUrl,
     bucketUrl: bucket,
-    assetServerUrl: process.env.ASSET_SERVER_URL
+    assetServerUrl: assetServerUrl
   } as AdNormalizerConfiguration;
 
   return configuration;

@@ -26,12 +26,7 @@ describe('EncoreClient', () => {
     jest
       .spyOn(ctx, 'getServiceAccessToken')
       .mockResolvedValue(serviceAccessToken);
-    encoreClient = new EncoreClient(
-      url,
-      callbackUrl,
-      'test-profle',
-      'my-token'
-    );
+    encoreClient = new EncoreClient(url, callbackUrl, 'test-profle');
   });
 
   afterEach(() => {
