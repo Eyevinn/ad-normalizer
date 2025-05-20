@@ -13,8 +13,8 @@ The image below illustrates a typical normalizer flow:
 
 ![Normalizer work flow](/images/normalizer_workflow.svg)
 
-
 ## API
+
 The service provides two main endpoints:
 
 ### VAST Endpoint
