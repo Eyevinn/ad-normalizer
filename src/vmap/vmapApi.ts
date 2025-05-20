@@ -16,6 +16,7 @@ import {
 import logger from '../util/logger';
 import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
 import { getHeaderValue } from '../util/headers';
+import { replaceSubDomain } from '../util/string';
 
 interface VmapAdBreak {
   '@_breakId'?: string;
@@ -230,10 +231,14 @@ export const getVmapXml = async (
   headers: Record<string, string> = {}
 ): Promise<string> => {
   try {
-    const url = new URL(adServerUrl);
+    let url = new URL(adServerUrl);
     const params = new URLSearchParams(path.split('?')[1]);
     for (const [key, value] of params) {
-      url.searchParams.append(key, value);
+      if (key == 'subDomain') {
+        url = replaceSubDomain(url, value);
+      } else {
+        url.searchParams.append(key, value);
+      }
     }
     logger.info(`Fetching VMAP request from ${url.toString()}`);
     const response = await fetch(url, {

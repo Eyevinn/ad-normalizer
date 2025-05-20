@@ -26,3 +26,14 @@ export const createOutputUrl = (bucket: URL, folder: string): string | null => {
     return null;
   }
 };
+
+export const replaceSubDomain = (url: URL, newSubDomain: string): URL => {
+  const hostParts = url.hostname.split('.');
+  if (hostParts.length > 2) {
+    hostParts[0] = newSubDomain;
+    url.hostname = hostParts.join('.');
+  } else {
+    url.hostname = newSubDomain + '.' + url.hostname;
+  }
+  return url;
+};

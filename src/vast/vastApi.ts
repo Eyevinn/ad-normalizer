@@ -7,6 +7,7 @@ import { timestampToSeconds } from '../util/time';
 import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
 import { EncoreService } from '../encore/encoreservice';
 import { getHeaderValue } from '../util/headers';
+import { replaceSubDomain } from '../util/string';
 
 export const deviceUserAgentHeader = 'X-Device-User-Agent';
 
@@ -309,10 +310,14 @@ const getVastXml = async (
   headers: Record<string, string> = {}
 ): Promise<string> => {
   try {
-    const url = new URL(adServerUrl);
+    let url = new URL(adServerUrl);
     const params = new URLSearchParams(path.split('?')[1]);
     for (const [key, value] of params) {
-      url.searchParams.append(key, value);
+      if (key == 'subDomain') {
+        url = replaceSubDomain(url, value);
+      } else {
+        url.searchParams.append(key, value);
+      }
     }
     logger.info(`Fetching VAST request from ${url.toString()}`);
     const response = await fetch(url, {

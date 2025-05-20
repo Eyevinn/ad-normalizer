@@ -1,4 +1,4 @@
-import { createPackageUrl } from './string';
+import { createPackageUrl, replaceSubDomain } from './string';
 
 describe('string utils', () => {
   it('can create a package url with asset server url', () => {
@@ -20,5 +20,12 @@ describe('string utils', () => {
     expect(createPackageUrl(assetServerUrl, outputFolder, baseName)).toEqual(
       expectedUrl
     );
+  });
+
+  it('can replace subdomain', () => {
+    const url = new URL('http://old-subdomain.example.com/path');
+    const newSubDomain = 'new-subdomain';
+    const expectedUrl = 'http://new-subdomain.example.com/path';
+    expect(replaceSubDomain(url, newSubDomain).href).toEqual(expectedUrl);
   });
 });

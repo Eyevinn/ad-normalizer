@@ -676,10 +676,34 @@ describe('VMAP API', () => {
       ) as jest.Mock
     );
     it('should pass along user device header', async () => {
-      getVmapXml('http://ad-server-url/api', '/path/to/vmap?param=value', {
-        [deviceUserAgentHeader]: 'test-device'
+      getVmapXml(
+        'http://domain1.ad-server-url/api',
+        '/path/to/vmap?param=value&subDomain=domain2',
+        {
+          [deviceUserAgentHeader]: 'test-device'
+        }
+      );
+      const expectedUrl = new URL('http://domain1.ad-server-url/api');
+      expectedUrl.searchParams.append('param', 'value');
+      expectedUrl.searchParams.append('rt', 'vmap');
+      expect(fetchMock).toHaveBeenCalledWith(expectedUrl, {
+        headers: {
+          'Content-Type': 'application/xml',
+          'X-Device-User-Agent': 'test-device',
+          'User-Agent': 'eyevinn/ad-normalizer'
+        },
+        method: 'GET'
       });
-      const expectedUrl = new URL('http://ad-server-url/api');
+    });
+    it('should replace subdomain if provided', async () => {
+      getVmapXml(
+        'http://domain1.ad-server-url/api',
+        '/path/to/vmap?param=value&subDomain=domain2',
+        {
+          [deviceUserAgentHeader]: 'test-device'
+        }
+      );
+      const expectedUrl = new URL('http://domain2.ad-server-url/api');
       expectedUrl.searchParams.append('param', 'value');
       expectedUrl.searchParams.append('rt', 'vmap');
       expect(fetchMock).toHaveBeenCalledWith(expectedUrl, {
