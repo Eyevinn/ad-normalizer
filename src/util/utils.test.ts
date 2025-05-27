@@ -1,4 +1,5 @@
-const crypto = require('crypto');
+// eslint-disable-next-line
+const crypto = require('crypto'); // required to do it this way for jest to mock it
 import { calculateAspectRatio } from './aspectratio';
 import { getHeaderValue } from './headers';
 import { createOutputUrl, createPackageUrl } from './string';
@@ -68,7 +69,7 @@ describe('string utils', () => {
 
     const bucket = new URL('s3://test-bucket.osaas.io');
     const folder = 'test-folder';
-    const expected = 's3://test-bucket.osaas.io/' + uuid + '/test-folder/';
+    const expected = 's3://test-bucket.osaas.io/test-folder/' + uuid + '/';
     const actual = createOutputUrl(bucket, folder);
     expect(actual).toBe(expected);
   });
