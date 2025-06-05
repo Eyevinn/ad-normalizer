@@ -398,42 +398,50 @@ const replaceMediaFiles = (
 ): string => {
   try {
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
-    const span = trace
+    const built = trace
       .getTracerProvider()
       .getTracer('vastApi')
-      .startSpan('VAST API Request');
-    span.addEvent('Parsing VAST XML for media file replacement');
+      .startActiveSpan('Replace Media Files in VAST', (span: Span) => {
+        span.addEvent('Parsing VAST XML for media file replacement');
 
-    const parsedVAST = parser.parse(vastXml);
-    span.addEvent('Parsed VAST XML successfully');
+        const parsedVAST = parser.parse(vastXml);
+        span.addEvent('Parsed VAST XML successfully');
 
-    if (parsedVAST.VAST.Ad) {
-      span.addEvent('Replacing media files in VAST Ad');
+        if (parsedVAST.VAST.Ad) {
+          span.addEvent('Replacing media files in VAST Ad');
 
-      const vastAds = Array.isArray(parsedVAST.VAST.Ad)
-        ? parsedVAST.VAST.Ad
-        : [parsedVAST.VAST.Ad];
+          const vastAds = Array.isArray(parsedVAST.VAST.Ad)
+            ? parsedVAST.VAST.Ad
+            : [parsedVAST.VAST.Ad];
 
-      parsedVAST.VAST.Ad = vastAds.reduce((acc: VastAd[], vastAd: VastAd) => {
-        const adId = getKey(keyField, keyRegex, vastAd);
-        const asset = assets.find((a) => a.creativeId === adId);
-        if (asset) {
-          const mediaFile = getBestMediaFileFromVastAd(vastAd);
-          mediaFile['#text'] = asset.masterPlaylistUrl;
-          mediaFile['@_type'] = 'application/x-mpegURL';
-          vastAd.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile =
-            mediaFile;
-          acc.push(vastAd);
+          parsedVAST.VAST.Ad = vastAds.reduce(
+            (acc: VastAd[], vastAd: VastAd) => {
+              const adId = getKey(keyField, keyRegex, vastAd);
+              const asset = assets.find((a) => a.creativeId === adId);
+              if (asset) {
+                const mediaFile = getBestMediaFileFromVastAd(vastAd);
+                mediaFile['#text'] = asset.masterPlaylistUrl;
+                mediaFile['@_type'] = 'application/x-mpegURL';
+                vastAd.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile =
+                  mediaFile;
+                acc.push(vastAd);
+              }
+              return acc;
+            },
+            []
+          );
+          span.addEvent('Replaced media files in VAST Ad');
         }
-        return acc;
-      }, []);
-      span.addEvent('Replaced media files in VAST Ad');
-    }
-    span.addEvent('Building XML from modified VAST');
+        span.addEvent('Building XML from modified VAST');
 
-    const builder = new XMLBuilder({ format: true, ignoreAttributes: false });
-    span.end();
-    return builder.build(parsedVAST);
+        const builder = new XMLBuilder({
+          format: true,
+          ignoreAttributes: false
+        });
+        span.end();
+        return builder.build(parsedVAST);
+      });
+    return built;
   } catch (error) {
     logger.error('Failed to replace media files in VAST', error);
     return vastXml;
