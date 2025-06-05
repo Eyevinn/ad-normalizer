@@ -184,28 +184,32 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
       if (forwardedFor) {
         vastReqHeaders = { ...vastReqHeaders, 'X-Forwarded-For': forwardedFor };
       }
-      const span = trace
+      const response = await trace
         .getTracerProvider()
         .getTracer('GET /api/v1/vast')
-        .startSpan('VAST API Request');
-      span.addEvent('Fetching VAST request from ad server');
+        .startActiveSpan('VAST API Request', async (span: Span) => {
+          span.addEvent('Fetching VAST request from ad server');
 
-      const vastStr = await getVastXml(opts.adServerUrl, path, vastReqHeaders);
+          const vastStr = await getVastXml(
+            opts.adServerUrl,
+            path,
+            vastReqHeaders
+          );
 
-      span.addEvent('Fetched VAST request from ad server');
-      span.addEvent('Parsing VAST XML');
+          span.addEvent('Fetched VAST request from ad server');
+          span.addEvent('Parsing VAST XML');
 
-      const vastXml = parseVast(vastStr);
-      span.addEvent('Parsed VAST XML successfully');
+          const vastXml = parseVast(vastStr);
+          span.addEvent('Parsed VAST XML successfully');
 
-      const response = await findMissingAndDispatchJobs(vastXml, opts);
+          const response = await findMissingAndDispatchJobs(vastXml, opts);
 
-      span.addEvent('Found missing assets and dispatched jobs');
-      span.addEvent('Preparing response');
+          span.addEvent('Found missing assets and dispatched jobs');
+          span.end();
+          return response;
+        });
 
       reply.send(response);
-      span.addEvent('Response prepared successfully');
-      span.end;
 
       return reply;
     }
