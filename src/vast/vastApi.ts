@@ -184,13 +184,12 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
       if (forwardedFor) {
         vastReqHeaders = { ...vastReqHeaders, 'X-Forwarded-For': forwardedFor };
       }
-      let span = trace.getActiveSpan();
+      const span = trace
+        .getTracerProvider()
+        .getTracer('vastApi')
+        .startSpan('VAST API Request');
       if (!span) {
         logger.debug('No active span found, creating a new one');
-        span = trace
-          .getTracerProvider()
-          .getTracer('vastApi')
-          .startSpan('VAST API Request');
       }
       if (span) {
         span.addEvent('Fetching VAST request from ad server');
@@ -400,7 +399,10 @@ const replaceMediaFiles = (
 ): string => {
   try {
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
-    let span = trace.getActiveSpan();
+    const span = trace
+      .getTracerProvider()
+      .getTracer('vastApi')
+      .startSpan('VAST API Request');
     if (span) {
       span.addEvent('Parsing VAST XML for media file replacement');
     }
