@@ -184,10 +184,28 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
       if (forwardedFor) {
         vastReqHeaders = { ...vastReqHeaders, 'X-Forwarded-For': forwardedFor };
       }
+      let span = trace.getActiveSpan();
+      if (span) {
+        span.addEvent('Fetching VAST request from ad server');
+      }
       const vastStr = await getVastXml(opts.adServerUrl, path, vastReqHeaders);
+      if (span) {
+        span.addEvent('Fetched VAST request from ad server');
+        span.addEvent('Parsing VAST XML');
+      }
       const vastXml = parseVast(vastStr);
+      if (span) {
+        span.addEvent('Parsed VAST XML successfully');
+      }
       const response = await findMissingAndDispatchJobs(vastXml, opts);
+      if (span) {
+        span.addEvent('Found missing assets and dispatched jobs');
+        span.addEvent('Preparing response');
+      }
       reply.send(response);
+      if (span) {
+        span.addEvent('Response prepared successfully');
+      }
       return reply;
     }
   );
@@ -320,6 +338,7 @@ const getVastXml = async (
         url.searchParams.append(key, value);
       }
     }
+
     logger.info(`Fetching VAST request from ${url.toString()}`);
     const response = await fetch(url, {
       method: 'GET',
