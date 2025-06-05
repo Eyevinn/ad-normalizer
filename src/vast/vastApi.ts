@@ -185,6 +185,13 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
         vastReqHeaders = { ...vastReqHeaders, 'X-Forwarded-For': forwardedFor };
       }
       let span = trace.getActiveSpan();
+      if (!span) {
+        logger.debug('No active span found, creating a new one');
+        span = trace
+          .getTracerProvider()
+          .getTracer('vastApi')
+          .startSpan('VAST API Request');
+      }
       if (span) {
         span.addEvent('Fetching VAST request from ad server');
       }
