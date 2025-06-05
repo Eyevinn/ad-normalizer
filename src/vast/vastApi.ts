@@ -186,32 +186,27 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
       }
       const span = trace
         .getTracerProvider()
-        .getTracer('vastApi')
+        .getTracer('GET /api/v1/vast')
         .startSpan('VAST API Request');
-      if (!span) {
-        logger.debug('No active span found, creating a new one');
-      }
-      if (span) {
-        span.addEvent('Fetching VAST request from ad server');
-      }
+      span.addEvent('Fetching VAST request from ad server');
+
       const vastStr = await getVastXml(opts.adServerUrl, path, vastReqHeaders);
-      if (span) {
-        span.addEvent('Fetched VAST request from ad server');
-        span.addEvent('Parsing VAST XML');
-      }
+
+      span.addEvent('Fetched VAST request from ad server');
+      span.addEvent('Parsing VAST XML');
+
       const vastXml = parseVast(vastStr);
-      if (span) {
-        span.addEvent('Parsed VAST XML successfully');
-      }
+      span.addEvent('Parsed VAST XML successfully');
+
       const response = await findMissingAndDispatchJobs(vastXml, opts);
-      if (span) {
-        span.addEvent('Found missing assets and dispatched jobs');
-        span.addEvent('Preparing response');
-      }
+
+      span.addEvent('Found missing assets and dispatched jobs');
+      span.addEvent('Preparing response');
+
       reply.send(response);
-      if (span) {
-        span.addEvent('Response prepared successfully');
-      }
+      span.addEvent('Response prepared successfully');
+      span.end;
+
       return reply;
     }
   );
@@ -403,17 +398,14 @@ const replaceMediaFiles = (
       .getTracerProvider()
       .getTracer('vastApi')
       .startSpan('VAST API Request');
-    if (span) {
-      span.addEvent('Parsing VAST XML for media file replacement');
-    }
+    span.addEvent('Parsing VAST XML for media file replacement');
+
     const parsedVAST = parser.parse(vastXml);
-    if (span) {
-      span.addEvent('Parsed VAST XML successfully');
-    }
+    span.addEvent('Parsed VAST XML successfully');
+
     if (parsedVAST.VAST.Ad) {
-      if (span) {
-        span.addEvent('Replacing media files in VAST Ad');
-      }
+      span.addEvent('Replacing media files in VAST Ad');
+
       const vastAds = Array.isArray(parsedVAST.VAST.Ad)
         ? parsedVAST.VAST.Ad
         : [parsedVAST.VAST.Ad];
@@ -431,14 +423,12 @@ const replaceMediaFiles = (
         }
         return acc;
       }, []);
-      if (span) {
-        span.addEvent('Replaced media files in VAST Ad');
-      }
+      span.addEvent('Replaced media files in VAST Ad');
     }
-    if (span) {
-      span.addEvent('Building XML from modified VAST');
-    }
+    span.addEvent('Building XML from modified VAST');
+
     const builder = new XMLBuilder({ format: true, ignoreAttributes: false });
+    span.end();
     return builder.build(parsedVAST);
   } catch (error) {
     logger.error('Failed to replace media files in VAST', error);
