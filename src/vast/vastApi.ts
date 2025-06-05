@@ -8,6 +8,7 @@ import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
 import { EncoreService } from '../encore/encoreservice';
 import { getHeaderValue } from '../util/headers';
 import { replaceSubDomain } from '../util/string';
+import { trace, Span } from '@opentelemetry/api';
 
 export const deviceUserAgentHeader = 'X-Device-User-Agent';
 
@@ -373,8 +374,18 @@ const replaceMediaFiles = (
 ): string => {
   try {
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
+    let span = trace.getActiveSpan();
+    if (span) {
+      span.addEvent('Parsing VAST XML for media file replacement');
+    }
     const parsedVAST = parser.parse(vastXml);
+    if (span) {
+      span.addEvent('Parsed VAST XML successfully');
+    }
     if (parsedVAST.VAST.Ad) {
+      if (span) {
+        span.addEvent('Replacing media files in VAST Ad');
+      }
       const vastAds = Array.isArray(parsedVAST.VAST.Ad)
         ? parsedVAST.VAST.Ad
         : [parsedVAST.VAST.Ad];
@@ -392,8 +403,13 @@ const replaceMediaFiles = (
         }
         return acc;
       }, []);
+      if (span) {
+        span.addEvent('Replaced media files in VAST Ad');
+      }
     }
-
+    if (span) {
+      span.addEvent('Building XML from modified VAST');
+    }
     const builder = new XMLBuilder({ format: true, ignoreAttributes: false });
     return builder.build(parsedVAST);
   } catch (error) {
