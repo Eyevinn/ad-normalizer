@@ -186,9 +186,9 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
       }
       const response = await trace
         .getTracerProvider()
-        .getTracer('GET /api/v1/vast')
+        .getTracer('/api/v1/vast')
         .startActiveSpan('VAST API Request', async (span: Span) => {
-          span.addEvent('Fetching VAST request from ad server');
+          span.addEvent('Fetching VAST from ad server');
 
           const vastStr = await getVastXml(
             opts.adServerUrl,
@@ -196,7 +196,7 @@ export const vastApi: FastifyPluginCallback<AdApiOptions> = (
             vastReqHeaders
           );
 
-          span.addEvent('Fetched VAST request from ad server');
+          span.addEvent('Fetched VAST from ad server');
           span.addEvent('Parsing VAST XML');
 
           const vastXml = parseVast(vastStr);
@@ -400,7 +400,7 @@ const replaceMediaFiles = (
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
     const built = trace
       .getTracerProvider()
-      .getTracer('vastApi')
+      .getTracer('/api/v1/vast')
       .startActiveSpan('Replace Media Files in VAST', (span: Span) => {
         span.addEvent('Parsing VAST XML for media file replacement');
 

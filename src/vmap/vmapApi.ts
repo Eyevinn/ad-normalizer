@@ -17,6 +17,7 @@ import logger from '../util/logger';
 import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
 import { getHeaderValue } from '../util/headers';
 import { replaceSubDomain } from '../util/string';
+import { trace, Span } from '@opentelemetry/api';
 
 interface VmapAdBreak {
   '@_breakId'?: string;
@@ -110,12 +111,27 @@ export const vmapApi: FastifyPluginCallback<AdApiOptions> = (
       } else {
         logger.error('Missing X-Forwarded-For header');
       }
-      const vmapStr = await getVmapXml(opts.adServerUrl, path, vmapReqHeaders);
-      const vmapXml = parseVmap(vmapStr);
-      const response = await findMissingAndDispatchJobs(
-        vmapXml as VmapXmlObject,
-        opts
-      );
+      const response = await trace
+        .getTracerProvider()
+        .getTracer('/api/v1/vmap')
+        .startActiveSpan('VMAP API Request', async (span: Span) => {
+          span.addEvent('Fetching VMAP from ad server');
+          const vmapStr = await getVmapXml(
+            opts.adServerUrl,
+            path,
+            vmapReqHeaders
+          );
+          span.addEvent('VMAP fetched from ad server');
+          span.addEvent('Parsing VMAP XML');
+          const vmapXml = parseVmap(vmapStr);
+          span.addEvent('VMAP XML parsed successfully');
+          const response = await findMissingAndDispatchJobs(
+            vmapXml as VmapXmlObject,
+            opts
+          );
+          span.addEvent('Found missing creatives and dispatched jobs');
+          return response;
+        });
       reply.send(response);
       return reply;
     }
@@ -302,38 +318,49 @@ export const replaceMediaFiles = (
 ): string => {
   try {
     const parser = new XMLParser({ ignoreAttributes: false, isArray: isArray });
-    const parsedVMAP = parser.parse(vmapXml);
-    if (parsedVMAP['vmap:VMAP']['vmap:AdBreak']) {
-      for (const adBreak of parsedVMAP['vmap:VMAP']['vmap:AdBreak']) {
-        if (adBreak['vmap:AdSource']?.['vmap:VASTAdData'].VAST.Ad) {
-          const vastAds = Array.isArray(
-            adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
-          )
-            ? adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
-            : [adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad];
+    const built = trace
+      .getTracerProvider()
+      .getTracer('/api/v1/vmap')
+      .startActiveSpan('Replace Media Files in VMAP', (span: Span) => {
+        const parsedVMAP = parser.parse(vmapXml);
+        if (parsedVMAP['vmap:VMAP']['vmap:AdBreak']) {
+          span.addEvent('Replacing media files in VMAP');
+          for (const adBreak of parsedVMAP['vmap:VMAP']['vmap:AdBreak']) {
+            if (adBreak['vmap:AdSource']?.['vmap:VASTAdData'].VAST.Ad) {
+              const vastAds = Array.isArray(
+                adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
+              )
+                ? adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad
+                : [adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad];
 
-          adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad = vastAds.reduce(
-            (acc: VastAd[], vastAd: VastAd) => {
-              const adId = getKey(keyField, keyRegex, vastAd);
-              const asset = assets.find((a) => a.creativeId === adId);
-              if (asset) {
-                const mediaFile: MediaFile = getBestMediaFileFromVastAd(vastAd);
-                mediaFile['#text'] = asset.masterPlaylistUrl;
-                mediaFile['@_type'] = 'application/x-mpegURL';
-                vastAd.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile =
-                  mediaFile;
-                acc.push(vastAd);
-              }
-              return acc;
-            },
-            []
-          );
+              adBreak['vmap:AdSource']['vmap:VASTAdData'].VAST.Ad =
+                vastAds.reduce((acc: VastAd[], vastAd: VastAd) => {
+                  const adId = getKey(keyField, keyRegex, vastAd);
+                  const asset = assets.find((a) => a.creativeId === adId);
+                  if (asset) {
+                    const mediaFile: MediaFile =
+                      getBestMediaFileFromVastAd(vastAd);
+                    mediaFile['#text'] = asset.masterPlaylistUrl;
+                    mediaFile['@_type'] = 'application/x-mpegURL';
+                    vastAd.InLine.Creatives.Creative.Linear.MediaFiles.MediaFile =
+                      mediaFile;
+                    acc.push(vastAd);
+                  }
+                  return acc;
+                }, []);
+            }
+          }
         }
-      }
-    }
-
-    const builder = new XMLBuilder({ format: true, ignoreAttributes: false });
-    return builder.build(parsedVMAP);
+        span.addEvent('Replaced media files in VMAP');
+        span.addEvent('Building VMAP XML');
+        const builder = new XMLBuilder({
+          format: true,
+          ignoreAttributes: false
+        });
+        span.end();
+        return builder.build(parsedVMAP);
+      });
+    return built;
   } catch (error) {
     console.error('Failed to replace media files in VMAP', error);
     return vmapXml;
