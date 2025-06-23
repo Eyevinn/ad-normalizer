@@ -1,18 +1,17 @@
-ARG NODE_IMAGE=node:23-alpine
+ARG DENO_IMAGE=denoland/deno:2.3.6
 
-FROM ${NODE_IMAGE}
+FROM ${DENO_IMAGE}
 ENV NODE_ENV=production
 EXPOSE 8000
 RUN mkdir /app
 COPY ./docker-entrypoint.sh /app/entrypoint.sh
-RUN chown node:node /app
+RUN chown deno:deno /app
 RUN chmod +x /app/entrypoint.sh
-USER node
+USER deno
 WORKDIR /app
-COPY --chown=node:node ["package.json", "package-lock.json*", "tsconfig*.json", "./"]
-COPY --chown=node:node ["src", "./src"]
-# Delete prepare script to avoid errors from husky
-RUN npm pkg delete scripts.prepare \
-    && npm ci --omit=dev
+COPY --chown=deno:deno ["package.json", "package-lock.json*", "tsconfig*.json", "./"]
+COPY --chown=deno:deno ["src", "./src"]
 ENTRYPOINT [ "/app/entrypoint.sh" ]
-CMD [ "npm", "run", "start" ]
+RUN deno install
+RUN deno cache src/server.ts
+CMD [ "run", "--allow-net", "src/server.ts" ]
