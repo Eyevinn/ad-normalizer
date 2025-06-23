@@ -1,0 +1,6 @@
+github.com/Eyevinn/VMAP v0.3.0 h1:AsbEGyaEZPhg08RUA8sB2eLvTp2h7hk7KWK3ahs3roI=
+github.com/Eyevinn/VMAP v0.3.0/go.mod h1:5n80N+ssgJzWJW6wb74c/Ayzo1pLRwMOptYmZ1TIThk=
+github.com/valkey-io/valkey-go v1.0.61 h1:uz7gxSs4dKqLfaa8xKFo8wHaCWYSCD3lMhVL0OJifZA=
+github.com/valkey-io/valkey-go v1.0.61/go.mod h1:bHmwjIEOrGq/ubOJfh5uMRs7Xj6mV3mQ/ZXUbmqpjqY=
+golang.org/x/sys v0.31.0 h1:ioabZlmFYtWhL+TRYpcnNlLwhyxaM9kWTDEmfnprqik=
+golang.org/x/sys v0.31.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
