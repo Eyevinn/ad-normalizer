@@ -12,12 +12,12 @@ export type EncoreJob = {
 };
 
 export enum EncoreStatus {
-  NEW = 'NEW',
-  IN_PROGRESS = 'IN_PROGRESS',
-  QUEUED = 'QUEUED',
-  SUCCESSFUL = 'SUCCESSFUL',
-  FAILED = 'FAILED',
-  CANCELLED = 'CANCELLED'
+  NEW = "NEW",
+  IN_PROGRESS = "IN_PROGRESS",
+  QUEUED = "QUEUED",
+  SUCCESSFUL = "SUCCESSFUL",
+  FAILED = "FAILED",
+  CANCELLED = "CANCELLED",
 }
 
 export type Output = {
@@ -52,7 +52,7 @@ export type InputFile = {
 };
 
 export enum InputType {
-  AUDIO = 'Audio',
-  VIDEO = 'Video',
-  AUDIO_VIDEO = 'AudioVideo'
+  AUDIO = "Audio",
+  VIDEO = "Video",
+  AUDIO_VIDEO = "AudioVideo",
 }

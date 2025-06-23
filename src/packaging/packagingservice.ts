@@ -1,9 +1,9 @@
-import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
-import { EncoreClient } from '../encore/encoreclient';
-import { EncoreJob } from '../encore/types';
-import { RedisClient } from '../redis/redisclient';
-import logger from '../util/logger';
-import { createPackageUrl } from '../util/string';
+import { TranscodeInfo, TranscodeStatus } from "../data/transcodeinfo.ts";
+import { EncoreClient } from "../encore/encoreclient.ts";
+import { EncoreJob } from "../encore/types.ts";
+import { RedisClient } from "../redis/redisclient.ts";
+import logger from "../util/logger.ts";
+import { createPackageUrl } from "../util/string.ts";
 
 export type PackagingSuccessBody = {
   url: string;
@@ -20,7 +20,7 @@ export class PackagingService {
     private redisClient: RedisClient,
     private encoreClient: EncoreClient,
     private assetServerUrl: URL,
-    private redisTtl: number
+    private redisTtl: number,
   ) {}
 
   async handlePackagingFailed(fail: PackagingFailureBody): Promise<void> {
@@ -30,7 +30,7 @@ export class PackagingService {
       if (encoreJob.externalId) {
         const job = await this.redisClient.get(encoreJob.externalId);
         if (!job) {
-          logger.error('Job not found in Redis', encoreJob.externalId);
+          logger.error("Job not found in Redis", encoreJob.externalId);
           return;
         }
 
@@ -40,29 +40,29 @@ export class PackagingService {
   }
   async handlePackagingCompleted(success: PackagingSuccessBody): Promise<void> {
     const encoreJob: EncoreJob = await this.encoreClient.getEncoreJob(
-      success.jobId
+      success.jobId,
     );
     if (!encoreJob.externalId) {
-      logger.error('Encore job has no external ID', encoreJob.id);
+      logger.error("Encore job has no external ID", encoreJob.id);
       return;
     }
     const job = await this.redisClient.get(encoreJob.externalId);
     if (!job) {
-      logger.error('Job not found in Redis', success.jobId);
+      logger.error("Job not found in Redis", success.jobId);
       return;
     }
     const transcodeInfo = JSON.parse(job) as TranscodeInfo;
     const packageUrl = createPackageUrl(
       this.assetServerUrl.href,
       success.outputPath,
-      'index'
+      "index",
     );
     transcodeInfo.url = packageUrl;
     transcodeInfo.status = TranscodeStatus.COMPLETED;
     return this.redisClient.saveTranscodeStatus(
       encoreJob.externalId,
       transcodeInfo,
-      0 // Remove TTL in redis
+      0, // Remove TTL in redis
     );
   }
 }

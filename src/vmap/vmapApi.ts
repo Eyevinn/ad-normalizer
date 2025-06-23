@@ -1,23 +1,23 @@
 import { FastifyPluginCallback } from 'fastify';
 import { Static } from '@sinclair/typebox';
 import fastifyAcceptsSerializer from '@fastify/accepts-serializer';
-import { XMLParser, XMLBuilder } from 'fast-xml-parser';
+import { XMLBuilder, XMLParser } from 'npm:fast-xml-parser';
 import {
-  ManifestAsset,
   AdApiOptions,
-  ManifestResponse,
+  deviceUserAgentHeader,
   getBestMediaFileFromVastAd,
-  MediaFile,
-  isArray,
-  VastAd,
   getKey,
-  deviceUserAgentHeader
-} from '../vast/vastApi';
-import logger from '../util/logger';
-import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
-import { getHeaderValue } from '../util/headers';
-import { replaceSubDomain } from '../util/string';
-import { trace, Span } from '@opentelemetry/api';
+  isArray,
+  ManifestAsset,
+  ManifestResponse,
+  MediaFile,
+  VastAd
+} from '../vast/vastApi.ts';
+import logger from '../util/logger.ts';
+import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo.ts';
+import { getHeaderValue } from '../util/headers.ts';
+import { replaceSubDomain } from '../util/string.ts';
+import { Span, trace } from '@opentelemetry/api';
 
 interface VmapAdBreak {
   '@_breakId'?: string;
@@ -214,6 +214,7 @@ const findMissingAndDispatchJobs = async (
 
   logger.debug('Partitioned creatives', { found, missing });
 
+  // deno-lint-ignore require-await
   missing.forEach(async (creative) => {
     if (opts.onMissingAsset) {
       opts
@@ -249,13 +250,13 @@ export const getVmapXml = async (
   try {
     let url = new URL(adServerUrl);
     const params = new URLSearchParams(path.split('?')[1]);
-    for (const [key, value] of params) {
+    params.forEach((value, key) => {
       if (key == 'subDomain') {
         url = replaceSubDomain(url, value);
       } else {
         url.searchParams.append(key, value);
       }
-    }
+    });
     logger.info(`Fetching VMAP request from ${url.toString()}`);
     const response = await fetch(url, {
       method: 'GET',
@@ -275,6 +276,7 @@ export const getVmapXml = async (
   }
 };
 
+// deno-lint-ignore require-await
 export const getCreatives = async (
   vmapXml: VmapXmlObject,
   keyRegex: RegExp,

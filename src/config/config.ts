@@ -1,5 +1,6 @@
-import path from 'path';
-import { removeTrailingSlash } from '../util/string';
+import path from "node:path";
+import { removeTrailingSlash } from "../util/string.ts";
+import process from "node:process";
 
 export interface AdNormalizerConfiguration {
   encoreUrl: string;
@@ -23,31 +24,30 @@ let config: AdNormalizerConfiguration | null = null;
 
 const loadConfiguration = (): AdNormalizerConfiguration => {
   if (!process.env.ENCORE_URL) {
-    throw new Error('ENCORE_URL is required');
+    throw new Error("ENCORE_URL is required");
   }
   const encoreUrl = new URL(removeTrailingSlash(process.env.ENCORE_URL));
   if (!process.env.ASSET_SERVER_URL) {
-    throw new Error('ASSET_SERVER_URL is required');
+    throw new Error("ASSET_SERVER_URL is required");
   }
   const assetServerUrl = new URL(
-    removeTrailingSlash(process.env.ASSET_SERVER_URL)
+    removeTrailingSlash(process.env.ASSET_SERVER_URL),
   );
 
   const adServerUrl = process.env.AD_SERVER_URL;
   if (!process.env.REDIS_URL) {
-    throw new Error('REDIS_URL is required');
+    throw new Error("REDIS_URL is required");
   }
   const redisUrl = process.env.REDIS_URL;
-  const redisCluster = process.env.REDIS_CLUSTER === 'true';
+  const redisCluster = process.env.REDIS_CLUSTER === "true";
   if (!process.env.OUTPUT_BUCKET_URL) {
-    throw new Error('OUTPUT_BUCKET_URL is required');
+    throw new Error("OUTPUT_BUCKET_URL is required");
   }
   const bucketRaw = removeTrailingSlash(process.env.OUTPUT_BUCKET_URL);
   const bucket = new URL(bucketRaw);
-  const bucketPath =
-    bucket.pathname === ''
-      ? path.join(bucket.hostname, bucket.pathname)
-      : bucket.hostname;
+  const bucketPath = bucket.pathname === ""
+    ? path.join(bucket.hostname, bucket.pathname)
+    : bucket.hostname;
   const oscToken = process.env.OSC_ACCESS_TOKEN;
   const inFlightTtl = process.env.IN_FLIGHT_TTL;
 
@@ -55,13 +55,13 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
   const keyRegex = process.env.KEY_REGEX;
 
   const encoreProfile = process.env.ENCORE_PROFILE;
-  const jitPackaging = process.env.JIT_PACKAGING === 'true';
+  const jitPackaging = process.env.JIT_PACKAGING === "true";
   const packagingQueueName = process.env.PACKAGING_QUEUE;
 
   const rootUrl = process.env.ROOT_URL;
   if (!rootUrl) {
     throw new Error(
-      'ROOT_URL is required, otherwise encore callbacks will not work'
+      "ROOT_URL is required, otherwise encore callbacks will not work",
     );
   }
 
@@ -73,14 +73,14 @@ const loadConfiguration = (): AdNormalizerConfiguration => {
     bucket: removeTrailingSlash(bucketPath),
     oscToken: oscToken,
     inFlightTtl: inFlightTtl ? parseInt(inFlightTtl) : null,
-    keyField: keyField ? keyField.toLowerCase() : 'UniversalAdId'.toLowerCase(),
-    keyRegex: keyRegex ? keyRegex : '[^a-zA-Z0-9]',
-    encoreProfile: encoreProfile ? encoreProfile : 'program',
+    keyField: keyField ? keyField.toLowerCase() : "UniversalAdId".toLowerCase(),
+    keyRegex: keyRegex ? keyRegex : "[^a-zA-Z0-9]",
+    encoreProfile: encoreProfile ? encoreProfile : "program",
     jitPackaging: jitPackaging,
     packagingQueueName: packagingQueueName,
     rootUrl: rootUrl,
     bucketUrl: bucket,
-    assetServerUrl: assetServerUrl
+    assetServerUrl: assetServerUrl,
   } as AdNormalizerConfiguration;
 
   return configuration;

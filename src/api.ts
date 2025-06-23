@@ -1,26 +1,26 @@
-import fastify from 'fastify';
-import cors from '@fastify/cors';
-import compress from '@fastify/compress';
-import swagger from '@fastify/swagger';
-import swaggerUI from '@fastify/swagger-ui';
-import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
-import { Static, Type } from '@sinclair/typebox';
-import { FastifyPluginCallback } from 'fastify';
-import { ManifestAsset, vastApi } from './vast/vastApi';
-import { vmapApi } from './vmap/vmapApi';
-import getConfiguration from './config/config';
-import { DEFAULT_TTL, RedisClient } from './redis/redisclient';
-import logger from './util/logger';
-import { EncoreClient } from './encore/encoreclient';
-import { TranscodeInfo, TranscodeStatus } from './data/transcodeinfo';
-import { EncoreService } from './encore/encoreservice';
-import { PackagingService } from './packaging/packagingservice';
-import { encoreCallbackApi } from './encore/encorecallbackapi';
-import { packagingCallbackApi } from './packaging/packagingcallbackapi';
-import { EncoreJob } from './encore/types';
+import fastify from "fastify";
+import cors from "@fastify/cors";
+import compress from "@fastify/compress";
+import swagger from "@fastify/swagger";
+import swaggerUI from "@fastify/swagger-ui";
+import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
+import { Static, Type } from "@sinclair/typebox";
+import { FastifyPluginCallback } from "fastify";
+import { ManifestAsset, vastApi } from "./vast/vastApi.ts";
+import { vmapApi } from "./vmap/vmapApi.ts";
+import getConfiguration from "./config/config.ts";
+import { DEFAULT_TTL, RedisClient } from "./redis/redisclient.ts";
+import logger from "./util/logger.ts";
+import { EncoreClient } from "./encore/encoreclient.ts";
+import { TranscodeInfo, TranscodeStatus } from "./data/transcodeinfo.ts";
+import { EncoreService } from "./encore/encoreservice.ts";
+import { PackagingService } from "./packaging/packagingservice.ts";
+import { encoreCallbackApi } from "./encore/encorecallbackapi.ts";
+import { packagingCallbackApi } from "./packaging/packagingcallbackapi.ts";
+import { EncoreJob } from "./encore/types.ts";
 
 const HelloWorld = Type.String({
-  status: 'HEALTHY'
+  status: "HEALTHY",
 });
 
 export interface HealthcheckOptions {
@@ -30,21 +30,21 @@ export interface HealthcheckOptions {
 const healthcheck: FastifyPluginCallback<HealthcheckOptions> = (
   fastify,
   opts,
-  next
+  next,
 ) => {
   fastify.get<{ Reply: Static<typeof HelloWorld> }>(
-    '/',
+    "/",
     {
       schema: {
-        description: 'Health check',
+        description: "Health check",
         response: {
-          200: HelloWorld
-        }
-      }
+          200: HelloWorld,
+        },
+      },
     },
     async (_, reply) => {
-      reply.send('Hello, world! I am ' + opts.title);
-    }
+      reply.send("Hello, world! I am " + opts.title);
+    },
   );
   next();
 };
@@ -54,36 +54,36 @@ export interface ApiOptions {
 }
 
 export default (opts: ApiOptions) => {
-  logger.info('starting server');
+  logger.info("starting server");
   const config = getConfiguration();
 
   if (!config.oscToken) {
     logger.info(
-      "No service access token provided. If you're running the app outside of OSC, you won't be able to access the API."
+      "No service access token provided. If you're running the app outside of OSC, you won't be able to access the API.",
     );
   } else {
     logger.info(
-      'Service access token provided. You should be able to access the API.'
+      "Service access token provided. You should be able to access the API.",
     );
   }
 
   const redisclient = new RedisClient(
     config.redisUrl,
     config.packagingQueueName,
-    config.rediscluster
+    config.rediscluster,
   );
 
   redisclient.connect();
 
   const saveToRedis = (key: string, value: string, ttl: number) => {
-    logger.info('Saving to Redis', { key, value });
+    logger.info("Saving to Redis", { key, value });
     redisclient.set(key, value, ttl);
   };
 
   const encoreClient = new EncoreClient(
     config.encoreUrl,
     config.encoreProfile,
-    config.oscToken
+    config.oscToken,
   );
 
   const encoreService = new EncoreService(
@@ -94,25 +94,25 @@ export default (opts: ApiOptions) => {
     config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL,
     config.rootUrl,
     config.encoreUrl,
-    config.bucketUrl
+    config.bucketUrl,
   );
 
   const packagingService = new PackagingService(
     redisclient,
     encoreClient,
     config.assetServerUrl,
-    config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
+    config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL,
   );
 
   const api = fastify({
-    ignoreTrailingSlash: true
+    ignoreTrailingSlash: true,
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   // register the cors plugin, configure it for better security
   api.register(cors);
 
   api.register(compress, {
-    encodings: ['gzip', 'deflate']
+    encodings: ["gzip", "deflate"],
   });
 
   // register the swagger plugins, it will automagically do magic
@@ -120,13 +120,13 @@ export default (opts: ApiOptions) => {
     swagger: {
       info: {
         title: opts.title,
-        description: 'hello',
-        version: 'v1'
-      }
-    }
+        description: "hello",
+        version: "v1",
+      },
+    },
   });
   api.register(swaggerUI, {
-    routePrefix: '/docs'
+    routePrefix: "/docs",
   });
 
   api.register(healthcheck, { title: opts.title });
@@ -136,80 +136,80 @@ export default (opts: ApiOptions) => {
     adServerUrl: config.adServerUrl,
     assetServerUrl: config.assetServerUrl.href,
     keyField: config.keyField,
-    keyRegex: new RegExp(config.keyRegex, 'g'),
+    keyRegex: new RegExp(config.keyRegex, "g"),
     encoreService: encoreService,
     lookUpAsset: async (mediaFile: string) =>
       redisclient.getTranscodeStatus(mediaFile),
     onMissingAsset: async (asset: ManifestAsset) => {
       const inProgressInfo: TranscodeInfo = {
-        url: '',
-        aspectRatio: '',
+        url: "",
+        aspectRatio: "",
         framerates: [],
-        status: TranscodeStatus.IN_PROGRESS
+        status: TranscodeStatus.IN_PROGRESS,
       };
       return encoreService.createEncoreJob(asset).then((res: Response) => {
         if (res.ok) {
           redisclient.saveTranscodeStatus(
             asset.creativeId,
             inProgressInfo,
-            config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
+            config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL,
           );
           res.json().then((data: EncoreJob) => {
-            logger.info('Encore job created', { jobId: data.id });
+            logger.info("Encore job created", { jobId: data.id });
           });
           return Promise.resolve(inProgressInfo);
         } else {
-          logger.error('Failed to start job', {
+          logger.error("Failed to start job", {
             asset: asset,
             res: res.ok,
-            code: res.status
+            code: res.status,
           });
           return Promise.resolve(null);
         }
       });
-    }
+    },
   });
 
   api.register(vmapApi, {
     adServerUrl: config.adServerUrl,
     assetServerUrl: config.assetServerUrl.href,
     keyField: config.keyField,
-    keyRegex: new RegExp(config.keyRegex, 'g'),
+    keyRegex: new RegExp(config.keyRegex, "g"),
     encoreService: encoreService,
     lookUpAsset: async (mediaFile: string) =>
       redisclient.getTranscodeStatus(mediaFile),
     onMissingAsset: async (asset: ManifestAsset) => {
       const inProgressInfo: TranscodeInfo = {
-        url: '',
-        aspectRatio: '',
+        url: "",
+        aspectRatio: "",
         framerates: [],
-        status: TranscodeStatus.IN_PROGRESS
+        status: TranscodeStatus.IN_PROGRESS,
       };
       return encoreService.createEncoreJob(asset).then((res: Response) => {
         if (res.ok) {
           redisclient.saveTranscodeStatus(
             asset.creativeId,
             inProgressInfo,
-            config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL
+            config.inFlightTtl ? config.inFlightTtl : DEFAULT_TTL,
           );
           res.json().then((data: EncoreJob) => {
-            logger.info('Encore job created', { jobId: data.id });
+            logger.info("Encore job created", { jobId: data.id });
           });
           return Promise.resolve(inProgressInfo);
         } else {
-          logger.error('Failed to start job', { asset });
+          logger.error("Failed to start job", { asset });
           return Promise.resolve(null);
         }
       });
-    }
+    },
   });
 
   api.register(encoreCallbackApi, {
-    encoreService: encoreService
+    encoreService: encoreService,
   });
 
   api.register(packagingCallbackApi, {
-    packagingService: packagingService
+    packagingService: packagingService,
   });
 
   return api;

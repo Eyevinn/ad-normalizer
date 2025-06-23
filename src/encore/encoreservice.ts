@@ -1,15 +1,15 @@
 import {
   JobProgress,
   TranscodeInfo,
-  TranscodeStatus
-} from '../data/transcodeinfo';
-import { RedisClient } from '../redis/redisclient';
-import { EncoreClient } from './encoreclient';
-import logger from '../util/logger';
-import { EncoreJob, EncoreStatus, InputType, VideoStream } from './types';
-import { calculateAspectRatio } from '../util/aspectratio';
-import { ManifestAsset } from '../vast/vastApi';
-import { createOutputUrl, createPackageUrl } from '../util/string';
+  TranscodeStatus,
+} from "../data/transcodeinfo.ts";
+import { RedisClient } from "../redis/redisclient.ts";
+import { EncoreClient } from "./encoreclient.ts";
+import logger from "../util/logger.ts";
+import { EncoreJob, EncoreStatus, InputType, VideoStream } from "./types.ts";
+import { calculateAspectRatio } from "../util/aspectratio.ts";
+import { ManifestAsset } from "../vast/vastApi.ts";
+import { createOutputUrl, createPackageUrl } from "../util/string.ts";
 export class EncoreService {
   constructor(
     private client: EncoreClient,
@@ -19,46 +19,47 @@ export class EncoreService {
     private redisTtl: number,
     private rootUrl: string,
     private encoreUrl: string,
-    private outputBucket: URL
+    private outputBucket: URL,
   ) {}
 
+  // deno-lint-ignore require-await
   async createEncoreJob(creative: ManifestAsset): Promise<Response> {
     const outputFolder = createOutputUrl(
       this.outputBucket,
-      creative.creativeId
+      creative.creativeId,
     );
     if (!outputFolder) {
-      logger.error('Error creating output URL', {
+      logger.error("Error creating output URL", {
         outputBucket: this.outputBucket,
-        creativeId: creative.creativeId
+        creativeId: creative.creativeId,
       });
-      throw new Error('Error creating output URL');
+      throw new Error("Error creating output URL");
     }
     const job: EncoreJob = {
       externalId: creative.creativeId,
       profile: this.client.profile,
       outputFolder: outputFolder,
       baseName: creative.creativeId,
-      progressCallbackUri: this.rootUrl + '/encoreCallback', // Should figure out how to set this for the configured server
+      progressCallbackUri: this.rootUrl + "/encoreCallback", // Should figure out how to set this for the configured server
       inputs: [
         {
           uri: creative.masterPlaylistUrl,
           seekTo: 0,
           copyTs: true,
-          type: InputType.AUDIO_VIDEO
-        }
-      ]
+          type: InputType.AUDIO_VIDEO,
+        },
+      ],
     };
     return this.client.createEncoreJob(job);
   }
 
   async handleCallback(jobProgress: JobProgress): Promise<void> {
     switch (jobProgress.status) {
-      case 'SUCCESSFUL':
+      case "SUCCESSFUL":
         return this.handleTranscodeCompleted(jobProgress);
-      case 'FAILED':
+      case "FAILED":
         return this.handleTranscodeFailed(jobProgress);
-      case 'IN_PROGRESS':
+      case "IN_PROGRESS":
         return this.handleTranscodeInProgress(jobProgress);
       default:
         logger.info("Job status doesn't match any known status", jobProgress);
@@ -72,15 +73,15 @@ export class EncoreService {
       this.redisClient.saveTranscodeStatus(
         jobProgress.externalId,
         transcodeInfo,
-        this.jitPackaging ? 0 : this.redisTtl // Persist if JIT packaging
+        this.jitPackaging ? 0 : this.redisTtl, // Persist if JIT packaging
       );
       if (!this.jitPackaging) {
         const packagingQueueMessage = {
           jobId: jobProgress.jobId,
-          url: `${this.encoreUrl}/encoreJobs/${jobProgress.jobId}`
+          url: `${this.encoreUrl}/encoreJobs/${jobProgress.jobId}`,
         };
         this.redisClient.enqueuePackagingJob(
-          JSON.stringify(packagingQueueMessage)
+          JSON.stringify(packagingQueueMessage),
         );
       }
     });
@@ -92,7 +93,7 @@ export class EncoreService {
 
   async handleTranscodeInProgress(jobProgress: JobProgress): Promise<void> {
     // No-op for now
-    logger.info('Transcoding progress updated', { jobProgress });
+    logger.info("Transcoding progress updated", { jobProgress });
     return Promise.resolve();
   }
 
@@ -105,27 +106,27 @@ export class EncoreService {
             ? [...videoStreams, ...output.videoStreams]
             : videoStreams;
         },
-        []
+        [],
       )[0];
       const aspectRatio = calculateAspectRatio(
         firstVideoStream?.width || 1920,
-        firstVideoStream?.height || 1080
+        firstVideoStream?.height || 1080,
       ); // fallback to 16:9
       return {
         url: this.jitPackaging
           ? createPackageUrl(
-              this.assetServerUrl,
-              job.outputFolder,
-              job.baseName
-            )
-          : '', // If packaging is not JIT, we shouldn't set URL here
+            this.assetServerUrl,
+            job.outputFolder,
+            job.baseName,
+          )
+          : "", // If packaging is not JIT, we shouldn't set URL here
         aspectRatio: aspectRatio,
         framerates: this.getFrameRates(job),
-        status: jobStatus
+        status: jobStatus,
       };
     } catch (e) {
-      logger.error('Error creating transcode info', e);
-      throw new Error('Error creating transcode info');
+      logger.error("Error creating transcode info", e);
+      throw new Error("Error creating transcode info");
     }
   }
 
@@ -151,19 +152,18 @@ export class EncoreService {
   }
 
   getFrameRates(job: EncoreJob): number[] {
-    const allRates =
-      job.output?.reduce((frameRates: number[], output) => {
-        const videoStreams = output.videoStreams || [];
-        const rates = videoStreams.map((stream) =>
-          this.parseFrameRate(stream.frameRate)
-        );
-        return [...frameRates, ...rates];
-      }, []) || [];
+    const allRates = job.output?.reduce((frameRates: number[], output) => {
+      const videoStreams = output.videoStreams || [];
+      const rates = videoStreams.map((stream) =>
+        this.parseFrameRate(stream.frameRate)
+      );
+      return [...frameRates, ...rates];
+    }, []) || [];
     return Array.from(new Set(allRates));
   }
 
   parseFrameRate(frameRate: string): number {
-    const [numerator, denominator] = frameRate.split('/');
+    const [numerator, denominator] = frameRate.split("/");
     return parseInt(numerator) / parseInt(denominator);
   }
 

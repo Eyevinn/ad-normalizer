@@ -1,6 +1,6 @@
-import { FastifyPluginCallback } from 'fastify';
-import { JobProgress } from '../data/transcodeinfo';
-import { EncoreService } from './encoreservice';
+import { FastifyPluginCallback } from "fastify";
+import { JobProgress } from "../data/transcodeinfo.ts";
+import { EncoreService } from "./encoreservice.ts";
 
 export interface EncoreCallbackOptions {
   encoreService: EncoreService;
@@ -9,15 +9,15 @@ export interface EncoreCallbackOptions {
 export const encoreCallbackApi: FastifyPluginCallback<EncoreCallbackOptions> = (
   fastify,
   opts,
-  next
+  next,
 ) => {
   fastify.post<{ Body: JobProgress }>(
-    '/encoreCallback',
+    "/encoreCallback",
     async (request, reply) => {
       const job = request.body;
       await opts.encoreService.handleCallback(job);
       reply.send();
-    }
+    },
   );
   next();
 };

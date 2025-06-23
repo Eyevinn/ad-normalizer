@@ -1,14 +1,14 @@
 import { FastifyPluginCallback } from 'fastify';
 import { Static, Type } from '@sinclair/typebox';
 import fastifyAcceptsSerializer from '@fastify/accepts-serializer';
-import { XMLParser, XMLBuilder } from 'fast-xml-parser';
-import logger from '../util/logger';
-import { timestampToSeconds } from '../util/time';
-import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo';
-import { EncoreService } from '../encore/encoreservice';
-import { getHeaderValue } from '../util/headers';
-import { replaceSubDomain } from '../util/string';
-import { trace, Span } from '@opentelemetry/api';
+import { XMLBuilder, XMLParser } from 'npm:fast-xml-parser';
+import logger from '../util/logger.ts';
+import { timestampToSeconds } from '../util/time.ts';
+import { TranscodeInfo, TranscodeStatus } from '../data/transcodeinfo.ts';
+import { EncoreService } from '../encore/encoreservice.ts';
+import { getHeaderValue } from '../util/headers.ts';
+import { replaceSubDomain } from '../util/string.ts';
+import { Span, trace } from '@opentelemetry/api';
 
 export const deviceUserAgentHeader = 'X-Device-User-Agent';
 
@@ -304,6 +304,7 @@ const findMissingAndDispatchJobs = async (
   logger.debug('Partitioned creatives', { found, missing });
   logger.debug('Received creatives', { creatives });
   logger.debug('Received VAST request');
+  // deno-lint-ignore require-await
   missing.forEach(async (creative) => {
     if (opts.onMissingAsset) {
       opts
@@ -336,13 +337,13 @@ const getVastXml = async (
   try {
     let url = new URL(adServerUrl);
     const params = new URLSearchParams(path.split('?')[1]);
-    for (const [key, value] of params) {
+    params.forEach((value, key) => {
       if (key == 'subDomain') {
         url = replaceSubDomain(url, value);
       } else {
         url.searchParams.append(key, value);
       }
-    }
+    });
 
     logger.info(`Fetching VAST request from ${url.toString()}`);
     const response = await fetch(url, {

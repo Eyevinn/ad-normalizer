@@ -6,12 +6,12 @@ export type TranscodeInfo = {
 };
 
 export enum TranscodeStatus {
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-  IN_PROGRESS = 'IN_PROGRESS',
-  TRANSCODING = 'TRANSCODING',
-  PACKAGING = 'PACKAGING',
-  UNKNOWN = 'UNKNOWN'
+  COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
+  IN_PROGRESS = "IN_PROGRESS",
+  TRANSCODING = "TRANSCODING",
+  PACKAGING = "PACKAGING",
+  UNKNOWN = "UNKNOWN",
 }
 
 export type JobProgress = {
@@ -23,17 +23,17 @@ export type JobProgress = {
 
 // TODO: Refactor to populate a lot of stuff here
 export const JobProgressToTranscodeStatus = (
-  job: JobProgress
+  job: JobProgress,
 ): TranscodeInfo => {
   const info = {} as TranscodeInfo;
   switch (job.status) {
-    case 'SUCCESSFUL':
+    case "SUCCESSFUL":
       info.status = TranscodeStatus.COMPLETED;
       break;
-    case 'FAILED':
+    case "FAILED":
       info.status = TranscodeStatus.FAILED;
       break;
-    case 'IN_PROGRESS':
+    case "IN_PROGRESS":
       info.status = TranscodeStatus.IN_PROGRESS;
       break;
     default:
