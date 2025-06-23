@@ -14,4 +14,4 @@ COPY --chown=deno:deno ["src", "./src"]
 ENTRYPOINT [ "/app/entrypoint.sh" ]
 RUN deno install
 RUN deno cache src/server.ts
-CMD [ "run", "--allow-net", "src/server.ts" ]
+CMD [ "deno","run", "--allow-net","--allow-env","--allow-sys","src/server.ts" ]
