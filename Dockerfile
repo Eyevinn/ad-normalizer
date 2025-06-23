@@ -1,4 +1,4 @@
-ARG DENO_IMAGE=denoland/deno:2.3.6
+ARG DENO_IMAGE=denoland/deno:alpine-2.3.6
 
 FROM ${DENO_IMAGE}
 ENV NODE_ENV=production
