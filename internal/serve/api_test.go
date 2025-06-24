@@ -33,11 +33,17 @@ func (s *StoreStub) Set(key string, value string, ttl ...int) error {
 }
 
 type EncoreHandlerStub struct {
+	calls int
+}
+
+func (e *EncoreHandlerStub) reset() {
+	e.calls = 0
 }
 
 // TODO: refactor from AI slop
 func (e *EncoreHandlerStub) CreateJob(creative *structure.ManifestAsset) (structure.EncoreJob, error) {
 	newJob := structure.EncoreJob{}
+	e.calls += 1
 	return newJob, nil
 }
 
@@ -53,6 +59,7 @@ func TestMain(m *testing.M) {
 
 	testServer = setupTestServer()
 	defer testServer.Close()
+	encoreHandler = &EncoreHandlerStub{}
 	adserverUrl, _ := url.Parse(testServer.URL)
 	assetServerUrl, _ := url.Parse("https://asset-server.example.com")
 	apiConf := config.AdNormalizerConfig{
@@ -108,6 +115,9 @@ func TestReplaceVast(t *testing.T) {
 	is.Equal(mediaFile.Text, "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8")
 	is.Equal(mediaFile.Width, 718)
 	is.Equal(mediaFile.Height, 404)
+
+	is.Equal(encoreHandler.calls, 1)
+	encoreHandler.reset()
 }
 
 func TestReplaceVmap(t *testing.T) {
@@ -129,17 +139,18 @@ func setupTestServer() *httptest.Server {
 	vmapData, _ := os.ReadFile("../test_data/testVmap.xml")
 	return httptest.NewServer(http.HandlerFunc(
 		func(res http.ResponseWriter, req *http.Request) {
-			if req.URL.Path == "/vast" {
+			switch req.URL.Path {
+			case "/vast":
 				time.Sleep(time.Millisecond * 10)
 				res.Header().Set("Content-Type", "application/xml")
 				res.WriteHeader(200)
 				_, _ = res.Write(vastData)
-			} else if req.URL.Path == "/vmap" {
+			case "/vmap":
 				time.Sleep(time.Millisecond * 10)
 				res.Header().Set("Content-Type", "application/xml")
 				res.WriteHeader(200)
 				_, _ = res.Write(vmapData)
-			} else {
+			default:
 				res.WriteHeader(404)
 			}
 		}))
