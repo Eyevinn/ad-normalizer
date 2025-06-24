@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"context"
 	"log/slog"
 	"net/http"
@@ -18,7 +19,7 @@ import (
 )
 
 func main() {
-
+	// TODO: Telemetry
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
@@ -33,10 +34,11 @@ func main() {
 	apiMux.HandleFunc("/vmap", api.HandleVmap)
 	apiMux.HandleFunc("/vast", api.HandleVast)
 
+	apiMuxChain := setupMiddleWare(apiMux, "api")
 	mainmux := http.NewServeMux()
 
 	mainmux.HandleFunc("/ping", healthCheck)
-	mainmux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMux))
+	mainmux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMuxChain))
 
 	server := &http.Server{
 		Addr:    ":8080",
@@ -100,7 +102,7 @@ func recovery(next http.Handler) http.HandlerFunc {
 }
 
 func setupMiddleWare(mainHandler http.Handler, name string) http.Handler {
-	compressorMiddleware, err := gzhttp.NewWrapper(gzhttp.MinSize(2000), gzhttp.LevelBestSpeed)
+	compressorMiddleware, err := gzhttp.NewWrapper(gzhttp.MinSize(2000), gzhttp.CompressionLevel(gzip.BestSpeed))
 	if err != nil {
 		panic(err)
 	}

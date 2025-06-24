@@ -1,3 +1,5 @@
+github.com/CarlLindqvist/xmltokenizer v0.0.10 h1:pdp+yJZTOijVnGR6oeuqecXY9zIt7O28A5JXbL6Yp00=
+github.com/CarlLindqvist/xmltokenizer v0.0.10/go.mod h1:OlBoGMMzCOY2cnz7NLSuBQjlVRYYbarlqbFelQf14XM=
 github.com/Eyevinn/VMAP v0.3.0 h1:AsbEGyaEZPhg08RUA8sB2eLvTp2h7hk7KWK3ahs3roI=
 github.com/Eyevinn/VMAP v0.3.0/go.mod h1:5n80N+ssgJzWJW6wb74c/Ayzo1pLRwMOptYmZ1TIThk=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
