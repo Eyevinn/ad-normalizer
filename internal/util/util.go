@@ -71,6 +71,7 @@ func ReplaceMediaFiles(
 			newAd.InLine.Creatives[0].Linear.MediaFiles = []vmap.MediaFile{
 				newMediaFile,
 			}
+			newAds = append(newAds, newAd)
 		}
 	}
 	vast.Ad = newAds

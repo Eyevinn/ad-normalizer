@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Eyevinn/ad-normalizer/internal/config"
+	"github.com/Eyevinn/ad-normalizer/internal/encore"
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
 	"github.com/Eyevinn/ad-normalizer/internal/serve"
 	"github.com/Eyevinn/ad-normalizer/internal/store"
@@ -118,11 +119,16 @@ func setupApi(config *config.AdNormalizerConfig) (*serve.API, error) {
 	}
 	valkeyStore, err := store.NewValkeyStore(valkeyConnectionUrl)
 
+	client := &http.Client{}
+	encoreHandler := &encore.HttpEncoreHandler{
+		Client: client,
+	}
+
 	if err != nil {
 		logger.Error("Failed to create Valkey store", slog.String("error", err.Error()))
 		return nil, err
 	}
 	logger.Debug("Valkey store created successfully")
-	api := serve.NewAPI(valkeyStore, config.AdServerUrl, config.EncoreUrl, config.AssetServerUrl)
+	api := serve.NewAPI(valkeyStore, *config, encoreHandler, client)
 	return api, nil
 }

@@ -2,11 +2,15 @@ package serve
 
 import (
 	"compress/gzip"
+	"encoding/xml"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"path"
 
 	"github.com/Eyevinn/VMAP/vmap"
+	"github.com/Eyevinn/ad-normalizer/internal/config"
 	"github.com/Eyevinn/ad-normalizer/internal/encore"
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
 	"github.com/Eyevinn/ad-normalizer/internal/store"
@@ -19,21 +23,28 @@ const forwardedForHeader = "X-Forwarded-For"
 
 type API struct {
 	valkeyStore    store.Store
-	adServerUrl    string
-	encoreUrl      string
-	assetServerUrl string
+	adServerUrl    url.URL
+	assetServerUrl url.URL
 	keyField       string
 	keyRegex       string
-	EncoreHandler  *encore.EncoreHandler
+	encoreHandler  encore.EncoreHandler
 	client         *http.Client
 }
 
-func NewAPI(valkeyStore store.Store, adServerUrl, encoreUrl, assetServerUrl string) *API {
+func NewAPI(
+	valkeyStore store.Store,
+	config config.AdNormalizerConfig,
+	encoreHandler encore.EncoreHandler,
+	client *http.Client,
+) *API {
 	return &API{
 		valkeyStore:    valkeyStore,
-		adServerUrl:    adServerUrl,
-		encoreUrl:      encoreUrl,
-		assetServerUrl: assetServerUrl,
+		adServerUrl:    config.AdServerUrl,
+		assetServerUrl: config.AssetServerUrl,
+		keyField:       config.KeyField,
+		keyRegex:       config.KeyRegex,
+		encoreHandler:  encoreHandler,
+		client:         client,
 	}
 }
 
@@ -49,21 +60,31 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 	// Implement the logic to handle the VAST request
 	// This will likely involve fetching data from valkeyStore and formatting it as needed
 	vastData := vmap.VAST{}
-	vastReq, err := http.NewRequest("GET", api.adServerUrl, nil) // TODO: Handle the error properly
+
+	newUrl := api.adServerUrl
+	newUrl.Path = path.Join(api.adServerUrl.Path, r.URL.Path)
+	vastReq, err := http.NewRequest(
+		"GET",
+		newUrl.String(),
+		nil,
+	) // TODO: Handle the error properly
 	if err != nil {
 		logger.Error("failed to create VAST request", slog.String("error", err.Error()))
-		return vastData, err
+		http.Error(w, "Failed to create VAST request", http.StatusInternalServerError)
+		return
 	}
 	setupHeaders(r, vastReq)
 	response, err := api.client.Do(vastReq)
 	if err != nil {
 		logger.Error("failed to fetch VAST data", slog.String("error", err.Error()))
-		return vastData, err
+		http.Error(w, "Failed to fetch VAST data", http.StatusInternalServerError)
+		return
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		logger.Error("failed to fetch VAST data", slog.Int("statusCode", response.StatusCode))
-		return vastData, err
+		http.Error(w, "Failed to fetch VAST data", response.StatusCode)
+		return
 	}
 
 	var responseBody []byte
@@ -72,22 +93,33 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 		responseBody, err = decompressGzip(response.Body)
 		if err != nil {
 			logger.Error("failed to decompress gzip response", slog.String("error", err.Error()))
-			return vastData, err
+			http.Error(w, "Failed to decompress gzip response", http.StatusInternalServerError)
+			return
 		}
 	} else {
 		responseBody, err = io.ReadAll(response.Body)
 		if err != nil {
 			logger.Error("failed to read response body", slog.String("error", err.Error()))
-			return vastData, err
+			http.Error(w, "Failed to read response body", http.StatusInternalServerError)
+			return
 		}
 	}
 	vastData, err = vmap.DecodeVast(responseBody)
 	if err != nil {
 		logger.Error("failed to decode VAST data", slog.String("error", err.Error()))
-		return vastData, err
+		http.Error(w, "Failed to decode VAST data", http.StatusInternalServerError)
+		return
 	}
+	api.findMissingAndDispatchJobs(&vastData)
+	serializedVast, err := xml.Marshal(vastData)
+	if err != nil {
+		logger.Error("failed to marshal VAST data", slog.String("error", err.Error()))
+		http.Error(w, "Failed to marshal VAST data", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/xml")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("VAST response"))
+	_, _ = w.Write(serializedVast)
 }
 
 func (api *API) findMissingAndDispatchJobs(
@@ -101,7 +133,7 @@ func (api *API) findMissingAndDispatchJobs(
 	// Since the creatives won't be used in this response anyway
 	for _, creative := range missing {
 		go func(creative *structure.ManifestAsset) {
-			encoreJob, err := api.EncoreHandler.CreateJob(creative)
+			encoreJob, err := api.encoreHandler.CreateJob(creative)
 			if err != nil {
 				logger.Error("failed to create encore job", slog.String("error", err.Error()), slog.String("creativeId", creative.CreativeId))
 				return
@@ -110,6 +142,13 @@ func (api *API) findMissingAndDispatchJobs(
 
 		}(&creative)
 	}
+	// TODO: Error handling
+	_ = util.ReplaceMediaFiles(
+		vast,
+		found,
+		api.keyRegex,
+		api.keyField,
+	)
 }
 
 func (api *API) partitionCreatives(

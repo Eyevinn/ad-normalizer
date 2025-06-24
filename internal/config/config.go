@@ -14,7 +14,7 @@ import (
 type AdNormalizerConfig struct {
 	EncoreUrl          string
 	Bucket             string
-	AdServerUrl        string
+	AdServerUrl        url.URL
 	ValkeyUrl          string
 	ValkeyClusterUrl   string
 	OscToken           string
@@ -26,7 +26,7 @@ type AdNormalizerConfig struct {
 	PackagingQueueName string
 	RootUrl            string
 	BucketUrl          url.URL
-	AssetServerUrl     string
+	AssetServerUrl     url.URL
 }
 
 func ReadConfig() (AdNormalizerConfig, error) {
@@ -62,7 +62,12 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		logger.Error("No environment variable AD_SERVER_URL was found")
 		err = errors.Join(err, errors.New("missing AD_SERVER_URL environment variable"))
 	} else {
-		conf.AdServerUrl = adServerUrl
+		parsedUrl, parseErr := url.Parse(strings.TrimSuffix(adServerUrl, "/"))
+		if parseErr != nil {
+			logger.Error("Failed to parse AD_SERVER_URL", slog.String("error", parseErr.Error()))
+			err = errors.Join(err, errors.New("invalid AD_SERVER_URL format"))
+		}
+		conf.AdServerUrl = *parsedUrl
 	}
 
 	// TODO: configurable port
@@ -124,7 +129,12 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		logger.Error("No environment variable ASSET_SERVER_URL was found")
 		err = errors.Join(err, errors.New("missing ASSET_SERVER_URL environment variable"))
 	} else {
-		conf.AssetServerUrl = strings.TrimSuffix(assetServerUrl, "/")
+		parsedUrl, parseErr := url.Parse(strings.TrimSuffix(assetServerUrl, "/"))
+		if parseErr != nil {
+			logger.Error("Failed to parse ASSET_SERVER_URL", slog.String("error", parseErr.Error()))
+			err = errors.Join(err, errors.New("invalid ASSET_SERVER_URL format"))
+		}
+		conf.AssetServerUrl = *parsedUrl
 	}
 
 	jitPackage, _ := os.LookupEnv("JIT_PACKAGE")

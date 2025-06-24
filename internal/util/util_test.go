@@ -19,10 +19,30 @@ func TestGetBestMediaFileFromVastAd(t *testing.T) {
 func TestGetCreatives(t *testing.T) {
 	vast := DefaultVast()
 	is := is.New(t)
-	creatives := GetCreatives(vast, "resolution", "")
-	is.Equal(len(creatives), 1)
-	is.Equal(creatives[0].CreativeId, "1280x720")
-	is.Equal(creatives[0].MasterPlaylistUrl, "http://example.com/video2.mp4")
+	cases := []struct {
+		key         string
+		regex       string
+		expectedKey string
+	}{
+		{
+			key:         "resolution",
+			regex:       "",
+			expectedKey: "1280x720",
+		},
+		{
+			key:         "url",
+			regex:       "[^a-zA-Z0-9]",
+			expectedKey: "httpexamplecomvideo2mp4",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.key, func(t *testing.T) {
+			creatives := GetCreatives(vast, c.key, c.regex)
+			is.Equal(len(creatives), 1)
+			is.Equal(creatives[c.expectedKey].CreativeId, c.expectedKey)
+			is.Equal(creatives[c.expectedKey].MasterPlaylistUrl, "http://example.com/video2.mp4")
+		})
+	}
 }
 
 func DefaultVast() *vmap.VAST {
