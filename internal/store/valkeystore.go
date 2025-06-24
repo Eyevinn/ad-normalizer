@@ -1,22 +1,40 @@
-package valkey
+package store
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/Eyevinn/ad-normalizer/internal/logger"
 	"github.com/valkey-io/valkey-go"
 )
+
+type Store interface {
+	Get(key string) (string, bool, error)
+	Set(key string, value string, ttl ...int) error
+}
 
 type ValkeyStore struct {
 	client valkey.Client
 }
 
-func NewValkeyStore(client valkey.Client) *ValkeyStore {
+func NewValkeyStore(valkeyUrl string) (*ValkeyStore, error) {
+	logger.Debug("Connecting to Valkey", slog.String("valkeyUrl", valkeyUrl))
+	options := valkey.MustParseURL(valkeyUrl)
+	options.SendToReplicas = func(cmd valkey.Completed) bool {
+		return false // No read from replicas
+	}
+	options.DisableCache = true
+	client, err := valkey.NewClient(options)
+	if err != nil {
+		logger.Error("Failed to create Valkey client", slog.String("error", err.Error()))
+		return nil, err
+	}
 	return &ValkeyStore{
 		client: client,
-	}
+	}, nil
 }
 
 func (vs *ValkeyStore) Get(key string) (string, bool, error) {

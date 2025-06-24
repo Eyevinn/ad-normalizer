@@ -6,19 +6,37 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 
+	"github.com/Eyevinn/ad-normalizer/internal/config"
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
+	"github.com/Eyevinn/ad-normalizer/internal/serve"
+	"github.com/Eyevinn/ad-normalizer/internal/store"
+	"github.com/klauspost/compress/gzhttp"
 )
 
 func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
+
+	config, err := config.ReadConfig()
+	if err != nil {
+		logger.Error("Failed to read configuration", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	api, err := setupApi(&config)
+
+	apiMux := http.NewServeMux()
+	apiMux.HandleFunc("/vmap", api.HandleVmap)
+	apiMux.HandleFunc("/vast", api.HandleVast)
+
 	mainmux := http.NewServeMux()
 
 	mainmux.HandleFunc("/ping", healthCheck)
+	mainmux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMux))
 
 	server := &http.Server{
 		Addr:    ":8080",
@@ -50,4 +68,59 @@ func main() {
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("pong"))
+}
+
+func corsMiddleware(next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			origin = "*"
+		}
+		w.Header().Add("Access-Control-Allow-Credentials", "true")
+		w.Header().Add("Access-Control-Expose-Headers", "Set-Cookie")
+		w.Header().Add("Access-Control-Allow-Origin", origin)
+		next.ServeHTTP(w, r)
+	}
+}
+
+func recovery(next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				logger.Error("There was a panic in a request",
+					slog.Any("Message", err),
+					slog.String("stack", string(debug.Stack())),
+				)
+				w.WriteHeader(500)
+			}
+		}()
+
+		next.ServeHTTP(w, r)
+	}
+}
+
+func setupMiddleWare(mainHandler http.Handler, name string) http.Handler {
+	compressorMiddleware, err := gzhttp.NewWrapper(gzhttp.MinSize(2000), gzhttp.LevelBestSpeed)
+	if err != nil {
+		panic(err)
+	}
+	return recovery(corsMiddleware(compressorMiddleware(mainHandler)))
+}
+
+func setupApi(config *config.AdNormalizerConfig) (*serve.API, error) {
+	valkeyConnectionUrl := ""
+	if config.ValkeyClusterUrl != "" {
+		valkeyConnectionUrl = config.ValkeyClusterUrl
+	} else {
+		valkeyConnectionUrl = config.ValkeyUrl
+	}
+	valkeyStore, err := store.NewValkeyStore(valkeyConnectionUrl)
+
+	if err != nil {
+		logger.Error("Failed to create Valkey store", slog.String("error", err.Error()))
+		return nil, err
+	}
+	logger.Debug("Valkey store created successfully")
+	api := serve.NewAPI(valkeyStore, config.AdServerUrl, config.EncoreUrl, config.AssetServerUrl)
+	return api, nil
 }

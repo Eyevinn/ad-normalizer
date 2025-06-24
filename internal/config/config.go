@@ -2,13 +2,13 @@ package config
 
 import (
 	"errors"
+	"log/slog"
 	"net/url"
 	"os"
 	"path"
 	"strings"
 
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
-	"golang.org/x/exp/slog"
 )
 
 type AdNormalizerConfig struct {
@@ -74,7 +74,7 @@ func ReadConfig() (AdNormalizerConfig, error) {
 	} else {
 		bucket, err := url.Parse(strings.TrimSuffix(bucketRaw, "/"))
 		if err != nil {
-			logger.Error("Failed to parse OUTPUT_BUCKET_URL", slog.Error(err))
+			logger.Error("Failed to parse OUTPUT_BUCKET_URL", slog.String("error", err.Error()))
 			err = errors.Join(err, errors.New("invalid OUTPUT_BUCKET_URL format"))
 		} else {
 			var bucketPath string
