@@ -11,11 +11,6 @@ type AssetDescription struct {
 	Duration string `json:"DURATION"`
 }
 
-type EncoreJob struct {
-	Id         string `json:"id"`
-	ExternalId string `json:"ExternalId"`
-}
-
 type TranscodeStatus int
 
 const (
