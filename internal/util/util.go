@@ -1,11 +1,14 @@
 package util
 
 import (
+	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/Eyevinn/VMAP/vmap"
 	"github.com/Eyevinn/ad-normalizer/internal/structure"
+	"github.com/google/uuid"
 )
 
 func GetBestMediaFileFromVastAd(ad *vmap.Ad) *vmap.MediaFile {
@@ -76,4 +79,20 @@ func ReplaceMediaFiles(
 	}
 	vast.Ad = newAds
 	return nil
+}
+
+func CreateOutputUrl(bucket url.URL, folder string) string {
+	newPath := bucket.JoinPath(folder, uuid.New().String(), "/")
+	return newPath.String()
+}
+
+func ReplaceSubdomain(start url.URL, subdomain string) url.URL {
+	hostParts := strings.Split(start.Host, ".")
+	if len(hostParts) > 2 {
+		hostParts[0] = subdomain
+	} else {
+		hostParts = []string{subdomain, hostParts[0], hostParts[1]}
+	}
+	start.Host = strings.Join(hostParts, ".")
+	return start
 }

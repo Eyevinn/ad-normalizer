@@ -32,6 +32,10 @@ func (s *StoreStub) Set(key string, value string, ttl ...int) error {
 	return nil
 }
 
+func (s *StoreStub) reset() {
+	s.mockStore = make(map[string]string)
+}
+
 type EncoreHandlerStub struct {
 	calls int
 }
@@ -118,6 +122,7 @@ func TestReplaceVast(t *testing.T) {
 
 	is.Equal(encoreHandler.calls, 1)
 	encoreHandler.reset()
+	storeStub.reset()
 }
 
 func TestReplaceVmap(t *testing.T) {

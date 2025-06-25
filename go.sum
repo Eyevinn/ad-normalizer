@@ -2,11 +2,15 @@ github.com/CarlLindqvist/xmltokenizer v0.0.10 h1:pdp+yJZTOijVnGR6oeuqecXY9zIt7O2
 github.com/CarlLindqvist/xmltokenizer v0.0.10/go.mod h1:OlBoGMMzCOY2cnz7NLSuBQjlVRYYbarlqbFelQf14XM=
 github.com/Eyevinn/VMAP v0.3.0 h1:AsbEGyaEZPhg08RUA8sB2eLvTp2h7hk7KWK3ahs3roI=
 github.com/Eyevinn/VMAP v0.3.0/go.mod h1:5n80N+ssgJzWJW6wb74c/Ayzo1pLRwMOptYmZ1TIThk=
+github.com/EyevinnOSC/client-go v0.0.4 h1:4iZr7nAGJrL1dqka9rybyzESxQiLrv0rhZF+XBWw310=
+github.com/EyevinnOSC/client-go v0.0.4/go.mod h1:Y20c9F5BO3cdFToVxVUAb9+lRhilDmbnPVyOksLhnrI=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
 github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zttxdo=
 github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
 github.com/matryer/is v1.4.1 h1:55ehd8zaGABKLXQUe2awZ99BD/PTc2ls+KV/dXphgEQ=

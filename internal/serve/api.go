@@ -48,6 +48,7 @@ func NewAPI(
 	}
 }
 
+// TODO: Implement
 func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 	// Implement the logic to handle the VMAP request
 	// This will likely involve fetching data from valkeyStore and formatting it as needed
@@ -67,7 +68,7 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 		"GET",
 		newUrl.String(),
 		nil,
-	) // TODO: Handle the error properly
+	)
 	if err != nil {
 		logger.Error("failed to create VAST request", slog.String("error", err.Error()))
 		http.Error(w, "Failed to create VAST request", http.StatusInternalServerError)
