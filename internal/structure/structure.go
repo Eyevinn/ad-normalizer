@@ -1,9 +1,18 @@
 package structure
 
+import (
+	"math"
+	"net/url"
+	"strconv"
+	"strings"
+)
+
 type ManifestAsset struct {
 	CreativeId        string
 	MasterPlaylistUrl string
 }
+
+const DefaultTtl = 3600
 
 // Used for HLS interstitials
 type AssetDescription struct {
@@ -11,62 +20,110 @@ type AssetDescription struct {
 	Duration string `json:"DURATION"`
 }
 
-type TranscodeStatus int
-
-const (
-	Unknown TranscodeStatus = iota
-	Failed
-	InProgress
-	Transcoding
-	Completed
-	Packaging
-)
-
 type TranscodeInfo struct {
-	Url         string `json:"url"`
-	AspectRatio string `json:"aspectRatio"`
-	FrameRates  []int  `json:"frameRates"`
-	Status      string `json:"status"`
+	Url         string    `json:"url"`
+	AspectRatio string    `json:"aspectRatio"`
+	FrameRates  []float64 `json:"frameRates"`
+	Status      string    `json:"status"`
 }
 
-type JobProgress struct {
+func TranscodeInfoFromEncoreJob(job *EncoreJob, jitPackaging bool, assetServerUrl url.URL) TranscodeInfo {
+	jobStatus := job.GetTranscodeStatus(jitPackaging)
+	firstVideoStream := job.Outputs[0].VideoStreams[0]
+	width := 1920
+	height := 1080
+	if firstVideoStream.Width != 0 {
+		width = firstVideoStream.Width
+	}
+	if firstVideoStream.Height != 0 {
+		height = firstVideoStream.Height
+	}
+	aspectRatio := calculateAspectRatio(width, height)
+	var vidUrl string
+	if jitPackaging {
+		packageUrl := CreatePackageUrl(
+			assetServerUrl,
+			job.OutputFolder,
+			job.BaseName,
+		)
+		vidUrl = packageUrl.String()
+	}
+	return TranscodeInfo{
+		Url:         vidUrl,
+		AspectRatio: aspectRatio,
+		FrameRates:  job.GetFrameRates(),
+		Status:      jobStatus,
+	}
+}
+
+type EncoreJobProgress struct {
 	JobId      string `json:"jobId"`
 	ExternalId string `json:"externalId"`
 	Progress   int    `json:"progress"`
 	Status     string `json:"status"`
 }
 
-// How can a langugage not have enum support?
-func (ts *TranscodeStatus) String() string {
+func (ep *EncoreJob) GetTranscodeStatus(jitPackage bool) string {
 	var res string
-	switch *ts {
-	case Unknown:
-		res = "UNKNOWN"
-	case Failed:
+	switch ep.Status {
+	case "SUCCESSFUL":
+		if jitPackage {
+			res = "COMPLETED"
+		} else {
+			res = "PACKAGING"
+		}
+	case "FAILED", "CANCELLED":
 		res = "FAILED"
-	case InProgress:
+	case "IN_PROGRESS", "QUEUED", "NEW":
 		res = "IN_PROGRESS"
-	case Completed:
-		res = "COMPLETED"
-	case Packaging:
-		res = "PACKAGING"
 	default:
-		res = "TRANSCODING"
+		res = "UNKNOWN"
 	}
 	return res
 }
 
-func (jp *JobProgress) ToTranscodeStatus() TranscodeStatus {
-	var res TranscodeStatus
-	switch jp.Status {
-	case "SUCCESSFUL":
-		res = Completed
-	case "FAILED":
-		res = Failed
-	case "IN_PROGRESS":
-		res = InProgress
-	default:
-		res = Transcoding
+func calculateAspectRatio(width, height int) string {
+	if width == 0 || height == 0 {
+		return "0:0"
 	}
-	return res
+	gcd := gcd(width, height)
+	return strconv.Itoa(width/gcd) + ":" + strconv.Itoa(height/gcd)
+}
+
+// Greatest Common Divisor (GCD) using the Euclidean algorithm
+func gcd(a, b int) int {
+	for b != 0 {
+		t := b
+		b = a % b
+		a = t
+	}
+	return a
+}
+
+// Parses a frame rate string in the format "numerator/denominator"
+// and returns the frame rate as a rounded float64.
+// Media applications very rarely need more than 2 decimal places
+func ParseFrameRate(framerateStr string) float64 {
+	parts := strings.Split(framerateStr, "/")
+	if len(parts) == 2 {
+		numerator, err1 := strconv.Atoi(parts[0])
+		denominator, err2 := strconv.Atoi(parts[1])
+		if err1 == nil && err2 == nil && denominator != 0 {
+			frameRate := float64(numerator) / float64(denominator)
+			return math.Round((frameRate * 100.0) / 100.0) // Round to 2 decimal places
+		}
+	}
+	return 0.0 // Default or error case
+}
+
+func CreatePackageUrl(
+	assetServerUrl url.URL,
+	outputFolder string,
+	baseName string,
+) url.URL {
+	newUrl := assetServerUrl.JoinPath(
+		outputFolder,
+		baseName+".m3u8",
+	)
+	return *newUrl
 }

@@ -38,6 +38,7 @@ func main() {
 	apiMuxChain := setupMiddleWare(apiMux, "api")
 	mainmux := http.NewServeMux()
 
+	mainmux.HandleFunc("/encoreCallback", api.HandleEncoreCallback)
 	mainmux.HandleFunc("/ping", healthCheck)
 	mainmux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMuxChain))
 

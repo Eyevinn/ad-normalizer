@@ -1,7 +1,9 @@
 package serve
 
 import (
+	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"encoding/xml"
 	"io"
 	"log/slog"
@@ -29,6 +31,7 @@ type API struct {
 	keyRegex       string
 	encoreHandler  encore.EncoreHandler
 	client         *http.Client
+	jitPackage     bool
 }
 
 func NewAPI(
@@ -58,8 +61,6 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 
 // TODO: Fix error handling
 func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
-	// Implement the logic to handle the VAST request
-	// This will likely involve fetching data from valkeyStore and formatting it as needed
 	vastData := vmap.VAST{}
 
 	newUrl := api.adServerUrl
@@ -159,15 +160,15 @@ func (api *API) partitionCreatives(
 	missing := make(map[string]structure.ManifestAsset, len(creatives))
 
 	for _, creative := range creatives {
-		url, urlFound, err := api.valkeyStore.Get(creative.CreativeId)
+		transcodeInfo, urlFound, err := api.valkeyStore.Get(creative.CreativeId)
 		if err != nil {
 			logger.Error("failed to get creative from store", slog.String("error", err.Error()), slog.String("creativeId", creative.CreativeId))
 			continue
 		}
-		if urlFound {
+		if urlFound && transcodeInfo.Status == "COMPLETED" {
 			found[creative.CreativeId] = structure.ManifestAsset{
 				CreativeId:        creative.CreativeId,
-				MasterPlaylistUrl: url,
+				MasterPlaylistUrl: transcodeInfo.Url,
 			}
 		} else {
 			missing[creative.CreativeId] = structure.ManifestAsset{
@@ -179,9 +180,77 @@ func (api *API) partitionCreatives(
 	return found, missing
 }
 
+func (api *API) HandleEncoreCallback(w http.ResponseWriter, r *http.Request) {
+	jobProgress := structure.EncoreJobProgress{}
+	var requestBody []byte
+	var err error
+	defer r.Body.Close()
+	if r.Header.Get("Content-Encoding") == "gzip" {
+		requestBody, err = decompressGzip(r.Body)
+		if err != nil {
+			logger.Error("failed to decompress gzip request body", slog.String("error", err.Error()))
+			http.Error(w, "Failed to decompress gzip request body", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		requestBody, err = io.ReadAll(r.Body)
+		if err != nil {
+			logger.Error("failed to read request body", slog.String("error", err.Error()))
+			http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+			return
+		}
+	}
+	jsonDecoder := json.NewDecoder(bytes.NewBuffer(requestBody))
+	err = jsonDecoder.Decode(&jobProgress)
+	if err != nil {
+		logger.Error("failed to decode job progress", slog.String("error", err.Error()))
+		http.Error(w, "Failed to decode job progress", http.StatusBadRequest)
+		return
+	}
+	switch jobProgress.Status {
+	case "SUCCESSFUL":
+		err = api.handleTranscodeCompleted(&jobProgress)
+	case "FAILED":
+		err = api.handleTranscodeFailed(&jobProgress)
+	case "IN_PROGRESS":
+		err = api.handleTranscodeInProgress(&jobProgress)
+	default:
+		logger.Info("Job status does not match any known status", slog.String("status", jobProgress.Status))
+		err = nil
+	}
+	if err != nil {
+		logger.Error("failed to handle transcode job progress", slog.String("error", err.Error()), slog.String("jobId", jobProgress.JobId))
+		http.Error(w, "Failed to handle transcode job progress", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+
+}
+
+func (api *API) handleTranscodeInProgress(progress *structure.EncoreJobProgress) error {
+	logger.Info("Transcoding progress updated", slog.String("creative ID", progress.ExternalId), slog.Int("progress", progress.Progress))
+	return nil
+}
+
+func (api *API) handleTranscodeFailed(progress *structure.EncoreJobProgress) error {
+	err := api.valkeyStore.Delete(progress.ExternalId)
+	return err
+}
+
+func (api *API) handleTranscodeCompleted(progress *structure.EncoreJobProgress) error {
+	job, err := api.encoreHandler.GetEncoreJob(progress.JobId)
+	if err != nil {
+		logger.Error("failed to get encore job", slog.String("error", err.Error()), slog.String("jobId", progress.JobId))
+		return err
+	}
+	transcodeInfo := structure.TranscodeInfoFromEncoreJob(&job, api.jitPackage, api.assetServerUrl)
+	api.valkeyStore.Set(progress.ExternalId, transcodeInfo)
+	return nil
+}
+
 func decompressGzip(body io.Reader) ([]byte, error) {
 	zr, err := gzip.NewReader(body)
-	defer zr.Close()
+	defer func() { _ = zr.Close() }()
 	if err != nil {
 		return []byte{}, err
 	}

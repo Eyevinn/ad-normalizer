@@ -17,27 +17,38 @@ import (
 )
 
 type StoreStub struct {
-	mockStore map[string]string
+	mockStore map[string]structure.TranscodeInfo
 }
 
-func (s *StoreStub) Get(key string) (string, bool, error) {
+// Delete implements store.Store.
+func (s *StoreStub) Delete(key string) error {
+	delete(s.mockStore, key)
+	return nil
+}
+
+func (s *StoreStub) Get(key string) (structure.TranscodeInfo, bool, error) {
 	if value, exists := s.mockStore[key]; exists {
 		return value, true, nil
 	}
-	return "", false, nil
+	return structure.TranscodeInfo{}, false, nil
 }
 
-func (s *StoreStub) Set(key string, value string, ttl ...int) error {
+func (s *StoreStub) Set(key string, value structure.TranscodeInfo, ttl ...int) error {
 	s.mockStore[key] = value
 	return nil
 }
 
 func (s *StoreStub) reset() {
-	s.mockStore = make(map[string]string)
+	s.mockStore = make(map[string]structure.TranscodeInfo)
 }
 
 type EncoreHandlerStub struct {
 	calls int
+}
+
+// GetEncoreJob implements encore.EncoreHandler.
+func (e *EncoreHandlerStub) GetEncoreJob(jobId string) (structure.EncoreJob, error) {
+	panic("unimplemented")
 }
 
 func (e *EncoreHandlerStub) reset() {
@@ -58,7 +69,7 @@ var storeStub *StoreStub
 
 func TestMain(m *testing.M) {
 	storeStub = &StoreStub{
-		mockStore: make(map[string]string),
+		mockStore: make(map[string]structure.TranscodeInfo),
 	}
 
 	testServer = setupTestServer()
@@ -92,7 +103,13 @@ func TestReplaceVast(t *testing.T) {
 	// Populate the store with one ad
 	re := regexp.MustCompile("[^a-zA-Z0-9]")
 	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
-	_ = storeStub.Set(adKey, "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8")
+	transcodeInfo := structure.TranscodeInfo{
+		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
+		AspectRatio: "16:9",
+		FrameRates:  []float64{25.0},
+		Status:      "COMPLETED",
+	}
+	_ = storeStub.Set(adKey, transcodeInfo)
 	vastReq, err := http.NewRequest(
 		"GET",
 		testServer.URL+"/vast",

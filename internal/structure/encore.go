@@ -1,5 +1,7 @@
 package structure
 
+import "slices"
+
 type EncoreJob struct {
 	Id                  string         `json:"id"`
 	ExternalId          string         `json:"externalId"`
@@ -10,6 +12,22 @@ type EncoreJob struct {
 	Inputs              []EncoreInput  `json:"inputs"`
 	Outputs             []EncoreOutput `json:"outputs"`
 	ProgressCallbackUri string         `json:"progressCallbackUri"`
+}
+
+func (ep *EncoreJob) GetFrameRates() []float64 {
+	// In most cases, this is an overallocation, but it reduces
+	// the amount of times we need to re-alloc the slice
+	framerates := make([]float64, len(ep.Outputs)*2)
+	for _, o := range ep.Outputs {
+		for _, vs := range o.VideoStreams {
+			if vs.FrameRate != "" {
+				framerates = append(framerates, ParseFrameRate(vs.FrameRate))
+			}
+		}
+	}
+	// Sorting the slices allows us to use slices.Compact to remove duplicates
+	slices.Sort(framerates)
+	return slices.Compact(framerates)
 }
 
 type EncoreInput struct {
