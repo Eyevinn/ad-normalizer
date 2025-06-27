@@ -13,3 +13,8 @@ type PackagingFailureBody struct {
 type FailMessage struct {
 	JobId string `json:"jobId"`
 }
+
+type PackagingQueueMessage struct {
+	JobId string `json:"jobId"`
+	Url   string `json:"url"`
+}

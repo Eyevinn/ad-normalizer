@@ -32,6 +32,8 @@ type API struct {
 	encoreHandler  encore.EncoreHandler
 	client         *http.Client
 	jitPackage     bool
+	packageQueue   string
+	encoreUrl      url.URL
 }
 
 func NewAPI(
@@ -48,6 +50,9 @@ func NewAPI(
 		keyRegex:       config.KeyRegex,
 		encoreHandler:  encoreHandler,
 		client:         client,
+		jitPackage:     config.JitPackage,
+		packageQueue:   config.PackagingQueueName,
+		encoreUrl:      config.EncoreUrl,
 	}
 }
 
@@ -245,6 +250,13 @@ func (api *API) handleTranscodeCompleted(progress *structure.EncoreJobProgress) 
 	}
 	transcodeInfo := structure.TranscodeInfoFromEncoreJob(&job, api.jitPackage, api.assetServerUrl)
 	api.valkeyStore.Set(progress.ExternalId, transcodeInfo)
+	if !api.jitPackage {
+		packageInfo := structure.PackagingQueueMessage{
+			JobId: progress.ExternalId,
+			Url:   encore,
+		}
+		err = api.valkeyStore.EnqueuePackagingJob(api.packageQueue, packageInfo)
+	}
 	return nil
 }
 

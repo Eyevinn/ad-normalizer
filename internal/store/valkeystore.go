@@ -17,6 +17,7 @@ type Store interface {
 	Get(key string) (structure.TranscodeInfo, bool, error)
 	Set(key string, value structure.TranscodeInfo, ttl ...int) error
 	Delete(key string) error
+	EnqueuePackagingJob(queueName string, packagingJob structure.PackagingQueueMessage) error
 }
 
 type ValkeyStore struct {
@@ -115,6 +116,28 @@ func (vs *ValkeyStore) Set(key string, value structure.TranscodeInfo, ttl ...int
 		}
 		logger.Debug("Persisted key in Valkey", slog.String("key", key))
 		logger.Debug("Set key in Valkey", slog.String("key", key))
+	}
+	return nil
+}
+
+func (vs *ValkeyStore) EnqueuePackagingJob(queueName string, packagingJob structure.PackagingQueueMessage) error {
+	serializedJob, err := json.Marshal(packagingJob)
+	if err != nil {
+		return fmt.Errorf("failed to serialize packaging job %s: %w", packagingJob.JobId, err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err = vs.client.Do(
+		ctx,
+		vs.client.B().
+			Zadd().
+			Key(queueName).
+			ScoreMember().
+			ScoreMember(float64(time.Now().UnixMilli()), string(serializedJob)).
+			Build()).
+		Error()
+	if err != nil {
+		return fmt.Errorf("failed to enqueue packaging job %s: %w", packagingJob, err)
 	}
 	return nil
 }
