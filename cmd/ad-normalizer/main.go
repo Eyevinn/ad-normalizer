@@ -121,9 +121,14 @@ func setupApi(config *config.AdNormalizerConfig) (*serve.API, error) {
 	valkeyStore, err := store.NewValkeyStore(valkeyConnectionUrl)
 
 	client := &http.Client{}
-	encoreHandler := &encore.HttpEncoreHandler{
-		Client: client,
-	}
+	encoreHandler := encore.NewHttpEncoreHandler(
+		http.DefaultClient,
+		config.EncoreUrl,
+		config.EncoreProfile,
+		config.OscToken,
+		config.BucketUrl,
+		config.RootUrl,
+	)
 
 	if err != nil {
 		logger.Error("Failed to create Valkey store", slog.String("error", err.Error()))
