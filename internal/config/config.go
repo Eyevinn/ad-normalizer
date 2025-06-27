@@ -12,7 +12,7 @@ import (
 )
 
 type AdNormalizerConfig struct {
-	EncoreUrl          string
+	EncoreUrl          url.URL
 	Bucket             string
 	AdServerUrl        url.URL
 	ValkeyUrl          string
@@ -21,10 +21,10 @@ type AdNormalizerConfig struct {
 	InFlightTtl        int
 	KeyField           string
 	KeyRegex           string
-	encoreProfile      string
+	EncoreProfile      string
 	JitPackage         bool
 	PackagingQueueName string
-	RootUrl            string
+	RootUrl            url.URL
 	BucketUrl          url.URL
 	AssetServerUrl     url.URL
 }
@@ -37,7 +37,12 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		logger.Error("No environment variable ENCORE_URL was found")
 		err = errors.Join(err, errors.New("missing ENCORE_URL environment variable"))
 	} else {
-		conf.EncoreUrl = strings.TrimSuffix(encoreUrl, "/")
+		parsed, err := url.Parse(strings.TrimSuffix(encoreUrl, "/"))
+		if err != nil {
+			logger.Error("Failed to parse ENCORE_URL", slog.String("error", err.Error()))
+			err = errors.Join(err, errors.New("invalid ENCORE_URL format"))
+		}
+		conf.EncoreUrl = *parsed
 	}
 
 	// TODO: log level should be configurable
@@ -119,9 +124,9 @@ func ReadConfig() (AdNormalizerConfig, error) {
 	encoreProfile, found := os.LookupEnv("ENCORE_PROFILE")
 	if !found {
 		logger.Info("No environment variable ENCORE_PROFILE was found, using default")
-		conf.encoreProfile = "program"
+		conf.EncoreProfile = "program"
 	} else {
-		conf.encoreProfile = encoreProfile
+		conf.EncoreProfile = encoreProfile
 	}
 
 	assetServerUrl, found := os.LookupEnv("ASSET_SERVER_URL")
@@ -141,5 +146,18 @@ func ReadConfig() (AdNormalizerConfig, error) {
 
 	conf.JitPackage = jitPackage == "true"
 
+	rootUrl, found := os.LookupEnv("ROOT_URL")
+	if !found {
+		logger.Error("No environment variable ROOT_URL was found")
+		err = errors.Join(err, errors.New("missing ROOT_URL environment variable"))
+	} else {
+		parsedUrl, parseErr := url.Parse(strings.TrimSuffix(rootUrl, "/"))
+		if parseErr != nil {
+			logger.Error("Failed to parse ROOT_URL", slog.String("error", parseErr.Error()))
+			err = errors.Join(err, errors.New("invalid ROOT_URL format"))
+		} else {
+			conf.RootUrl = *parsedUrl
+		}
+	}
 	return conf, err
 }
