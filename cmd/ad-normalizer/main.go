@@ -35,12 +35,18 @@ func main() {
 	apiMux.HandleFunc("/vmap", api.HandleVmap)
 	apiMux.HandleFunc("/vast", api.HandleVast)
 
+	packagerMux := http.NewServeMux()
+	packagerMux.HandleFunc("/success", api.HandlePackagingSuccess)
+	packagerMux.HandleFunc("/failure", api.HandlePackagingFailure)
+
 	apiMuxChain := setupMiddleWare(apiMux, "api")
+	packagerMuxChain := setupMiddleWare(packagerMux, "packager")
 	mainmux := http.NewServeMux()
 
 	mainmux.HandleFunc("/encoreCallback", api.HandleEncoreCallback)
 	mainmux.HandleFunc("/ping", healthCheck)
 	mainmux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMuxChain))
+	mainmux.Handle("/packagerCallback/", http.StripPrefix("/packagerCallback", packagerMuxChain))
 
 	server := &http.Server{
 		Addr:    ":8080",
