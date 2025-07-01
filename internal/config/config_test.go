@@ -35,4 +35,8 @@ func TestReadConfig(t *testing.T) {
 	is.Equal(config.AdServerUrl.String(), "http://test-ad-server.osaas.io")
 	is.Equal(config.BucketUrl.String(), "s3://test-bucket.osaas.io")
 	is.Equal(config.InFlightTtl, 10)
+	is.Equal(config.KeyField, "url")
+	is.Equal(config.KeyRegex, "^[^a-zA-Z0-9]")
+	is.Equal(config.EncoreProfile, "ad-profile")
+	is.Equal(config.LogLevel, "DEBUG")
 }

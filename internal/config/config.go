@@ -46,8 +46,6 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		conf.EncoreUrl = *parsed
 	}
 
-	// TODO: log level should be configurable
-
 	valkeyUrl, found := os.LookupEnv("VALKEY_URL")
 	if !found {
 		logger.Error("No environment variable VALKEY_URL was found")

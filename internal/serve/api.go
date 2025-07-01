@@ -3,6 +3,7 @@ package serve
 import (
 	"compress/gzip"
 	"encoding/xml"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -63,9 +64,17 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 	byteResponse, err := api.makeAdServerRequest(r)
 	if err != nil {
 		logger.Error("failed to fetch VMAP data", slog.String("error", err.Error()))
-		// TODO: If ad server error, return that error code
-		http.Error(w, "Failed to fetch VMAP data", http.StatusInternalServerError)
-		return
+		var adServerErr structure.AdServerError
+		if errors.As(err, &adServerErr) {
+			logger.Error("ad server error", slog.Int("statusCode", adServerErr.StatusCode), slog.String("message", adServerErr.Message))
+			http.Error(w, adServerErr.Message, adServerErr.StatusCode)
+			return
+		} else {
+			logger.Error("error fetching VMAP data", slog.String("error", err.Error()))
+
+			http.Error(w, "Failed to fetch VMAP data", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	vmapData, err = vmap.DecodeVmap(byteResponse)
@@ -90,7 +99,6 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(serializedVmap)
 }
 
-// TODO: Fix error handling
 func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 	vastData := vmap.VAST{}
 

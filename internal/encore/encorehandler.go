@@ -112,7 +112,6 @@ func (eh *HttpEncoreHandler) submitJob(job structure.EncoreJob) (structure.Encor
 		logger.Error("Failed to serialize Encore job", slog.String("err", err.Error()))
 		return structure.EncoreJob{}, err
 	}
-	// TODO: Set up the request, submit it, and handle the response
 	jobRequest, err := http.NewRequest("POST", eh.encoreUrl.JoinPath("/encoreJobs").String(), bytes.NewBuffer(serialized))
 
 	if err != nil {
