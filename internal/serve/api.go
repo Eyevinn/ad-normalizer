@@ -3,7 +3,6 @@ package serve
 import (
 	"compress/gzip"
 	"encoding/xml"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -75,7 +74,6 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode VMAP data", http.StatusInternalServerError)
 		return
 	}
-	fmt.Println(len(vmapData.AdBreaks))
 	if err := api.processVmap(&vmapData); err != nil {
 		logger.Error("failed to process VMAP data", slog.String("error", err.Error()))
 		http.Error(w, "Failed to process VMAP data", http.StatusInternalServerError)
@@ -87,6 +85,7 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to marshal VMAP data", http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/xml")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(serializedVmap)
 }
@@ -168,7 +167,6 @@ func (api *API) makeAdServerRequest(r *http.Request) ([]byte, error) {
 func (api *API) processVmap(
 	vmapData *vmap.VMAP,
 ) error {
-	logger.Info("Processing VMAP data", slog.Int("adBreaksCount", len(vmapData.AdBreaks)))
 	breakWg := &sync.WaitGroup{}
 	for _, adBreak := range vmapData.AdBreaks {
 		logger.Debug("Processing ad break", slog.String("breakId", adBreak.Id))

@@ -184,11 +184,59 @@ func TestReplaceVmap(t *testing.T) {
 		_ = f.Close()
 	}()
 
+	// Populate the store with one ad
+	re := regexp.MustCompile("[^a-zA-Z0-9]")
+	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	transcodeInfo := structure.TranscodeInfo{
+		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
+		AspectRatio: "16:9",
+		FrameRates:  []float64{25.0},
+		Status:      "COMPLETED",
+	}
+	_ = storeStub.Set(adKey, transcodeInfo)
+	vmapReq, err := http.NewRequest(
+		"GET",
+		testServer.URL+"/vmap",
+		nil,
+	)
 	is.NoErr(err)
-	// This function should contain the test logic for the ReplaceVmap function
-	// It should set up the necessary mocks and expectations, call the function,
-	// and then assert that the results are as expected.
+	vmapReq.Header.Set("User-Agent", "TestUserAgent")
+	vmapReq.Header.Set("X-Forwarded-For", "123.123.123")
+	vmapReq.Header.Set("X-Device-User-Agent", "TestDeviceUserAgent")
+	vmapReq.Header.Set("accept", "application/xml")
+	recorder := httptest.NewRecorder()
+	api.HandleVmap(recorder, vmapReq)
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	is.Equal(recorder.Result().Header.Get("Content-Type"), "application/xml")
+	defer recorder.Result().Body.Close()
 
+	responseBody, err := io.ReadAll(recorder.Result().Body)
+	is.NoErr(err)
+	vmapRes, err := vmap.DecodeVmap(responseBody)
+	is.NoErr(err)
+	is.Equal(len(vmapRes.AdBreaks), 1)
+
+	firstBreak := vmapRes.AdBreaks[0]
+	is.Equal(firstBreak.TimeOffset.Position, vmap.OffsetStart)
+	is.Equal(firstBreak.BreakType, "linear")
+
+	firstVast := firstBreak.AdSource.VASTData.VAST
+	is.Equal(len(firstVast.Ad), 1)
+	firstAd := firstVast.Ad[0]
+	is.Equal(firstAd.Id, "POD_AD-ID_001")
+	is.Equal(firstAd.Sequence, 1)
+	is.Equal(len(firstAd.InLine.Creatives), 1)
+	firstCreative := firstAd.InLine.Creatives[0]
+	is.Equal(len(firstCreative.Linear.TrackingEvents), 5)
+	is.Equal(len(firstCreative.Linear.ClickTracking), 1)
+	is.Equal(firstCreative.Linear.Duration.Duration, 10*time.Second)
+	mediaFile := firstCreative.Linear.MediaFiles[0]
+	is.Equal(mediaFile.MediaType, "application/x-mpegURL")
+	is.Equal(mediaFile.Text, "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8")
+	is.Equal(mediaFile.Width, 718)
+	is.Equal(mediaFile.Height, 404)
+	encoreHandler.reset()
+	storeStub.reset()
 }
 
 func setupTestServer() *httptest.Server {
