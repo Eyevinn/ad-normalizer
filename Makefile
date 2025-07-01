@@ -23,7 +23,7 @@ test: prepare
 coverage:
 	# Ignore (allow) packages without any tests
 	set -o pipefail
-	go test ./... -coverprofile coverage.out
+	go test -coverprofile coverage.out github.com/Eyevinn/ad-normalizer/internal... 
 	set +o pipefail
 	go tool cover -html=coverage.out -o coverage.html
 	go tool cover -func coverage.out -o coverage.txt
