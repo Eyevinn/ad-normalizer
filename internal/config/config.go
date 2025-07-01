@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
@@ -159,5 +160,28 @@ func ReadConfig() (AdNormalizerConfig, error) {
 			conf.RootUrl = *parsedUrl
 		}
 	}
+
+	packagingQueueName, found := os.LookupEnv("PACKAGING_QUEUE")
+	if !found {
+		logger.Info("No environment variable PACKAGING_QUEUE_NAME was found, using default")
+		conf.PackagingQueueName = "package"
+	} else {
+		conf.PackagingQueueName = packagingQueueName
+	}
+
+	inFlightTtl, found := os.LookupEnv("IN_FLIGHT_TTL")
+	if !found {
+		logger.Info("No environment variable IN_FLIGHT_TTL was found, using default")
+		conf.InFlightTtl = 60 * 60 // Default to 1 hour
+	} else {
+		inFlightTtlInt, parseErr := strconv.Atoi(inFlightTtl)
+		if parseErr != nil {
+			logger.Error("Failed to parse IN_FLIGHT_TTL", slog.String("error", parseErr.Error()))
+			err = errors.Join(err, errors.New("invalid IN_FLIGHT_TTL format"))
+		} else {
+			conf.InFlightTtl = inFlightTtlInt
+		}
+	}
+
 	return conf, err
 }
