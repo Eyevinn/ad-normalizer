@@ -105,13 +105,17 @@ func gcd(a, b int) int {
 // Media applications very rarely need more than 2 decimal places
 func ParseFrameRate(framerateStr string) float64 {
 	parts := strings.Split(framerateStr, "/")
+	numerator, parseErr := strconv.ParseFloat(parts[0], 64)
+	denominator := 1.0
 	if len(parts) == 2 {
-		numerator, err1 := strconv.Atoi(parts[0])
-		denominator, err2 := strconv.Atoi(parts[1])
-		if err1 == nil && err2 == nil && denominator != 0 {
-			frameRate := float64(numerator) / float64(denominator)
-			return math.Round((frameRate * 100.0) / 100.0) // Round to 2 decimal places
+		tDen, err2 := strconv.ParseFloat(parts[1], 64)
+		if err2 == nil {
+			denominator = tDen
 		}
+	}
+	if parseErr == nil {
+		frameRate := float64(numerator) / float64(denominator)
+		return (math.Round(frameRate*100.0) / 100.0) // Round to 2 decimal places
 	}
 	return 0.0 // Default or error case
 }

@@ -17,7 +17,7 @@ type EncoreJob struct {
 func (ep *EncoreJob) GetFrameRates() []float64 {
 	// In most cases, this is an overallocation, but it reduces
 	// the amount of times we need to re-alloc the slice
-	framerates := make([]float64, len(ep.Outputs)*2)
+	framerates := make([]float64, 0, len(ep.Outputs))
 	for _, o := range ep.Outputs {
 		for _, vs := range o.VideoStreams {
 			if vs.FrameRate != "" {

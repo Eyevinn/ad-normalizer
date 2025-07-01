@@ -15,7 +15,7 @@ import (
 
 type Store interface {
 	Get(key string) (structure.TranscodeInfo, bool, error)
-	Set(key string, value structure.TranscodeInfo, ttl ...int) error
+	Set(key string, value structure.TranscodeInfo, ttl ...int64) error
 	Delete(key string) error
 	EnqueuePackagingJob(queueName string, packagingJob structure.PackagingQueueMessage) error
 }
@@ -58,6 +58,9 @@ func (vs *ValkeyStore) Get(key string) (structure.TranscodeInfo, bool, error) {
 	value := structure.TranscodeInfo{}
 	result, err := vs.client.Do(ctx, vs.client.B().Get().Key(key).Build()).AsBytes()
 	if err != nil {
+		if errors.Is(err, valkey.Nil) {
+			return value, false, nil // Key does not exist
+		}
 		return value, false, err
 	}
 
@@ -72,7 +75,7 @@ func (vs *ValkeyStore) Get(key string) (structure.TranscodeInfo, bool, error) {
 	return value, true, nil
 }
 
-func (vs *ValkeyStore) Set(key string, value structure.TranscodeInfo, ttl ...int) error {
+func (vs *ValkeyStore) Set(key string, value structure.TranscodeInfo, ttl ...int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -118,6 +121,24 @@ func (vs *ValkeyStore) Set(key string, value structure.TranscodeInfo, ttl ...int
 		logger.Debug("Set key in Valkey", slog.String("key", key))
 	}
 	return nil
+}
+
+func (vs *ValkeyStore) Ttl(key string) (int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+	result, err := vs.client.Do(ctx, vs.client.B().Ttl().Key(key).Build()).AsInt64()
+	if err != nil {
+		logger.Warn("Could not get TTL from valkey", slog.String("key", key), slog.String("err", err.Error()))
+		return 0, err
+	}
+	switch result {
+	case -2: // key does not exist
+		return 0, errors.New("key does not exist")
+	case -1: // key exists but has no TTL
+		return -1, nil
+	default: // key exists and has a TTL
+		return result, nil
+	}
 }
 
 func (vs *ValkeyStore) EnqueuePackagingJob(queueName string, packagingJob structure.PackagingQueueMessage) error {

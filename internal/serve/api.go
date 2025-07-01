@@ -1,15 +1,15 @@
 package serve
 
 import (
-	"bytes"
 	"compress/gzip"
-	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
+	"sync"
 
 	"github.com/Eyevinn/VMAP/vmap"
 	"github.com/Eyevinn/ad-normalizer/internal/config"
@@ -56,60 +56,50 @@ func NewAPI(
 	}
 }
 
-// TODO: Implement
 func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 	// Implement the logic to handle the VMAP request
 	// This will likely involve fetching data from valkeyStore and formatting it as needed
+	vmapData := vmap.VMAP{}
+
+	byteResponse, err := api.makeAdServerRequest(r)
+	if err != nil {
+		logger.Error("failed to fetch VMAP data", slog.String("error", err.Error()))
+		// TODO: If ad server error, return that error code
+		http.Error(w, "Failed to fetch VMAP data", http.StatusInternalServerError)
+		return
+	}
+
+	vmapData, err = vmap.DecodeVmap(byteResponse)
+	if err != nil {
+		logger.Error("failed to decode VMAP data", slog.String("error", err.Error()))
+		http.Error(w, "Failed to decode VMAP data", http.StatusInternalServerError)
+		return
+	}
+	fmt.Println(len(vmapData.AdBreaks))
+	if err := api.processVmap(&vmapData); err != nil {
+		logger.Error("failed to process VMAP data", slog.String("error", err.Error()))
+		http.Error(w, "Failed to process VMAP data", http.StatusInternalServerError)
+		return
+	}
+	serializedVmap, err := xml.Marshal(vmapData)
+	if err != nil {
+		logger.Error("failed to marshal VMAP data", slog.String("error", err.Error()))
+		http.Error(w, "Failed to marshal VMAP data", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("VMAP response"))
+	_, _ = w.Write(serializedVmap)
 }
 
 // TODO: Fix error handling
 func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 	vastData := vmap.VAST{}
 
-	newUrl := api.adServerUrl
-	newUrl.Path = path.Join(api.adServerUrl.Path, r.URL.Path)
-	vastReq, err := http.NewRequest(
-		"GET",
-		newUrl.String(),
-		nil,
-	)
-	if err != nil {
-		logger.Error("failed to create VAST request", slog.String("error", err.Error()))
-		http.Error(w, "Failed to create VAST request", http.StatusInternalServerError)
-		return
-	}
-	setupHeaders(r, vastReq)
-	response, err := api.client.Do(vastReq)
+	responseBody, err := api.makeAdServerRequest(r)
 	if err != nil {
 		logger.Error("failed to fetch VAST data", slog.String("error", err.Error()))
 		http.Error(w, "Failed to fetch VAST data", http.StatusInternalServerError)
 		return
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		logger.Error("failed to fetch VAST data", slog.Int("statusCode", response.StatusCode))
-		http.Error(w, "Failed to fetch VAST data", response.StatusCode)
-		return
-	}
-
-	var responseBody []byte
-	if response.Header.Get("Content-Encoding") == "gzip" {
-		// Handle gzip decompression if necessary
-		responseBody, err = decompressGzip(response.Body)
-		if err != nil {
-			logger.Error("failed to decompress gzip response", slog.String("error", err.Error()))
-			http.Error(w, "Failed to decompress gzip response", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		responseBody, err = io.ReadAll(response.Body)
-		if err != nil {
-			logger.Error("failed to read response body", slog.String("error", err.Error()))
-			http.Error(w, "Failed to read response body", http.StatusInternalServerError)
-			return
-		}
 	}
 	vastData, err = vmap.DecodeVast(responseBody)
 	if err != nil {
@@ -127,6 +117,69 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(serializedVast)
+}
+
+// Makes a request to the ad server and returns the response body.
+// In the form of a byte slice. It's up to the caller to decode it as needed.
+// If the response is gzipped, it will decompress it.
+func (api *API) makeAdServerRequest(r *http.Request) ([]byte, error) {
+	newUrl := api.adServerUrl
+	newUrl.Path = path.Join(api.adServerUrl.Path, r.URL.Path)
+	adServerReq, err := http.NewRequest(
+		"GET",
+		newUrl.String(),
+		nil,
+	)
+	if err != nil {
+		logger.Error("failed to create ad server request", slog.String("error", err.Error()))
+		return nil, err
+	}
+	setupHeaders(r, adServerReq)
+	response, err := api.client.Do(adServerReq)
+	if err != nil {
+		logger.Error("failed to fetch ad server data", slog.String("error", err.Error()))
+		return nil, err
+	}
+	if response.StatusCode != http.StatusOK {
+		logger.Error("failed to fetch ad server data", slog.Int("statusCode", response.StatusCode))
+		return nil, structure.AdServerError{
+			StatusCode: response.StatusCode,
+			Message:    "Failed to fetch ad server data",
+		}
+	}
+	var responseBody []byte
+	if response.Header.Get("Content-Encoding") == "gzip" {
+		// Handle gzip decompression if necessary
+		responseBody, err = decompressGzip(response.Body)
+		if err != nil {
+			logger.Error("failed to decompress gzip response", slog.String("error", err.Error()))
+			return nil, err
+		}
+	} else {
+		responseBody, err = io.ReadAll(response.Body)
+		if err != nil {
+			logger.Error("failed to read response body", slog.String("error", err.Error()))
+			return nil, err
+		}
+	}
+	return responseBody, nil
+}
+
+func (api *API) processVmap(
+	vmapData *vmap.VMAP,
+) error {
+	logger.Info("Processing VMAP data", slog.Int("adBreaksCount", len(vmapData.AdBreaks)))
+	breakWg := &sync.WaitGroup{}
+	for _, adBreak := range vmapData.AdBreaks {
+		logger.Debug("Processing ad break", slog.String("breakId", adBreak.Id))
+		breakWg.Add(1)
+		go func(vastData *vmap.VAST) {
+			defer breakWg.Done()
+			api.findMissingAndDispatchJobs(vastData)
+		}(adBreak.AdSource.VASTData.VAST)
+	}
+	breakWg.Wait()
+	return nil
 }
 
 func (api *API) findMissingAndDispatchJobs(
@@ -183,81 +236,6 @@ func (api *API) partitionCreatives(
 		}
 	}
 	return found, missing
-}
-
-func (api *API) HandleEncoreCallback(w http.ResponseWriter, r *http.Request) {
-	jobProgress := structure.EncoreJobProgress{}
-	var requestBody []byte
-	var err error
-	defer r.Body.Close()
-	if r.Header.Get("Content-Encoding") == "gzip" {
-		requestBody, err = decompressGzip(r.Body)
-		if err != nil {
-			logger.Error("failed to decompress gzip request body", slog.String("error", err.Error()))
-			http.Error(w, "Failed to decompress gzip request body", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		requestBody, err = io.ReadAll(r.Body)
-		if err != nil {
-			logger.Error("failed to read request body", slog.String("error", err.Error()))
-			http.Error(w, "Failed to read request body", http.StatusInternalServerError)
-			return
-		}
-	}
-	jsonDecoder := json.NewDecoder(bytes.NewBuffer(requestBody))
-	err = jsonDecoder.Decode(&jobProgress)
-	if err != nil {
-		logger.Error("failed to decode job progress", slog.String("error", err.Error()))
-		http.Error(w, "Failed to decode job progress", http.StatusBadRequest)
-		return
-	}
-	switch jobProgress.Status {
-	case "SUCCESSFUL":
-		err = api.handleTranscodeCompleted(&jobProgress)
-	case "FAILED":
-		err = api.handleTranscodeFailed(&jobProgress)
-	case "IN_PROGRESS":
-		err = api.handleTranscodeInProgress(&jobProgress)
-	default:
-		logger.Info("Job status does not match any known status", slog.String("status", jobProgress.Status))
-		err = nil
-	}
-	if err != nil {
-		logger.Error("failed to handle transcode job progress", slog.String("error", err.Error()), slog.String("jobId", jobProgress.JobId))
-		http.Error(w, "Failed to handle transcode job progress", http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-
-}
-
-func (api *API) handleTranscodeInProgress(progress *structure.EncoreJobProgress) error {
-	logger.Info("Transcoding progress updated", slog.String("creative ID", progress.ExternalId), slog.Int("progress", progress.Progress))
-	return nil
-}
-
-func (api *API) handleTranscodeFailed(progress *structure.EncoreJobProgress) error {
-	err := api.valkeyStore.Delete(progress.ExternalId)
-	return err
-}
-
-func (api *API) handleTranscodeCompleted(progress *structure.EncoreJobProgress) error {
-	job, err := api.encoreHandler.GetEncoreJob(progress.JobId)
-	if err != nil {
-		logger.Error("failed to get encore job", slog.String("error", err.Error()), slog.String("jobId", progress.JobId))
-		return err
-	}
-	transcodeInfo := structure.TranscodeInfoFromEncoreJob(&job, api.jitPackage, api.assetServerUrl)
-	api.valkeyStore.Set(progress.ExternalId, transcodeInfo)
-	if !api.jitPackage {
-		packageInfo := structure.PackagingQueueMessage{
-			JobId: progress.ExternalId,
-			Url:   encore,
-		}
-		err = api.valkeyStore.EnqueuePackagingJob(api.packageQueue, packageInfo)
-	}
-	return nil
 }
 
 func decompressGzip(body io.Reader) ([]byte, error) {

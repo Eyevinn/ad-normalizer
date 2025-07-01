@@ -1,45 +1,62 @@
 package serve
 
 import (
+	"compress/gzip"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/Eyevinn/VMAP/vmap"
 	"github.com/Eyevinn/ad-normalizer/internal/config"
 	"github.com/Eyevinn/ad-normalizer/internal/structure"
+	"github.com/google/uuid"
 	"github.com/matryer/is"
 )
 
 type StoreStub struct {
 	mockStore map[string]structure.TranscodeInfo
+	sets      int
+	gets      int
+	deletes   int
 }
 
 // Delete implements store.Store.
 func (s *StoreStub) Delete(key string) error {
 	delete(s.mockStore, key)
+	s.deletes++
 	return nil
 }
 
 func (s *StoreStub) Get(key string) (structure.TranscodeInfo, bool, error) {
+	s.gets++
 	if value, exists := s.mockStore[key]; exists {
 		return value, true, nil
 	}
 	return structure.TranscodeInfo{}, false, nil
 }
 
-func (s *StoreStub) Set(key string, value structure.TranscodeInfo, ttl ...int) error {
+func (s *StoreStub) Set(key string, value structure.TranscodeInfo, ttl ...int64) error {
+	s.sets++
 	s.mockStore[key] = value
 	return nil
 }
 
 func (s *StoreStub) reset() {
 	s.mockStore = make(map[string]structure.TranscodeInfo)
+	s.sets = 0
+	s.gets = 0
+	s.deletes = 0
+}
+
+func (s *StoreStub) EnqueuePackagingJob(queueName string, message structure.PackagingQueueMessage) error {
+	// This is a stub, in a real implementation this would enqueue the job to a queue
+	return nil
 }
 
 type EncoreHandlerStub struct {
@@ -48,14 +65,32 @@ type EncoreHandlerStub struct {
 
 // GetEncoreJob implements encore.EncoreHandler.
 func (e *EncoreHandlerStub) GetEncoreJob(jobId string) (structure.EncoreJob, error) {
-	panic("unimplemented")
+	return structure.EncoreJob{
+		Id:         uuid.NewString(),
+		ExternalId: jobId,
+		Profile:    "test-profile",
+		BaseName:   jobId,
+		Status:     "COMPLETED",
+		Outputs: []structure.EncoreOutput{
+			{
+				MediaType: "Video",
+				VideoStreams: []structure.EncoreVideoStream{
+					{
+						Codec:     "AVC",
+						Width:     1920,
+						Height:    1080,
+						FrameRate: "25",
+					},
+				},
+			},
+		},
+	}, nil
 }
 
 func (e *EncoreHandlerStub) reset() {
 	e.calls = 0
 }
 
-// TODO: refactor from AI slop
 func (e *EncoreHandlerStub) CreateJob(creative *structure.ManifestAsset) (structure.EncoreJob, error) {
 	newJob := structure.EncoreJob{}
 	e.calls += 1
@@ -64,7 +99,7 @@ func (e *EncoreHandlerStub) CreateJob(creative *structure.ManifestAsset) (struct
 
 var api *API
 var testServer *httptest.Server
-var encoreHandler *EncoreHandlerStub // TODO: Convert encorehandler to interface
+var encoreHandler *EncoreHandlerStub
 var storeStub *StoreStub
 
 func TestMain(m *testing.M) {
@@ -165,8 +200,18 @@ func setupTestServer() *httptest.Server {
 			case "/vast":
 				time.Sleep(time.Millisecond * 10)
 				res.Header().Set("Content-Type", "application/xml")
-				res.WriteHeader(200)
-				_, _ = res.Write(vastData)
+				if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+					res.Header().Set("Content-Encoding", "gzip")
+					res.WriteHeader(http.StatusOK)
+					writer := gzip.NewWriter(res)
+					defer func() {
+						_ = writer.Close()
+					}()
+					_, _ = writer.Write(vastData)
+				} else {
+					res.WriteHeader(http.StatusOK)
+					_, _ = res.Write(vastData)
+				}
 			case "/vmap":
 				time.Sleep(time.Millisecond * 10)
 				res.Header().Set("Content-Type", "application/xml")

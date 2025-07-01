@@ -1,9 +1,12 @@
 package util
 
 import (
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/Eyevinn/VMAP/vmap"
+	"github.com/Eyevinn/ad-normalizer/internal/structure"
 	"github.com/matryer/is"
 )
 
@@ -43,6 +46,49 @@ func TestGetCreatives(t *testing.T) {
 			is.Equal(creatives[c.expectedKey].MasterPlaylistUrl, "http://example.com/video2.mp4")
 		})
 	}
+}
+
+func TestReplaceSubdomain(t *testing.T) {
+	is := is.New(t)
+	oldUrl, _ := url.Parse("http://old-subdomain.example.com/video1.mp4")
+	newSubdomain := "new-subdomain"
+	res := ReplaceSubdomain(*oldUrl, newSubdomain)
+	is.Equal(res.Host, "new-subdomain.example.com")
+
+}
+
+func TestReplaceMediaFiles(t *testing.T) {
+	vast := DefaultVast()
+	is := is.New(t)
+	vast.Ad = append(vast.Ad, vmap.Ad{
+		InLine: &vmap.InLine{
+			Creatives: []vmap.Creative{
+				{
+					Linear: &vmap.Linear{
+						MediaFiles: []vmap.MediaFile{
+							{Bitrate: 1000, Width: 640, Height: 360, Text: "http://example2.com/video1.mp4"},
+							{Bitrate: 2000, Width: 1280, Height: 720, Text: "http://example2.com/video2.mp4"},
+						},
+					},
+				},
+			},
+		},
+	})
+	assets := make(map[string]structure.ManifestAsset)
+	assets["httpexamplecomvideo2mp4"] = structure.ManifestAsset{
+		CreativeId:        "httpexamplecomvideo2mp4",
+		MasterPlaylistUrl: "http://example.com/video2/index.m3u8",
+	}
+	ReplaceMediaFiles(vast, assets, "[^a-zA-Z0-9]", "url")
+	is.Equal(len(assets), 1)
+}
+
+func TestCreateOutputUrl(t *testing.T) {
+	is := is.New(t)
+	bucketUrl, _ := url.Parse("s3://example.com/transcoding-output/")
+	folder := "test-creative-id"
+	res := CreateOutputUrl(*bucketUrl, folder)
+	is.True(strings.HasPrefix(res, "s3://example.com/transcoding-output/test-creative-id/"))
 }
 
 func DefaultVast() *vmap.VAST {
