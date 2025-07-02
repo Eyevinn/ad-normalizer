@@ -60,7 +60,7 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 	// Implement the logic to handle the VMAP request
 	// This will likely involve fetching data from valkeyStore and formatting it as needed
 	vmapData := vmap.VMAP{}
-
+	logger.Debug("Handling VMAP request", slog.String("path", r.URL.Path))
 	byteResponse, err := api.makeAdServerRequest(r)
 	if err != nil {
 		logger.Error("failed to fetch VMAP data", slog.String("error", err.Error()))
@@ -132,6 +132,7 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 func (api *API) makeAdServerRequest(r *http.Request) ([]byte, error) {
 	newUrl := api.adServerUrl
 	newUrl.Path = path.Join(api.adServerUrl.Path, r.URL.Path)
+	logger.Debug("Making ad server request", slog.String("url", newUrl.String()), slog.String("path", r.URL.Path))
 	adServerReq, err := http.NewRequest(
 		"GET",
 		newUrl.String(),
