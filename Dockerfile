@@ -1,5 +1,4 @@
-# TODO: build a new Dockerfile
-FROM --platform=$BUILDPLATFORM golang:1.24 AS base
+FROM --platform=$BUILDPLATFORM golang:1.24.4 AS base
 
 RUN adduser \
     --disabled-password \
