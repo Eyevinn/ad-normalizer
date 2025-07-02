@@ -140,6 +140,7 @@ func ReadConfig() (AdNormalizerConfig, error) {
 	jitPackage, _ := os.LookupEnv("JIT_PACKAGE")
 
 	conf.JitPackage = jitPackage == "true"
+	logger.Debug("JIT packaging enabled", slog.Bool("enabled", conf.JitPackage))
 
 	rootUrl, found := os.LookupEnv("ROOT_URL")
 	if !found {

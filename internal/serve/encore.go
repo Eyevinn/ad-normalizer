@@ -83,11 +83,12 @@ func (api *API) handleTranscodeCompleted(progress *structure.EncoreJobProgress) 
 	}
 	api.valkeyStore.Set(progress.ExternalId, transcodeInfo)
 	if !api.jitPackage {
+		logger.Debug("JIT packaging is disabled, queueing packaing job", slog.String("creativeId", progress.ExternalId))
 		packageInfo := structure.PackagingQueueMessage{
 			JobId: progress.ExternalId,
 			Url:   api.encoreUrl.JoinPath("encoreJobs", progress.JobId).String(),
 		}
 		err = api.valkeyStore.EnqueuePackagingJob(api.packageQueue, packageInfo)
 	}
-	return nil
+	return err
 }
