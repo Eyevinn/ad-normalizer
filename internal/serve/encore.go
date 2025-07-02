@@ -33,6 +33,7 @@ func (api *API) HandleEncoreCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonDecoder := json.NewDecoder(bytes.NewBuffer(requestBody))
 	err = jsonDecoder.Decode(&jobProgress)
+	logger.Debug("Decoded Encore job progress", slog.String("jobId", jobProgress.JobId), slog.String("externalId", jobProgress.ExternalId), slog.String("status", jobProgress.Status))
 	if err != nil {
 		logger.Error("failed to decode job progress", slog.String("error", err.Error()))
 		http.Error(w, "Failed to decode job progress", http.StatusBadRequest)
