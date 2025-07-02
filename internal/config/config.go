@@ -111,7 +111,7 @@ func ReadConfig() (AdNormalizerConfig, error) {
 	keyRegex, found := os.LookupEnv("KEY_REGEX")
 	if !found {
 		logger.Error("No environment variable KEY_REGEX was found")
-		conf.KeyRegex = "^[^a-zA-Z0-9]"
+		conf.KeyRegex = "[^a-zA-Z0-9]"
 	} else {
 		conf.KeyRegex = keyRegex
 	}
