@@ -61,7 +61,7 @@ func (eh *HttpEncoreHandler) CreateJob(creative *structure.ManifestAsset) (struc
 		Inputs: []structure.EncoreInput{
 			{
 				Uri:       creative.MasterPlaylistUrl,
-				SeekTo:    0,
+				SeekTo:    0.0,
 				CopyTs:    true,
 				MediaType: "AudioVideo",
 			},

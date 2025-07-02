@@ -140,7 +140,7 @@ func encoreJob(externalId string, inputFile, outputFolder string) []byte {
 		"inputs": [
 			{
 				"uri": "` + inputFile + `",
-				"seekTo": 0,
+				"seekTo": 0.0,
 				"copyTs": true,
 				"mediaType": "AudioVideo"
 			}

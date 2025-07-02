@@ -31,10 +31,10 @@ func (ep *EncoreJob) GetFrameRates() []float64 {
 }
 
 type EncoreInput struct {
-	Uri       string `json:"uri"`
-	SeekTo    int    `json:"seekTo"`
-	CopyTs    bool   `json:"copyTs"`
-	MediaType string `json:"type"`
+	Uri       string  `json:"uri"`
+	SeekTo    float64 `json:"seekTo,omitempty"`
+	CopyTs    bool    `json:"copyTs"`
+	MediaType string  `json:"type"`
 }
 
 type EncoreOutput struct {
