@@ -13,7 +13,8 @@ func TestReadConfig(t *testing.T) {
 		value string
 	}{
 		{"ENCORE_URL", "http://demo-encore.osaas.io"},
-		{"VALKEY_URL", "redis://demo-valkey.osaas.io"},
+		{"REDIS_URL", "redis://demo-valkey.osaas.io"},
+		{"REDIS_CLUSTER", "true"},
 		{"AD_SERVER_URL", "http://test-ad-server.osaas.io"},
 		{"OUTPUT_BUCKET_URL", "s3://test-bucket.osaas.io"},
 		{"KEY_FIELD", "url"},
@@ -38,5 +39,5 @@ func TestReadConfig(t *testing.T) {
 	is.Equal(config.KeyField, "url")
 	is.Equal(config.KeyRegex, "^[^a-zA-Z0-9]")
 	is.Equal(config.EncoreProfile, "ad-profile")
-	is.Equal(config.LogLevel, "DEBUG")
+	is.Equal(config.ValkeyCluster, true)
 }

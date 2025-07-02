@@ -17,7 +17,7 @@ type AdNormalizerConfig struct {
 	Bucket             string
 	AdServerUrl        url.URL
 	ValkeyUrl          string
-	ValkeyClusterUrl   string
+	ValkeyCluster      bool
 	OscToken           string
 	InFlightTtl        int
 	KeyField           string
@@ -46,7 +46,7 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		conf.EncoreUrl = *parsed
 	}
 
-	valkeyUrl, found := os.LookupEnv("VALKEY_URL")
+	valkeyUrl, found := os.LookupEnv("REDIS_URL")
 	if !found {
 		logger.Error("No environment variable VALKEY_URL was found")
 		err = errors.Join(err, errors.New("missing VALKEY_URL environment variable"))
@@ -54,12 +54,8 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		conf.ValkeyUrl = valkeyUrl
 	}
 
-	valkeyClusterUrl, found := os.LookupEnv("VALKEY_CLUSTER_URL")
-	if !found {
-		logger.Info("No environment variable VALKEY_CLUSTER_URL found")
-	} else {
-		conf.ValkeyClusterUrl = valkeyClusterUrl
-	}
+	valkeyCluster, found := os.LookupEnv("REDIS_CLUSTER")
+	conf.ValkeyCluster = valkeyCluster == "true"
 
 	adServerUrl, found := os.LookupEnv("AD_SERVER_URL")
 	if !found {

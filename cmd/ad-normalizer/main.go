@@ -49,7 +49,7 @@ func main() {
 	mainmux.Handle("/packagerCallback/", http.StripPrefix("/packagerCallback", packagerMuxChain))
 
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":8000",
 		Handler: mainmux,
 	}
 
