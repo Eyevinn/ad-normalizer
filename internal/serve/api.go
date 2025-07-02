@@ -101,7 +101,7 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 
 func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 	vastData := vmap.VAST{}
-
+	logger.Debug("Handling VAST request", slog.String("path", r.URL.Path))
 	responseBody, err := api.makeAdServerRequest(r)
 	if err != nil {
 		logger.Error("failed to fetch VAST data", slog.String("error", err.Error()))

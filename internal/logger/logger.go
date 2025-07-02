@@ -14,7 +14,7 @@ var errorLogger *slog.Logger
 
 func init() {
 
-	loglevelEnv, _ := os.LookupEnv("LOGLEVEL")
+	loglevelEnv, _ := os.LookupEnv("LOG_LEVEL")
 	loglevelEnv = strings.ToUpper(loglevelEnv)
 
 	loglevel := slog.LevelInfo
