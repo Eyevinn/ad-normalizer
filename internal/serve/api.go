@@ -191,6 +191,7 @@ func (api *API) processVmap(
 func (api *API) findMissingAndDispatchJobs(
 	vast *vmap.VAST,
 ) {
+	logger.Debug("Finding missing creatives in VAST", slog.Int("adCount", len(vast.Ad)))
 	creatives := util.GetCreatives(vast, api.keyField, api.keyRegex)
 	found, missing := api.partitionCreatives(creatives)
 	logger.Debug("partitioned creatives", slog.Int("found", len(found)), slog.Int("missing", len(missing)))
