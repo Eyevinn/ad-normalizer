@@ -19,7 +19,7 @@ RUN go mod download
 RUN go mod verify
 
 ARG TARGETOS TARGETARCH
-RUN CGO_ENABLED=0 GOOD=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /ad-normalizer ./cmd/ad-normalizer
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /ad-normalizer ./cmd/ad-normalizer
 
 FROM --platform=$TARGETPLATFORM scratch
 
