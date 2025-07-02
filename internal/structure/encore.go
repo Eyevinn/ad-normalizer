@@ -3,15 +3,15 @@ package structure
 import "slices"
 
 type EncoreJob struct {
-	Id                  string         `json:"id"`
-	ExternalId          string         `json:"externalId"`
+	Id                  string         `json:"id,omitempty"`
+	ExternalId          string         `json:"externalId,omitempty"`
 	Profile             string         `json:"profile"`
 	OutputFolder        string         `json:"outputFolder"`
 	BaseName            string         `json:"baseName"`
-	Status              string         `json:"status"`
-	Inputs              []EncoreInput  `json:"inputs"`
-	Outputs             []EncoreOutput `json:"outputs"`
-	ProgressCallbackUri string         `json:"progressCallbackUri"`
+	Status              string         `json:"status,omitempty"`
+	Inputs              []EncoreInput  `json:"inputs,omitempty"`
+	Outputs             []EncoreOutput `json:"outputs,omitempty"`
+	ProgressCallbackUri string         `json:"progressCallbackUri,omitempty"`
 }
 
 func (ep *EncoreJob) GetFrameRates() []float64 {
