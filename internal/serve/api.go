@@ -272,8 +272,10 @@ func setupHeaders(ir *http.Request, or *http.Request) {
 	query := or.URL.Query()
 	for k, v := range ir.URL.Query() {
 		if strings.ToLower(k) == "subdomain" {
+			logger.Debug("Replacing subdomain in URL", slog.String("subdomain", v[0]), slog.String("originalUrl", or.URL.String()))
 			newUrl := util.ReplaceSubdomain(*or.URL, v[0])
 			or.URL = &newUrl
+			logger.Debug("New URL after subdomain replacement", slog.String("newUrl", or.URL.String()))
 			continue
 		}
 		for _, val := range v {
