@@ -33,7 +33,7 @@ func GetCreatives(
 		mediaFile := GetBestMediaFileFromVastAd(&ad)
 		adId := getKey(keyField, keyRegex, &ad, mediaFile)
 		creatives[adId] = structure.ManifestAsset{
-			CreativeId:        getKey(keyField, keyRegex, &ad, mediaFile),
+			CreativeId:        adId,
 			MasterPlaylistUrl: mediaFile.Text,
 		}
 	}
