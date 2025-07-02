@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -132,7 +133,8 @@ func (eh *HttpEncoreHandler) submitJob(job structure.EncoreJob) (structure.Encor
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
-		logger.Error("Failed to submit Encore job", slog.Int("statusCode", resp.StatusCode))
+		respStr, _ := io.ReadAll(resp.Body)
+		logger.Error("Failed to submit Encore job", slog.Int("statusCode", resp.StatusCode), slog.String("error", string(respStr)))
 		return structure.EncoreJob{}, fmt.Errorf("failed to submit Encore job, status code: %d", resp.StatusCode)
 	}
 	newJob := structure.EncoreJob{}
