@@ -9,6 +9,8 @@ RUN adduser \
     --uid 65532 \
     small-user
 
+RUN apk add --no-cache tzdata
+
 WORKDIR $GOPATH/src/smallest-golang/app/
 
 COPY . .
