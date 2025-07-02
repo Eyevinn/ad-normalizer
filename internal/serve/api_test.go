@@ -147,7 +147,7 @@ func TestReplaceVast(t *testing.T) {
 	_ = storeStub.Set(adKey, transcodeInfo)
 	vastReq, err := http.NewRequest(
 		"GET",
-		testServer.URL+"/vast",
+		testServer.URL,
 		nil,
 	)
 	is.NoErr(err)
@@ -155,6 +155,10 @@ func TestReplaceVast(t *testing.T) {
 	vastReq.Header.Set("X-Forwarded-For", "123.123.123")
 	vastReq.Header.Set("X-Device-User-Agent", "TestDeviceUserAgent")
 	vastReq.Header.Set("accept", "application/xml")
+	// make sure we request a VAST response
+	qps := vastReq.URL.Query()
+	qps.Set("requestType", "vast")
+	vastReq.URL.RawQuery = qps.Encode()
 	recorder := httptest.NewRecorder()
 	api.HandleVast(recorder, vastReq)
 	is.Equal(recorder.Result().StatusCode, http.StatusOK)
@@ -204,6 +208,9 @@ func TestReplaceVmap(t *testing.T) {
 	vmapReq.Header.Set("X-Forwarded-For", "123.123.123")
 	vmapReq.Header.Set("X-Device-User-Agent", "TestDeviceUserAgent")
 	vmapReq.Header.Set("accept", "application/xml")
+	qps := vmapReq.URL.Query()
+	qps.Set("requestType", "vmap")
+	vmapReq.URL.RawQuery = qps.Encode()
 	recorder := httptest.NewRecorder()
 	api.HandleVmap(recorder, vmapReq)
 	is.Equal(recorder.Result().StatusCode, http.StatusOK)
@@ -244,8 +251,8 @@ func setupTestServer() *httptest.Server {
 	vmapData, _ := os.ReadFile("../test_data/testVmap.xml")
 	return httptest.NewServer(http.HandlerFunc(
 		func(res http.ResponseWriter, req *http.Request) {
-			switch req.URL.Path {
-			case "/vast":
+			switch req.URL.Query().Get("requestType") {
+			case "vast":
 				time.Sleep(time.Millisecond * 10)
 				res.Header().Set("Content-Type", "application/xml")
 				if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
@@ -260,7 +267,7 @@ func setupTestServer() *httptest.Server {
 					res.WriteHeader(http.StatusOK)
 					_, _ = res.Write(vastData)
 				}
-			case "/vmap":
+			case "vmap":
 				time.Sleep(time.Millisecond * 10)
 				res.Header().Set("Content-Type", "application/xml")
 				res.WriteHeader(200)

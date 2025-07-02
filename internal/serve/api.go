@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"path"
+	"strings"
 	"sync"
 
 	"github.com/Eyevinn/VMAP/vmap"
@@ -131,7 +131,6 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 // If the response is gzipped, it will decompress it.
 func (api *API) makeAdServerRequest(r *http.Request) ([]byte, error) {
 	newUrl := api.adServerUrl
-	newUrl.Path = path.Join(api.adServerUrl.Path, r.URL.Path)
 	logger.Debug("Making ad server request", slog.String("url", newUrl.String()), slog.String("path", r.URL.Path))
 	adServerReq, err := http.NewRequest(
 		"GET",
@@ -268,4 +267,17 @@ func setupHeaders(ir *http.Request, or *http.Request) {
 	or.Header.Add(forwardedForHeader, forwardedFor)
 	or.Header.Add("Accept", "application/xml")
 	or.Header.Add("Accept-Encoding", "gzip")
+	// Copy query parameters from the incoming request to the outgoing request
+	query := or.URL.Query()
+	for k, v := range ir.URL.Query() {
+		if strings.ToLower(k) == "subdomain" {
+			newUrl := util.ReplaceSubdomain(*or.URL, v[0])
+			or.URL = &newUrl
+			continue
+		}
+		for _, val := range v {
+			query.Add(k, val)
+		}
+	}
+	or.URL.RawQuery = query.Encode()
 }
