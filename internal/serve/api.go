@@ -131,7 +131,6 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 // If the response is gzipped, it will decompress it.
 func (api *API) makeAdServerRequest(r *http.Request) ([]byte, error) {
 	newUrl := api.adServerUrl
-	logger.Debug("Making ad server request", slog.String("url", newUrl.String()), slog.String("path", r.URL.Path))
 	adServerReq, err := http.NewRequest(
 		"GET",
 		newUrl.String(),
@@ -142,6 +141,7 @@ func (api *API) makeAdServerRequest(r *http.Request) ([]byte, error) {
 		return nil, err
 	}
 	setupHeaders(r, adServerReq)
+	logger.Debug("Making ad server request", slog.String("url", adServerReq.URL.String()))
 	response, err := api.client.Do(adServerReq)
 	if err != nil {
 		logger.Error("failed to fetch ad server data", slog.String("error", err.Error()))
