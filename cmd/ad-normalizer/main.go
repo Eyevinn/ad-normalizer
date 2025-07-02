@@ -118,13 +118,8 @@ func setupMiddleWare(mainHandler http.Handler, name string) http.Handler {
 }
 
 func setupApi(config *config.AdNormalizerConfig) (*serve.API, error) {
-	valkeyConnectionUrl := ""
-	if config.ValkeyClusterUrl != "" {
-		valkeyConnectionUrl = config.ValkeyClusterUrl
-	} else {
-		valkeyConnectionUrl = config.ValkeyUrl
-	}
-	valkeyStore, err := store.NewValkeyStore(valkeyConnectionUrl)
+
+	valkeyStore, err := store.NewValkeyStore(config.ValkeyUrl)
 
 	client := &http.Client{}
 	encoreHandler := encore.NewHttpEncoreHandler(
