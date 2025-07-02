@@ -74,7 +74,12 @@ func (api *API) handleTranscodeCompleted(progress *structure.EncoreJobProgress) 
 		logger.Error("failed to get encore job", slog.String("error", err.Error()), slog.String("jobId", progress.JobId))
 		return err
 	}
-	transcodeInfo := structure.TranscodeInfoFromEncoreJob(&job, api.jitPackage, api.assetServerUrl)
+	transcodeInfo, err := structure.TranscodeInfoFromEncoreJob(&job, api.jitPackage, api.assetServerUrl)
+	if err != nil {
+		logger.Error("failed to create transcode info from encore job", slog.String("error", err.Error()), slog.String("jobId", progress.JobId))
+		api.valkeyStore.Delete(progress.ExternalId) // Something went wrong, remove the job from the store
+		return nil
+	}
 	api.valkeyStore.Set(progress.ExternalId, transcodeInfo)
 	if !api.jitPackage {
 		packageInfo := structure.PackagingQueueMessage{

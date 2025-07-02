@@ -40,7 +40,8 @@ func TestTranscodeInfoFromEncoreJob(t *testing.T) {
 	assetServerUrl, err := url.Parse("http://cdn.osaas.io")
 	is.NoErr(err)
 	jitPackage := true
-	res := TranscodeInfoFromEncoreJob(&testJob, jitPackage, *assetServerUrl)
+	res, err := TranscodeInfoFromEncoreJob(&testJob, jitPackage, *assetServerUrl)
+	is.NoErr(err)
 	is.Equal(res.AspectRatio, "16:9")
 	is.Equal(res.FrameRates, []float64{25.0})
 	is.Equal(res.Status, "COMPLETED")

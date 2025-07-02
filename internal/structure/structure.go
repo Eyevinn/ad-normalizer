@@ -1,6 +1,7 @@
 package structure
 
 import (
+	"fmt"
 	"math"
 	"net/url"
 	"strconv"
@@ -27,8 +28,11 @@ type TranscodeInfo struct {
 	Status      string    `json:"status"`
 }
 
-func TranscodeInfoFromEncoreJob(job *EncoreJob, jitPackaging bool, assetServerUrl url.URL) TranscodeInfo {
+func TranscodeInfoFromEncoreJob(job *EncoreJob, jitPackaging bool, assetServerUrl url.URL) (TranscodeInfo, error) {
 	jobStatus := job.GetTranscodeStatus(jitPackaging)
+	if len(job.Outputs) == 0 {
+		return TranscodeInfo{}, fmt.Errorf("no outputs found for job %s", job.Id)
+	}
 	firstVideoStream := job.Outputs[0].VideoStreams[0]
 	width := 1920
 	height := 1080
@@ -53,7 +57,7 @@ func TranscodeInfoFromEncoreJob(job *EncoreJob, jitPackaging bool, assetServerUr
 		AspectRatio: aspectRatio,
 		FrameRates:  job.GetFrameRates(),
 		Status:      jobStatus,
-	}
+	}, nil
 }
 
 type EncoreJobProgress struct {
