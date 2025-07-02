@@ -10,7 +10,7 @@ type EncoreJob struct {
 	BaseName            string         `json:"baseName"`
 	Status              string         `json:"status,omitempty"`
 	Inputs              []EncoreInput  `json:"inputs,omitempty"`
-	Outputs             []EncoreOutput `json:"outputs,omitempty"`
+	Outputs             []EncoreOutput `json:"output,omitempty"`
 	ProgressCallbackUri string         `json:"progressCallbackUri,omitempty"`
 }
 

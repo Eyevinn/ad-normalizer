@@ -222,7 +222,7 @@ func (api *API) partitionCreatives(
 ) (map[string]structure.ManifestAsset, map[string]structure.ManifestAsset) {
 	found := make(map[string]structure.ManifestAsset, len(creatives))
 	missing := make(map[string]structure.ManifestAsset, len(creatives))
-
+	logger.Debug("partioning creatives", slog.Int("totalCreatives", len(creatives)))
 	for _, creative := range creatives {
 		transcodeInfo, urlFound, err := api.valkeyStore.Get(creative.CreativeId)
 		if err != nil {
