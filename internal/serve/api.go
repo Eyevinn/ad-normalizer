@@ -261,7 +261,7 @@ func decompressGzip(body io.Reader) ([]byte, error) {
 func setupHeaders(ir *http.Request, or *http.Request) {
 	deviceUserAgent := ir.Header.Get(userAgentHeader)
 	forwardedFor := ir.Header.Get(forwardedForHeader)
-	or.Header.Add("User-Agent", "eyevinnn/ad-normalizer")
+	or.Header.Add("User-Agent", "eyevinn/ad-normalizer")
 	if deviceUserAgent != "" {
 		or.Header.Add(userAgentHeader, deviceUserAgent)
 	}
