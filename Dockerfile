@@ -27,4 +27,4 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o
 USER small-user:small-user
 ENV TZ=GMT
 
-CMD ["./ad-normalizer/ad-normalizer"]
+CMD ["/ad-normalizer"]
