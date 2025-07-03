@@ -30,6 +30,7 @@ COPY --from=base /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=base /etc/group /etc/group
 COPY --from=base /etc/passwd /etc/passwd
+COPY --from=base /bin/sh /bin/sh
 COPY --from=base /ad-normalizer .
 
 USER small-user:small-user
