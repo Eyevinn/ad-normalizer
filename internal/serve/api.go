@@ -118,7 +118,7 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 	vastData, err = vmap.DecodeVast(responseBody)
 	span.AddEvent("Decoded VAST data")
 	if err != nil {
-		logger.Error("failed to decode VAST data", slog.String("error", err.Error()))
+		logger.Error("failed to decode VAST data", slog.String("error", err.Error()), slog.String("responseBody", string(responseBody)))
 		http.Error(w, "Failed to decode VAST data", http.StatusInternalServerError)
 		return
 	}
