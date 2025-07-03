@@ -31,6 +31,7 @@ type AdNormalizerConfig struct {
 	AssetServerUrl     url.URL
 	Version            string
 	InstanceID         string
+	Environment        string
 }
 
 func ReadConfig() (AdNormalizerConfig, error) {
@@ -200,6 +201,12 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		}
 	}
 	conf.InstanceID = instanceId
+
+	environment, found := os.LookupEnv("ENVIRONMENT")
+	if !found {
+		logger.Info("No environment variable ENVIRONMENT found")
+	}
+	conf.Environment = environment
 
 	return conf, err
 }

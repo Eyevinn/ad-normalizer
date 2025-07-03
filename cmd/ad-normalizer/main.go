@@ -21,6 +21,8 @@ import (
 	"github.com/klauspost/compress/gzhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
+
+	_ "net/http/pprof" // Import pprof for profiling
 )
 
 func main() {
@@ -61,6 +63,11 @@ func main() {
 	mainmux.HandleFunc("/ping", healthCheck)
 	mainmux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMuxChain))
 	mainmux.Handle("/packagerCallback/", http.StripPrefix("/packagerCallback", packagerMuxChain))
+
+	//Do not expose pprod debug endpoints in production
+	if config.Environment != "PRODUCTION" {
+		mainmux.Handle("/debug/", http.DefaultServeMux)
+	}
 
 	server := &http.Server{
 		Addr:    ":8000",
