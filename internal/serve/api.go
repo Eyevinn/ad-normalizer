@@ -114,6 +114,7 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode VAST data", http.StatusInternalServerError)
 		return
 	}
+	logger.Debug("Decoded VAST data", slog.Int("adCount", len(vastData.Ad)))
 	api.findMissingAndDispatchJobs(&vastData)
 	serializedVast, err := xml.Marshal(vastData)
 	if err != nil {
