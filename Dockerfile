@@ -24,8 +24,7 @@ RUN go mod verify
 ARG TARGETOS TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /ad-normalizer ./cmd/ad-normalizer
 
-
 USER small-user:small-user
 ENV TZ=GMT
 
-CMD ["/ad-normalizer/ad-normalizer"]
+CMD ["./ad-normalizer/ad-normalizer"]
