@@ -61,6 +61,7 @@ func (api *API) HandlePackagingSuccess(w http.ResponseWriter, r *http.Request) {
 	}
 	packageUrl := structure.CreatePackageUrl(api.assetServerUrl, body.OutputPath, "index")
 	storeInfo.Url = packageUrl.String()
+	storeInfo.Status = "COMPLETED"
 	if err := api.valkeyStore.Set(encoreJob.ExternalId, storeInfo); err != nil {
 		http.Error(w, "Failed to save job to Valkey store", http.StatusInternalServerError)
 		return
