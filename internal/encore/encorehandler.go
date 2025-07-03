@@ -76,8 +76,10 @@ func (eh *HttpEncoreHandler) CreateJob(creative *structure.ManifestAsset) (struc
 }
 
 func (eh *HttpEncoreHandler) GetEncoreJob(jobId string) (structure.EncoreJob, error) {
+	logger.Debug("Getting Encore job", slog.String("jobId", jobId))
 	job := structure.EncoreJob{} // init zero value
 	jobRequest, err := http.NewRequest("GET", eh.encoreUrl.JoinPath("/encoreJobs", jobId).String(), nil)
+	logger.Debug("Created Encore job request", slog.String("url", jobRequest.URL.String()))
 	if err != nil {
 		logger.Error("Failed to create Encore job request", slog.String("err", err.Error()))
 		return job, err

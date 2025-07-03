@@ -42,6 +42,7 @@ func (api *API) HandlePackagingSuccess(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode request body", http.StatusBadRequest)
 		return
 	}
+	logger.Debug("getting Encore job for packaging success", slog.String("jobId", body.JobId))
 	encoreJob, err := api.encoreHandler.GetEncoreJob(body.JobId)
 	if err != nil {
 		http.Error(w, "Failed to get Encore job", http.StatusNotFound)
