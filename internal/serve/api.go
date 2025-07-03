@@ -66,7 +66,7 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 		logger.Error("failed to fetch VMAP data", slog.String("error", err.Error()))
 		var adServerErr structure.AdServerError
 		if errors.As(err, &adServerErr) {
-			logger.Error("ad server error", slog.Int("statusCode", adServerErr.StatusCode), slog.String("message", adServerErr.Message))
+			logger.Error("ad server error", slog.Int("statusCode", adServerErr.StatusCode), slog.String("error", adServerErr.Message))
 			http.Error(w, adServerErr.Message, adServerErr.StatusCode)
 			return
 		} else {

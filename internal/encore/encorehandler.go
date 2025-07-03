@@ -70,7 +70,7 @@ func (eh *HttpEncoreHandler) CreateJob(creative *structure.ManifestAsset) (struc
 
 	submitted, err := eh.submitJob(job)
 	if err != nil {
-		logger.Error("Failed to submit Encore job", slog.String("err", err.Error()))
+		logger.Error("Failed to submit Encore job", slog.String("error", err.Error()))
 	}
 	return submitted, nil
 }
@@ -81,7 +81,7 @@ func (eh *HttpEncoreHandler) GetEncoreJob(jobId string) (structure.EncoreJob, er
 	jobRequest, err := http.NewRequest("GET", eh.encoreUrl.JoinPath("/encoreJobs", jobId).String(), nil)
 	logger.Debug("Created Encore job request", slog.String("url", jobRequest.URL.String()))
 	if err != nil {
-		logger.Error("Failed to create Encore job request", slog.String("err", err.Error()))
+		logger.Error("Failed to create Encore job request", slog.String("error", err.Error()))
 		return job, err
 	}
 	jobRequest.Header.Set("Accept", "application/hal+json")
@@ -92,7 +92,7 @@ func (eh *HttpEncoreHandler) GetEncoreJob(jobId string) (structure.EncoreJob, er
 	}
 	res, err := eh.Client.Do(jobRequest)
 	if err != nil {
-		logger.Error("Failed to get Encore job", slog.String("err", err.Error()))
+		logger.Error("Failed to get Encore job", slog.String("error", err.Error()))
 		return job, err
 	}
 	defer res.Body.Close()
@@ -103,7 +103,7 @@ func (eh *HttpEncoreHandler) GetEncoreJob(jobId string) (structure.EncoreJob, er
 	jsonDecoder := json.NewDecoder(res.Body)
 	err = jsonDecoder.Decode(&job)
 	if err != nil {
-		logger.Error("Failed to decode Encore job response", slog.String("err", err.Error()))
+		logger.Error("Failed to decode Encore job response", slog.String("error", err.Error()))
 		return job, fmt.Errorf("failed to decode Encore job response")
 	}
 	return job, nil
@@ -112,13 +112,13 @@ func (eh *HttpEncoreHandler) GetEncoreJob(jobId string) (structure.EncoreJob, er
 func (eh *HttpEncoreHandler) submitJob(job structure.EncoreJob) (structure.EncoreJob, error) {
 	serialized, err := json.Marshal(job)
 	if err != nil {
-		logger.Error("Failed to serialize Encore job", slog.String("err", err.Error()))
+		logger.Error("Failed to serialize Encore job", slog.String("error", err.Error()))
 		return structure.EncoreJob{}, err
 	}
 	jobRequest, err := http.NewRequest("POST", eh.encoreUrl.JoinPath("/encoreJobs").String(), bytes.NewBuffer(serialized))
 
 	if err != nil {
-		logger.Error("Failed to create Encore job request", slog.String("err", err.Error()))
+		logger.Error("Failed to create Encore job request", slog.String("error", err.Error()))
 		return structure.EncoreJob{}, err
 	}
 
@@ -130,7 +130,7 @@ func (eh *HttpEncoreHandler) submitJob(job structure.EncoreJob) (structure.Encor
 	}
 	resp, err := eh.Client.Do(jobRequest)
 	if err != nil {
-		logger.Error("Failed to submit Encore job", slog.String("err", err.Error()))
+		logger.Error("Failed to submit Encore job", slog.String("error", err.Error()))
 		return structure.EncoreJob{}, err
 	}
 	defer resp.Body.Close()
@@ -143,7 +143,7 @@ func (eh *HttpEncoreHandler) submitJob(job structure.EncoreJob) (structure.Encor
 	jsonDecoder := json.NewDecoder(resp.Body)
 	err = jsonDecoder.Decode(&newJob)
 	if err != nil {
-		logger.Error("Failed to decode Encore job response", slog.String("err", err.Error()))
+		logger.Error("Failed to decode Encore job response", slog.String("error", err.Error()))
 		return structure.EncoreJob{}, fmt.Errorf("failed to decode Encore job response")
 	}
 	logger.Info("Successfully submitted Encore job", slog.String("jobId", newJob.ExternalId))

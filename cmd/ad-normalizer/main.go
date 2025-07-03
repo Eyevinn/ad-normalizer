@@ -112,7 +112,7 @@ func recovery(next http.Handler) http.HandlerFunc {
 		defer func() {
 			if err := recover(); err != nil {
 				logger.Error("There was a panic in a request",
-					slog.Any("Message", err),
+					slog.Any("message", err),
 					slog.String("stack", string(debug.Stack())),
 				)
 				w.WriteHeader(500)
