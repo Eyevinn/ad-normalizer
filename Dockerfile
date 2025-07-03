@@ -10,7 +10,9 @@ RUN adduser \
     small-user
 
 RUN apk add --no-cache tzdata
-
+## Needed if downstream users want to export metrics to f.ex. cloudwatch
+RUN apk update 
+RUN apk add curl tar 
 
 WORKDIR $GOPATH/src/smallest-golang/app/
 
@@ -22,7 +24,8 @@ RUN go mod verify
 ARG TARGETOS TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /ad-normalizer ./cmd/ad-normalizer
 
+
 USER small-user:small-user
 ENV TZ=GMT
 
-CMD ["./ad-normalizer"]
+CMD ["/ad-normalizer/ad-normalizer"]
