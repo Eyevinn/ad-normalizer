@@ -2,6 +2,7 @@ package serve
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/xml"
 	"errors"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"github.com/Eyevinn/ad-normalizer/internal/store"
 	"github.com/Eyevinn/ad-normalizer/internal/structure"
 	"github.com/Eyevinn/ad-normalizer/internal/util"
+	"go.opentelemetry.io/otel"
 )
 
 const userAgentHeader = "X-Device-User-Agent"
@@ -57,11 +59,10 @@ func NewAPI(
 }
 
 func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
-	// Implement the logic to handle the VMAP request
-	// This will likely involve fetching data from valkeyStore and formatting it as needed
+	ctx, span := otel.Tracer("api").Start(r.Context(), "HandleVmap")
 	vmapData := vmap.VMAP{}
 	logger.Debug("Handling VMAP request", slog.String("path", r.URL.Path))
-	byteResponse, err := api.makeAdServerRequest(r)
+	byteResponse, err := api.makeAdServerRequest(r, ctx)
 	if err != nil {
 		logger.Error("failed to fetch VMAP data", slog.String("error", err.Error()))
 		var adServerErr structure.AdServerError
@@ -78,6 +79,7 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vmapData, err = vmap.DecodeVmap(byteResponse)
+	span.AddEvent("Decoded VMAP data")
 	if err != nil {
 		logger.Error("failed to decode VMAP data", slog.String("error", err.Error()))
 		http.Error(w, "Failed to decode VMAP data", http.StatusInternalServerError)
@@ -88,27 +90,33 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to process VMAP data", http.StatusInternalServerError)
 		return
 	}
+	span.AddEvent("Processed VMAP data")
 	serializedVmap, err := xml.Marshal(vmapData)
 	if err != nil {
 		logger.Error("failed to marshal VMAP data", slog.String("error", err.Error()))
 		http.Error(w, "Failed to marshal VMAP data", http.StatusInternalServerError)
 		return
 	}
+	span.AddEvent("Serialized VMAP data")
 	w.Header().Set("Content-Type", "application/xml")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(serializedVmap)
+	span.End()
 }
 
 func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "HandleVast")
+
 	vastData := vmap.VAST{}
 	logger.Debug("Handling VAST request", slog.String("path", r.URL.Path))
-	responseBody, err := api.makeAdServerRequest(r)
+	responseBody, err := api.makeAdServerRequest(r, ctx)
 	if err != nil {
 		logger.Error("failed to fetch VAST data", slog.String("error", err.Error()))
 		http.Error(w, "Failed to fetch VAST data", http.StatusInternalServerError)
 		return
 	}
 	vastData, err = vmap.DecodeVast(responseBody)
+	span.AddEvent("Decoded VAST data")
 	if err != nil {
 		logger.Error("failed to decode VAST data", slog.String("error", err.Error()))
 		http.Error(w, "Failed to decode VAST data", http.StatusInternalServerError)
@@ -116,7 +124,9 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Debug("Decoded VAST data", slog.Int("adCount", len(vastData.Ad)))
 	api.findMissingAndDispatchJobs(&vastData)
+	span.AddEvent("Processed VAST data")
 	serializedVast, err := xml.Marshal(vastData)
+	span.AddEvent("Serialized VAST data")
 	if err != nil {
 		logger.Error("failed to marshal VAST data", slog.String("error", err.Error()))
 		http.Error(w, "Failed to marshal VAST data", http.StatusInternalServerError)
@@ -125,12 +135,15 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(serializedVast)
+	span.End()
 }
 
 // Makes a request to the ad server and returns the response body.
 // In the form of a byte slice. It's up to the caller to decode it as needed.
 // If the response is gzipped, it will decompress it.
-func (api *API) makeAdServerRequest(r *http.Request) ([]byte, error) {
+func (api *API) makeAdServerRequest(r *http.Request, ctx context.Context) ([]byte, error) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "makeAdServerRequest")
+	defer span.End()
 	newUrl := api.adServerUrl
 	if subdomain := r.URL.Query().Get("subdomain"); subdomain != "" {
 		logger.Debug("Replacing subdomain in URL", slog.String("subdomain", subdomain), slog.String("originalUrl", newUrl.String()))
@@ -146,7 +159,9 @@ func (api *API) makeAdServerRequest(r *http.Request) ([]byte, error) {
 		logger.Error("failed to create ad server request", slog.String("error", err.Error()))
 		return nil, err
 	}
+	span.AddEvent("Created ad server request")
 	setupHeaders(r, adServerReq)
+	span.AddEvent("Done setting up headers and query parameters")
 	logger.Debug("Making ad server request", slog.String("url", adServerReq.URL.String()))
 	response, err := api.client.Do(adServerReq)
 	if err != nil {
@@ -160,6 +175,7 @@ func (api *API) makeAdServerRequest(r *http.Request) ([]byte, error) {
 			Message:    "Failed to fetch ad server data",
 		}
 	}
+	span.AddEvent("Received response from ad server")
 	var responseBody []byte
 	if response.Header.Get("Content-Encoding") == "gzip" {
 		// Handle gzip decompression if necessary
@@ -168,6 +184,7 @@ func (api *API) makeAdServerRequest(r *http.Request) ([]byte, error) {
 			logger.Error("failed to decompress gzip response", slog.String("error", err.Error()))
 			return nil, err
 		}
+		span.AddEvent("Decompressed gzip response")
 	} else {
 		responseBody, err = io.ReadAll(response.Body)
 		if err != nil {
