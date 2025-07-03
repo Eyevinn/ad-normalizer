@@ -236,10 +236,12 @@ func (api *API) partitionCreatives(
 			logger.Error("failed to get creative from store", slog.String("error", err.Error()), slog.String("creativeId", creative.CreativeId))
 			continue
 		}
-		if urlFound && transcodeInfo.Status == "COMPLETED" {
-			found[creative.CreativeId] = structure.ManifestAsset{
-				CreativeId:        creative.CreativeId,
-				MasterPlaylistUrl: transcodeInfo.Url,
+		if urlFound {
+			if transcodeInfo.Status == "COMPLETED" {
+				found[creative.CreativeId] = structure.ManifestAsset{
+					CreativeId:        creative.CreativeId,
+					MasterPlaylistUrl: transcodeInfo.Url,
+				}
 			}
 		} else {
 			missing[creative.CreativeId] = structure.ManifestAsset{
