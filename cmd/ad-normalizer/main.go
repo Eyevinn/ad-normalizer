@@ -3,6 +3,7 @@ package main
 import (
 	"compress/gzip"
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,20 +12,33 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Eyevinn/ad-normalizer/cmd/ad-normalizer/telemetry"
 	"github.com/Eyevinn/ad-normalizer/internal/config"
 	"github.com/Eyevinn/ad-normalizer/internal/encore"
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
 	"github.com/Eyevinn/ad-normalizer/internal/serve"
 	"github.com/Eyevinn/ad-normalizer/internal/store"
 	"github.com/klauspost/compress/gzhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
 )
 
 func main() {
-	// TODO: Telemetry
+	config, err := config.ReadConfig()
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	config, err := config.ReadConfig()
+	otelShutdown, err := telemetry.SetupOtelSdk(ctx, config)
+
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}()
+
 	if err != nil {
 		logger.Error("Failed to read configuration", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -110,11 +124,12 @@ func recovery(next http.Handler) http.HandlerFunc {
 }
 
 func setupMiddleWare(mainHandler http.Handler, name string) http.Handler {
+	otelMiddleware := otelhttp.NewMiddleware(name, otelhttp.WithPropagators(otel.GetTextMapPropagator()))
 	compressorMiddleware, err := gzhttp.NewWrapper(gzhttp.MinSize(2000), gzhttp.CompressionLevel(gzip.BestSpeed))
 	if err != nil {
 		panic(err)
 	}
-	return recovery(corsMiddleware(compressorMiddleware(mainHandler)))
+	return recovery(otelMiddleware(corsMiddleware(compressorMiddleware(mainHandler))))
 }
 
 func setupApi(config *config.AdNormalizerConfig) (*serve.API, error) {

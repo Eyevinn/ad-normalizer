@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
+	"github.com/rs/xid"
 )
 
 type AdNormalizerConfig struct {
@@ -28,6 +29,8 @@ type AdNormalizerConfig struct {
 	RootUrl            url.URL
 	BucketUrl          url.URL
 	AssetServerUrl     url.URL
+	Version            string
+	InstanceID         string
 }
 
 func ReadConfig() (AdNormalizerConfig, error) {
@@ -177,6 +180,26 @@ func ReadConfig() (AdNormalizerConfig, error) {
 			conf.InFlightTtl = inFlightTtlInt
 		}
 	}
+
+	version, found := os.LookupEnv("VERSION")
+	if !found {
+		logger.Info("No environment variable VERSION was found")
+		version = "unknown"
+	}
+	conf.Version = version
+
+	instanceId, found := os.LookupEnv("INSTANCEID")
+	if !found {
+		logger.Info("No environment variable INSTANCEID found, using hostname")
+		hostname, err := os.Hostname()
+		if err != nil {
+			logger.Error("Could not get hostname, generating random InstanceID")
+			instanceId = xid.New().String()
+		} else {
+			instanceId = hostname
+		}
+	}
+	conf.InstanceID = instanceId
 
 	return conf, err
 }
