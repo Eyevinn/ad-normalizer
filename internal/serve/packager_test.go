@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/matryer/is"
@@ -35,5 +36,9 @@ func TestPackagingSuccess(t *testing.T) {
 	api.HandlePackagingSuccess(rr, req)
 	is.Equal(rr.Code, http.StatusOK)
 	is.Equal(storeStub.sets, 1)
-	// TODO: Check that the created URL seems reasonable
+	tci, ok, err := storeStub.Get("test-job-id")
+	is.NoErr(err)
+	is.True(ok)
+	is.Equal(tci.Status, "COMPLETED")
+	is.True(strings.HasSuffix(tci.Url, "index.m3u8"))
 }
