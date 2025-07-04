@@ -12,6 +12,7 @@ import (
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
 	"github.com/Eyevinn/ad-normalizer/internal/structure"
 	"github.com/Eyevinn/ad-normalizer/internal/util"
+	osaasclient "github.com/EyevinnOSC/client-go"
 )
 
 type EncoreHandler interface {
@@ -23,7 +24,7 @@ type HttpEncoreHandler struct {
 	Client             *http.Client
 	encoreUrl          url.URL
 	transcodingProfile string
-	oscToken           string
+	oscContext         *osaasclient.Context
 	outputBucket       url.URL
 	rootUrl            url.URL
 }
@@ -32,7 +33,7 @@ func NewHttpEncoreHandler(
 	client *http.Client,
 	encoreUrl url.URL,
 	transcodingProfile string,
-	oscToken string,
+	oscContext *osaasclient.Context,
 	outputBucket url.URL,
 	rootUrl url.URL,
 ) *HttpEncoreHandler {
@@ -40,7 +41,7 @@ func NewHttpEncoreHandler(
 		Client:             client,
 		encoreUrl:          encoreUrl,
 		transcodingProfile: transcodingProfile,
-		oscToken:           oscToken,
+		oscContext:         oscContext,
 		outputBucket:       outputBucket,
 		rootUrl:            rootUrl,
 	}
@@ -86,9 +87,13 @@ func (eh *HttpEncoreHandler) GetEncoreJob(jobId string) (structure.EncoreJob, er
 	}
 	jobRequest.Header.Set("Accept", "application/hal+json")
 	jobRequest.Header.Set("Content-Type", "application/json")
-	if eh.oscToken != "" {
-		// TODO: Actually get a SAT
-		jobRequest.Header.Set("x-jwt", eh.oscToken)
+	if eh.oscContext != nil && eh.oscContext.PersonalAccessToken != "" {
+		sat, err := eh.oscContext.GetServiceAccessToken("encore")
+		if err != nil {
+			logger.Error("Failed to get Service Access Token for Encore", slog.String("error", err.Error()))
+			return job, fmt.Errorf("failed to get Service Access Token for Encore: %w", err)
+		}
+		jobRequest.Header.Set("x-jwt", sat)
 	}
 	res, err := eh.Client.Do(jobRequest)
 	if err != nil {
@@ -124,9 +129,13 @@ func (eh *HttpEncoreHandler) submitJob(job structure.EncoreJob) (structure.Encor
 
 	jobRequest.Header.Set("Content-Type", "application/json")
 	jobRequest.Header.Set("Accept", "application/hal+json")
-	if eh.oscToken != "" {
-		// TODO: Actually get a SAT
-		jobRequest.Header.Set("x-jwt", eh.oscToken)
+	if eh.oscContext != nil && eh.oscContext.PersonalAccessToken != "" {
+		sat, err := eh.oscContext.GetServiceAccessToken("encore")
+		if err != nil {
+			logger.Error("Failed to get Service Access Token for Encore", slog.String("error", err.Error()))
+			return job, fmt.Errorf("failed to get Service Access Token for Encore: %w", err)
+		}
+		jobRequest.Header.Set("x-jwt", sat)
 	}
 	resp, err := eh.Client.Do(jobRequest)
 	if err != nil {

@@ -16,8 +16,10 @@ import (
 	"github.com/Eyevinn/ad-normalizer/internal/config"
 	"github.com/Eyevinn/ad-normalizer/internal/encore"
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
+	"github.com/Eyevinn/ad-normalizer/internal/osaas"
 	"github.com/Eyevinn/ad-normalizer/internal/serve"
 	"github.com/Eyevinn/ad-normalizer/internal/store"
+	osaasclient "github.com/EyevinnOSC/client-go"
 	"github.com/klauspost/compress/gzhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -142,13 +144,20 @@ func setupMiddleWare(mainHandler http.Handler, name string) http.Handler {
 func setupApi(config *config.AdNormalizerConfig) (*serve.API, error) {
 
 	valkeyStore, err := store.NewValkeyStore(config.ValkeyUrl)
-
+	var oscCtx *osaasclient.Context
+	if config.OscToken != "" {
+		oscCtx, err = osaas.SetupOsc(config)
+		if err != nil {
+			logger.Error("Failed to setup OSC client", slog.String("error", err.Error()))
+			return nil, err
+		}
+	}
 	client := &http.Client{}
 	encoreHandler := encore.NewHttpEncoreHandler(
 		http.DefaultClient,
 		config.EncoreUrl,
 		config.EncoreProfile,
-		config.OscToken,
+		oscCtx,
 		config.BucketUrl,
 		config.RootUrl,
 	)

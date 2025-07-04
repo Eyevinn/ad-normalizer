@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 		client,
 		*testUrl,
 		"test-profile",
-		"",
+		nil,
 		*bucketUrl,
 		*rootUrl,
 	)

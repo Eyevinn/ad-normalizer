@@ -4,9 +4,9 @@ go 1.24.2
 
 require (
 	github.com/Eyevinn/VMAP v0.3.0
+	github.com/EyevinnOSC/client-go v0.0.4 
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/google/uuid v1.6.0
-	github.com/EyevinnOSC/client-go v0.0.4 
 	github.com/klauspost/compress v1.18.0
 	github.com/matryer/is v1.4.1
 	github.com/rs/xid v1.6.0
