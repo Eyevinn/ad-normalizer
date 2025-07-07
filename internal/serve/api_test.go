@@ -2,6 +2,8 @@ package serve
 
 import (
 	"compress/gzip"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -179,6 +181,49 @@ func TestReplaceVast(t *testing.T) {
 	is.Equal(encoreHandler.calls, 1)
 	encoreHandler.reset()
 	storeStub.reset()
+}
+
+func TestGetAssetList(t *testing.T) {
+	is := is.New(t)
+	// Populate the store with one ad
+	re := regexp.MustCompile("[^a-zA-Z0-9]")
+	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	transcodeInfo := structure.TranscodeInfo{
+		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
+		AspectRatio: "16:9",
+		FrameRates:  []float64{25.0},
+		Status:      "COMPLETED",
+	}
+	_ = storeStub.Set(adKey, transcodeInfo)
+	vastReq, err := http.NewRequest(
+		"GET",
+		testServer.URL,
+		nil,
+	)
+	is.NoErr(err)
+	vastReq.Header.Set("User-Agent", "TestUserAgent")
+	vastReq.Header.Set("X-Forwarded-For", "123.123.123")
+	vastReq.Header.Set("X-Device-User-Agent", "TestDeviceUserAgent")
+	vastReq.Header.Set("Accept", "application/json")
+	// make sure we request a VAST response
+	qps := vastReq.URL.Query()
+	qps.Set("requestType", "vast")
+	vastReq.URL.RawQuery = qps.Encode()
+	recorder := httptest.NewRecorder()
+	api.HandleVast(recorder, vastReq)
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	is.Equal(recorder.Result().Header.Get("Content-Type"), "application/json")
+	defer recorder.Result().Body.Close()
+
+	responseBody, err := io.ReadAll(recorder.Result().Body)
+	is.NoErr(err)
+	var assetList []structure.AssetDescription
+	err = json.Unmarshal(responseBody, &assetList)
+	is.NoErr(err)
+	fmt.Println(assetList)
+	is.Equal(len(assetList), 1)
+	is.Equal(assetList[0].Uri, transcodeInfo.Url)
+	is.Equal(assetList[0].Duration, 10.25)
 }
 
 func TestReplaceVmap(t *testing.T) {

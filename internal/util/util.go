@@ -56,6 +56,30 @@ func getKey(keyField, keyRegex string, ad *vmap.Ad, mediaFile *vmap.MediaFile) s
 	return res
 }
 
+func ConvertToAssetDescriptionSlice(vast *vmap.VAST) []structure.AssetDescription {
+	// the vast is pre-fitlered, should be the same size
+	descriptions := make([]structure.AssetDescription, len(vast.Ad))
+	for idx, ad := range vast.Ad {
+		mediaFile := GetBestMediaFileFromVastAd(&ad)
+		descriptions[idx] = convertToAssetDescription(mediaFile, getAdDuration(ad))
+	}
+	return descriptions
+}
+
+func getAdDuration(ad vmap.Ad) vmap.Duration {
+	if len(ad.InLine.Creatives) == 0 || ad.InLine.Creatives[0].Linear == nil {
+		return vmap.Duration{}
+	}
+	return ad.InLine.Creatives[0].Linear.Duration
+}
+
+func convertToAssetDescription(mediaFile *vmap.MediaFile, duration vmap.Duration) structure.AssetDescription {
+	return structure.AssetDescription{
+		Uri:      mediaFile.Text,
+		Duration: duration.Duration.Seconds(),
+	}
+}
+
 func ReplaceMediaFiles(
 	vast *vmap.VAST,
 	assets map[string]structure.ManifestAsset,

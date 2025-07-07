@@ -21,7 +21,7 @@
               <ClickTracking id="Click Tracking 1"><![CDATA[https://github.com/Eyevinn/test-adserver]]></ClickTracking>
               <CustomClick id="Custom Click 1"><![CDATA[https://github.com/Eyevinn/test-adserver]]></CustomClick>
             </VideoClicks>
-            <Duration><![CDATA[00:00:10]]></Duration>
+            <Duration><![CDATA[00:00:10.250]]></Duration>
             <MediaFiles>
               <MediaFile width="718" height="404" codec="H.264" delivery="progressive"
                 type="video/mp4" bitrate="1300"><![CDATA[https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4]]></MediaFile>

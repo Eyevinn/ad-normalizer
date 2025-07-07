@@ -3,6 +3,7 @@ package serve
 import (
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"io"
@@ -124,15 +125,30 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Debug("Decoded VAST data", slog.Int("adCount", len(vastData.Ad)))
 	api.findMissingAndDispatchJobs(&vastData)
-	span.AddEvent("Processed VAST data")
-	serializedVast, err := xml.Marshal(vastData)
-	span.AddEvent("Serialized VAST data")
-	if err != nil {
-		logger.Error("failed to marshal VAST data", slog.String("error", err.Error()))
-		http.Error(w, "Failed to marshal VAST data", http.StatusInternalServerError)
-		return
+	var serializedVast []byte
+	requestedContentType := r.Header.Get("Accept")
+	if requestedContentType == "application/json" {
+		span.AddEvent("Processing VAST data for JSON response")
+		assetDescriptors := util.ConvertToAssetDescriptionSlice(&vastData)
+		span.AddEvent("Converted VAST data to asset descriptions")
+		serializedVast, err = json.Marshal(assetDescriptors)
+		if err != nil {
+			logger.Error("failed to marshal VAST data to JSON", slog.String("error", err.Error()))
+			http.Error(w, "Failed to marshal VAST data to JSON", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+	} else {
+		span.AddEvent("Processed VAST data")
+		serializedVast, err = xml.Marshal(vastData)
+		span.AddEvent("Serialized VAST data")
+		if err != nil {
+			logger.Error("failed to marshal VAST data", slog.String("error", err.Error()))
+			http.Error(w, "Failed to marshal VAST data", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/xml")
 	}
-	w.Header().Set("Content-Type", "application/xml")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(serializedVast)
 	span.End()

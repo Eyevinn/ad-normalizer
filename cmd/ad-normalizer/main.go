@@ -29,6 +29,10 @@ import (
 
 func main() {
 	config, err := config.ReadConfig()
+	if err != nil {
+		logger.Error("Failed to read configuration", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()

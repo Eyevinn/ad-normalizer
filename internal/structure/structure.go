@@ -17,8 +17,8 @@ const DefaultTtl = 3600
 
 // Used for HLS interstitials
 type AssetDescription struct {
-	Uri      string `json:"URI"`
-	Duration string `json:"DURATION"`
+	Uri      string  `json:"URI"`
+	Duration float64 `json:"DURATION"`
 }
 
 type TranscodeInfo struct {
