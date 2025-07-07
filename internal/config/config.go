@@ -45,6 +45,7 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		parsed, err := url.Parse(strings.TrimSuffix(encoreUrl, "/"))
 		if err != nil {
 			logger.Error("Failed to parse ENCORE_URL", slog.String("error", err.Error()))
+			//nolint:staticcheck // err is returned, linter is dumb
 			err = errors.Join(err, errors.New("invalid ENCORE_URL format"))
 		}
 		conf.EncoreUrl = *parsed
@@ -58,7 +59,7 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		conf.ValkeyUrl = valkeyUrl
 	}
 
-	valkeyCluster, found := os.LookupEnv("REDIS_CLUSTER")
+	valkeyCluster, _ := os.LookupEnv("REDIS_CLUSTER")
 	conf.ValkeyCluster = valkeyCluster == "true"
 
 	adServerUrl, found := os.LookupEnv("AD_SERVER_URL")
@@ -84,6 +85,7 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		bucket, err := url.Parse(strings.TrimSuffix(bucketRaw, "/"))
 		if err != nil {
 			logger.Error("Failed to parse OUTPUT_BUCKET_URL", slog.String("error", err.Error()))
+			//nolint:staticcheck // err is returned, linter is dumb
 			err = errors.Join(err, errors.New("invalid OUTPUT_BUCKET_URL format"))
 		} else {
 			var bucketPath string

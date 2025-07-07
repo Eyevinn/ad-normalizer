@@ -54,7 +54,10 @@ func (api *API) HandlePackagingSuccess(w http.ResponseWriter, r *http.Request) {
 	}
 	storeInfo, err := structure.TranscodeInfoFromEncoreJob(&encoreJob, api.jitPackage, api.assetServerUrl)
 	if err != nil {
-		logger.Error("Failed to create transcode info from Encore job", slog.String("error", err.Error()), slog.String("jobId", encoreJob.Id))
+		logger.Error("Failed to create transcode info from Encore job",
+			slog.String("error", err.Error()),
+			slog.String("jobId", encoreJob.Id),
+		)
 		_ = api.valkeyStore.Delete(encoreJob.ExternalId) // Something went wrong, remove the job from the store
 		http.Error(w, "Failed to create transcode info from Encore job", http.StatusInternalServerError)
 		return
@@ -67,5 +70,8 @@ func (api *API) HandlePackagingSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	logger.Info("Packaging success handled successfully", slog.String("creativeId", encoreJob.ExternalId), slog.String("packageUrl", packageUrl.String()))
+	logger.Info("Packaging success handled successfully",
+		slog.String("creativeId", encoreJob.ExternalId),
+		slog.String("packageUrl", packageUrl.String()),
+	)
 }

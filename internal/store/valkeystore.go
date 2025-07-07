@@ -118,7 +118,11 @@ func (vs *ValkeyStore) Set(key string, value structure.TranscodeInfo, ttl ...int
 			return fmt.Errorf("failed to persist key %s: %w", key, err)
 		}
 		logger.Debug("Persisted key in Valkey", slog.String("key", key))
-		logger.Debug("Set key in Valkey", slog.String("key", key), slog.String("url", value.Url), slog.String("status", value.Status))
+		logger.Debug("Set key in Valkey",
+			slog.String("key", key),
+			slog.String("url", value.Url),
+			slog.String("status", value.Status),
+		)
 	}
 	return nil
 }

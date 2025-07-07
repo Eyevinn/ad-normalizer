@@ -68,7 +68,10 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 		logger.Error("failed to fetch VMAP data", slog.String("error", err.Error()))
 		var adServerErr structure.AdServerError
 		if errors.As(err, &adServerErr) {
-			logger.Error("ad server error", slog.Int("statusCode", adServerErr.StatusCode), slog.String("error", adServerErr.Message))
+			logger.Error("ad server error",
+				slog.Int("statusCode", adServerErr.StatusCode),
+				slog.String("error", adServerErr.Message),
+			)
 			http.Error(w, adServerErr.Message, adServerErr.StatusCode)
 			return
 		} else {
@@ -119,7 +122,10 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 	vastData, err = vmap.DecodeVast(responseBody)
 	span.AddEvent("Decoded VAST data")
 	if err != nil {
-		logger.Error("failed to decode VAST data", slog.String("error", err.Error()), slog.String("responseBody", string(responseBody)))
+		logger.Error("failed to decode VAST data",
+			slog.String("error", err.Error()),
+			slog.String("responseBody", string(responseBody)),
+		)
 		http.Error(w, "Failed to decode VAST data", http.StatusInternalServerError)
 		return
 	}
@@ -158,11 +164,14 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 // In the form of a byte slice. It's up to the caller to decode it as needed.
 // If the response is gzipped, it will decompress it.
 func (api *API) makeAdServerRequest(r *http.Request, ctx context.Context) ([]byte, error) {
-	ctx, span := otel.Tracer("api").Start(r.Context(), "makeAdServerRequest")
+	_, span := otel.Tracer("api").Start(ctx, "makeAdServerRequest")
 	defer span.End()
 	newUrl := api.adServerUrl
 	if subdomain := r.URL.Query().Get("subdomain"); subdomain != "" {
-		logger.Debug("Replacing subdomain in URL", slog.String("subdomain", subdomain), slog.String("originalUrl", newUrl.String()))
+		logger.Debug("Replacing subdomain in URL",
+			slog.String("subdomain", subdomain),
+			slog.String("originalUrl", newUrl.String()),
+		)
 		newUrl = util.ReplaceSubdomain(newUrl, subdomain)
 		logger.Debug("New URL after subdomain replacement", slog.String("newUrl", newUrl.String()))
 	}
@@ -172,7 +181,9 @@ func (api *API) makeAdServerRequest(r *http.Request, ctx context.Context) ([]byt
 		nil,
 	)
 	if err != nil {
-		logger.Error("failed to create ad server request", slog.String("error", err.Error()))
+		logger.Error("failed to create ad server request",
+			slog.String("error", err.Error()),
+		)
 		return nil, err
 	}
 	span.AddEvent("Created ad server request")
@@ -241,10 +252,16 @@ func (api *API) findMissingAndDispatchJobs(
 		go func(creative *structure.ManifestAsset) {
 			encoreJob, err := api.encoreHandler.CreateJob(creative)
 			if err != nil {
-				logger.Error("failed to create encore job", slog.String("error", err.Error()), slog.String("creativeId", creative.CreativeId))
+				logger.Error("failed to create encore job",
+					slog.String("error", err.Error()),
+					slog.String("creativeId", creative.CreativeId),
+				)
 				return
 			}
-			logger.Debug("created encore job", slog.String("creativeId", creative.CreativeId), slog.String("jobId", encoreJob.Id))
+			logger.Debug("created encore job",
+				slog.String("creativeId", creative.CreativeId),
+				slog.String("jobId", encoreJob.Id),
+			)
 
 		}(&creative)
 	}
@@ -266,7 +283,10 @@ func (api *API) partitionCreatives(
 	for _, creative := range creatives {
 		transcodeInfo, urlFound, err := api.valkeyStore.Get(creative.CreativeId)
 		if err != nil {
-			logger.Error("failed to get creative from store", slog.String("error", err.Error()), slog.String("creativeId", creative.CreativeId))
+			logger.Error("failed to get creative from store",
+				slog.String("error", err.Error()),
+				slog.String("creativeId", creative.CreativeId),
+			)
 			continue
 		}
 		if urlFound {

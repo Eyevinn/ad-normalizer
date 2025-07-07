@@ -25,7 +25,10 @@ func newResource(config config.AdNormalizerConfig) (*resource.Resource, error) {
 		))
 }
 
-func SetupOtelSdk(ctx context.Context, config config.AdNormalizerConfig) (shutdown func(context.Context) error, err error) {
+func SetupOtelSdk(
+	ctx context.Context,
+	config config.AdNormalizerConfig,
+) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
 
 	shutdown = func(ctx context.Context) error {

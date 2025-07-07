@@ -232,6 +232,7 @@ func TestReplaceVmap(t *testing.T) {
 	defer func() {
 		_ = f.Close()
 	}()
+	is.NoErr(err)
 
 	// Populate the store with one ad
 	re := regexp.MustCompile("[^a-zA-Z0-9]")

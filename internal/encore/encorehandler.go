@@ -120,7 +120,10 @@ func (eh *HttpEncoreHandler) submitJob(job structure.EncoreJob) (structure.Encor
 		logger.Error("Failed to serialize Encore job", slog.String("error", err.Error()))
 		return structure.EncoreJob{}, err
 	}
-	jobRequest, err := http.NewRequest("POST", eh.encoreUrl.JoinPath("/encoreJobs").String(), bytes.NewBuffer(serialized))
+	jobRequest, err := http.NewRequest("POST",
+		eh.encoreUrl.JoinPath("/encoreJobs").String(),
+		bytes.NewBuffer(serialized),
+	)
 
 	if err != nil {
 		logger.Error("Failed to create Encore job request", slog.String("error", err.Error()))
@@ -145,7 +148,10 @@ func (eh *HttpEncoreHandler) submitJob(job structure.EncoreJob) (structure.Encor
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		respStr, _ := io.ReadAll(resp.Body)
-		logger.Error("Failed to submit Encore job", slog.Int("statusCode", resp.StatusCode), slog.String("error", string(respStr)))
+		logger.Error("Failed to submit Encore job",
+			slog.Int("statusCode", resp.StatusCode),
+			slog.String("error", string(respStr)),
+		)
 		return structure.EncoreJob{}, fmt.Errorf("failed to submit Encore job, status code: %d", resp.StatusCode)
 	}
 	newJob := structure.EncoreJob{}

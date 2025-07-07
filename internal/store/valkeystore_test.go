@@ -65,6 +65,7 @@ func TestValkeyStoreTtl(t *testing.T) {
 		Status:      "COMPLETED",
 	}
 	err = store.Set("test-key", testData, 1)
+	is.NoErr(err)
 	ttl, err := store.Ttl("test-key")
 	is.NoErr(err)
 	is.True(ttl > 0)

@@ -76,7 +76,7 @@ func getAdDuration(ad vmap.Ad) vmap.Duration {
 func convertToAssetDescription(mediaFile *vmap.MediaFile, duration vmap.Duration) structure.AssetDescription {
 	return structure.AssetDescription{
 		Uri:      mediaFile.Text,
-		Duration: duration.Duration.Seconds(),
+		Duration: duration.Seconds(),
 	}
 }
 

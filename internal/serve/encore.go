@@ -33,7 +33,11 @@ func (api *API) HandleEncoreCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonDecoder := json.NewDecoder(bytes.NewBuffer(requestBody))
 	err = jsonDecoder.Decode(&jobProgress)
-	logger.Debug("Decoded Encore job progress", slog.String("jobId", jobProgress.JobId), slog.String("externalId", jobProgress.ExternalId), slog.String("status", jobProgress.Status))
+	logger.Debug("Decoded Encore job progress",
+		slog.String("jobId", jobProgress.JobId),
+		slog.String("externalId", jobProgress.ExternalId),
+		slog.String("status", jobProgress.Status),
+	)
 	if err != nil {
 		logger.Error("failed to decode job progress", slog.String("error", err.Error()))
 		http.Error(w, "Failed to decode job progress", http.StatusBadRequest)
@@ -51,7 +55,10 @@ func (api *API) HandleEncoreCallback(w http.ResponseWriter, r *http.Request) {
 		err = nil
 	}
 	if err != nil {
-		logger.Error("failed to handle transcode job progress", slog.String("error", err.Error()), slog.String("jobId", jobProgress.JobId))
+		logger.Error("failed to handle transcode job progress",
+			slog.String("error", err.Error()),
+			slog.String("jobId", jobProgress.JobId),
+		)
 		http.Error(w, "Failed to handle transcode job progress", http.StatusInternalServerError)
 		return
 	}
@@ -60,7 +67,10 @@ func (api *API) HandleEncoreCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) handleTranscodeInProgress(progress *structure.EncoreJobProgress) error {
-	logger.Info("Transcoding progress updated", slog.String("creative ID", progress.ExternalId), slog.Int("progress", progress.Progress))
+	logger.Info("Transcoding progress updated",
+		slog.String("creative ID", progress.ExternalId),
+		slog.Int("progress", progress.Progress),
+	)
 	return nil
 }
 
@@ -72,18 +82,27 @@ func (api *API) handleTranscodeFailed(progress *structure.EncoreJobProgress) err
 func (api *API) handleTranscodeCompleted(progress *structure.EncoreJobProgress) error {
 	job, err := api.encoreHandler.GetEncoreJob(progress.JobId)
 	if err != nil {
-		logger.Error("failed to get encore job", slog.String("error", err.Error()), slog.String("jobId", progress.JobId))
+		logger.Error("failed to get encore job",
+			slog.String("error", err.Error()),
+			slog.String("jobId", progress.JobId),
+		)
 		return err
 	}
 	transcodeInfo, err := structure.TranscodeInfoFromEncoreJob(&job, api.jitPackage, api.assetServerUrl)
 	if err != nil {
-		logger.Error("failed to create transcode info from encore job", slog.String("error", err.Error()), slog.String("jobId", progress.JobId))
+		logger.Error("failed to create transcode info from encore job",
+			slog.String("error", err.Error()),
+			slog.String("jobId", progress.JobId),
+		)
 		_ = api.valkeyStore.Delete(progress.ExternalId) // Something went wrong, remove the job from the store
 		return nil
 	}
 	err = api.valkeyStore.Set(progress.ExternalId, transcodeInfo)
 	if err != nil {
-		logger.Error("failed to store transcode info", slog.String("error", err.Error()), slog.String("creativeId", progress.ExternalId))
+		logger.Error("failed to store transcode info",
+			slog.String("error", err.Error()),
+			slog.String("creativeId", progress.ExternalId),
+		)
 		_ = api.valkeyStore.Delete(progress.ExternalId) // Something went wrong, remove the job from the store
 	}
 	if !api.jitPackage {
