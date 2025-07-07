@@ -262,7 +262,10 @@ func (api *API) findMissingAndDispatchJobs(
 				slog.String("creativeId", creative.CreativeId),
 				slog.String("jobId", encoreJob.Id),
 			)
-
+			_ = api.valkeyStore.Set(creative.CreativeId, structure.TranscodeInfo{
+				Url:    creative.MasterPlaylistUrl,
+				Status: "QUEUED",
+			})
 		}(&creative)
 	}
 	// TODO: Error handling
