@@ -26,5 +26,5 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o
 
 USER small-user:small-user
 ENV TZ=GMT
-
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["/ad-normalizer"]
