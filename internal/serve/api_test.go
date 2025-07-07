@@ -222,6 +222,7 @@ func TestGetAssetList(t *testing.T) {
 	is.Equal(len(assetList), 1)
 	is.Equal(assetList[0].Uri, transcodeInfo.Url)
 	is.Equal(assetList[0].Duration, 10.25)
+	is.Equal(encoreHandler.calls, 1)
 
 	encoreHandler.reset()
 	storeStub.reset()
