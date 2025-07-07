@@ -3,7 +3,6 @@ package serve
 import (
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -220,10 +219,12 @@ func TestGetAssetList(t *testing.T) {
 	var assetList []structure.AssetDescription
 	err = json.Unmarshal(responseBody, &assetList)
 	is.NoErr(err)
-	fmt.Println(assetList)
 	is.Equal(len(assetList), 1)
 	is.Equal(assetList[0].Uri, transcodeInfo.Url)
 	is.Equal(assetList[0].Duration, 10.25)
+
+	encoreHandler.reset()
+	storeStub.reset()
 }
 
 func TestReplaceVmap(t *testing.T) {
