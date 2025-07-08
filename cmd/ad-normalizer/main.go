@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -76,7 +77,7 @@ func main() {
 	}
 
 	server := &http.Server{
-		Addr:    ":8000",
+		Addr:    ":" + strconv.Itoa(config.Port),
 		Handler: mainmux,
 	}
 

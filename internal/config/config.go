@@ -32,6 +32,7 @@ type AdNormalizerConfig struct {
 	Version            string
 	InstanceID         string
 	Environment        string
+	Port               int
 }
 
 func ReadConfig() (AdNormalizerConfig, error) {
@@ -75,7 +76,20 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		conf.AdServerUrl = *parsedUrl
 	}
 
-	// TODO: configurable port
+	port, found := os.LookupEnv("PORT")
+	if !found {
+		logger.Info("No environment variable PORT was found, using default 8000")
+		conf.Port = 8000
+	} else {
+		portInt, parseErr := strconv.Atoi(port)
+		if parseErr != nil {
+			logger.Error("Failed to parse PORT", slog.String("error", parseErr.Error()))
+			err = errors.Join(err, errors.New("invalid PORT format"))
+			conf.Port = 8000 // Default to 8000 if parsing fails
+		} else {
+			conf.Port = portInt
+		}
+	}
 
 	bucketRaw, found := os.LookupEnv("OUTPUT_BUCKET_URL")
 	if !found {
