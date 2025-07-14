@@ -3,12 +3,16 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/Eyevinn/ad-normalizer/internal/config"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 
@@ -48,14 +52,21 @@ func SetupOtelSdk(
 	otel.SetTextMapPropagator(prop)
 
 	var traceExporter trace.SpanExporter
-	var teErr error
+	var metricExporter metric.Exporter
+	var meErr, teErr error
 	if config.InstanceID == "local" {
 		traceExporter, teErr = stdouttrace.New()
+		metricExporter, meErr = stdoutmetric.New()
 	} else {
+		metricExporter, meErr = otlpmetrichttp.New(ctx)
 		traceExporter, teErr = otlptracehttp.New(ctx)
 	}
 	if teErr != nil {
 		handleErr(teErr)
+		return
+	}
+	if meErr != nil {
+		handleErr(meErr)
 		return
 	}
 
@@ -69,6 +80,11 @@ func SetupOtelSdk(
 	tracerProvider := newTraceProvider(resource, traceExporter)
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
+
+	// Set up metric provider
+	meterProvider := newMeterProvider(resource, metricExporter)
+	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+	otel.SetMeterProvider(meterProvider)
 
 	return
 }
@@ -85,4 +101,11 @@ func newTraceProvider(res *resource.Resource, te trace.SpanExporter) *trace.Trac
 		trace.WithResource(res),
 		trace.WithSampler(trace.ParentBased(trace.TraceIDRatioBased(0.1))),
 	)
+}
+func newMeterProvider(res *resource.Resource, me metric.Exporter) *metric.MeterProvider {
+	meterProvider := metric.NewMeterProvider(
+		metric.WithResource(res),
+		metric.WithReader(metric.NewPeriodicReader(me, metric.WithInterval(10*time.Second))),
+	)
+	return meterProvider
 }
