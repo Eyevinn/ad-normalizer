@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VAST version="4.0">
+  <Ad id="POD_AD-ID_001" sequence="1">
+    <InLine>
+      <Impression id="IMPRESSION-ID_001"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=alvedon-10s_1&progress=vast]]></Impression>
+      <AdSystem><![CDATA[Test Adserver]]></AdSystem>
+      <AdTitle><![CDATA[Ad That Test-Adserver Wants Player To See #1]]></AdTitle>
+      <Creatives>
+        <Creative id="CRETIVE-ID_001" adId="alvedon-10s" sequence="1">
+          <UniversalAdId idRegistry="test-ad-id.eyevinn" idValue="AAA%2FBBBB123%2F1"><![CDATA[AAA%2FBBBB123%2F1]]></UniversalAdId>
+          <Linear>
+            <TrackingEvents>
+              <Tracking event="start"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=alvedon-10s_1&progress=0]]></Tracking>
+              <Tracking event="firstQuartile"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=alvedon-10s_1&progress=25]]></Tracking>
+              <Tracking event="midpoint"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=alvedon-10s_1&progress=50]]></Tracking>
+              <Tracking event="thirdQuartile"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=alvedon-10s_1&progress=75]]></Tracking>
+              <Tracking event="complete"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=alvedon-10s_1&progress=100]]></Tracking>
+            </TrackingEvents>
+            <VideoClicks>
+              <ClickThrough id="Eyevinn Test AdServer"><![CDATA[https://github.com/Eyevinn/test-adserver]]></ClickThrough>
+              <ClickTracking id="Click Tracking 1"><![CDATA[https://github.com/Eyevinn/test-adserver]]></ClickTracking>
+              <CustomClick id="Custom Click 1"><![CDATA[https://github.com/Eyevinn/test-adserver]]></CustomClick>
+            </VideoClicks>
+            <Duration><![CDATA[00:00:10.250]]></Duration>
+            <MediaFiles>
+              <MediaFile width="718" height="404" codec="H.264" delivery="progressive"
+                type="video/mp4" bitrate="1300"><![CDATA[https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4]]></MediaFile>
+            </MediaFiles>
+          </Linear>
+        </Creative>
+      </Creatives>
+    </InLine>
+  </Ad>
+  <Ad id="POD_AD-ID_002" sequence="2">
+    <InLine>
+      <Impression id="IMPRESSION-ID_002"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=bromwel-15s_2&progress=vast]]></Impression>
+      <AdSystem><![CDATA[Test Adserver]]></AdSystem>
+      <AdTitle><![CDATA[Ad That Test-Adserver Wants Player To See #2]]></AdTitle>
+      <Creatives>
+        <Creative id="CRETIVE-ID_002" adId="bromwel-15s" sequence="2">
+          <UniversalAdId idRegistry="test-ad-id.eyevinn" idValue="AAA%2FDDDD123%2F2"><![CDATA[AAA%2FDDDD123%2F2]]></UniversalAdId>
+          <Linear>
+            <TrackingEvents>
+              <Tracking event="start"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=bromwel-15s_2&progress=0]]></Tracking>
+              <Tracking event="firstQuartile"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=bromwel-15s_2&progress=25]]></Tracking>
+              <Tracking event="midpoint"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=bromwel-15s_2&progress=50]]></Tracking>
+              <Tracking event="thirdQuartile"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=bromwel-15s_2&progress=75]]></Tracking>
+              <Tracking event="complete"><![CDATA[http://eyevinnlab-adnormalizer.eyevinn-test-adserver.auto.prod.osaas.io/api/v1/sessions/07587bf5-1ab5-4f41-a398-25a5fbc3760d/tracking?adId=bromwel-15s_2&progress=100]]></Tracking>
+            </TrackingEvents>
+            <VideoClicks>
+              <ClickThrough id="Eyevinn Test AdServer"><![CDATA[https://github.com/Eyevinn/test-adserver]]></ClickThrough>
+            </VideoClicks>
+            <Duration><![CDATA[00:00:15]]></Duration>
+            <MediaFiles>
+              <MediaFile width="718" height="404" codec="H.264" delivery="progressive"
+                type="video/mp4" bitrate="1000"><![CDATA[https://testcontent.eyevinn.technology/ads/bromwel-15s.mp4]]></MediaFile>
+            </MediaFiles>
+          </Linear>
+        </Creative>
+      </Creatives>
+    </InLine>
+  </Ad>
+</VAST>
