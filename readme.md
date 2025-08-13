@@ -110,11 +110,13 @@ Note: the ad normalizer assumes that your packager is set up with the output sub
 
 ## Development
 
-When developing, it is highly recommended that you put the required variables in a dotenv file at the repository root. This will make it easier to iterate and change environment variables throughout the development process.
+When developing, it is recommended that you put the required variables in a dotenv file at the repository root. This will make it easier to iterate and change environment variables throughout the development process.
 Before pushing changes to the repo, please run the following steps to make sure your pipeline will succeed:
 
-- `npm run test` to verify that your changes do not break existing functionality (if adding features, it is good practice to also write tests).
-- `npm run lint` as well as `npm run pretty` to ensure that the code still follows the formatting standards. Errors should be fixed, as the pipeline won't succeed otherwise. Warnings should be handled on a case-by-case basis. To format all files in the `src/` directory, run `npm run format`.
+- `make test` to verify that your changes do not break existing functionality (if adding features, it is good practice to also write tests).
+- If you are adding new features, it is also recommended to run `make coverage` in order to make sure that the new functionality has adequate test coverage.
+- `make lint` will run `golangci-lint` to ensure that the code still follows the formatting standards. Errors should be fixed, as the pipeline won't succeed otherwise. Warnings should be handled on a case-by-case basis.
+- `make format` will run `gofmt` on the entire codebase.
 
 ### Contributing
 

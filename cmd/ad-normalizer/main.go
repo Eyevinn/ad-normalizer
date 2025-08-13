@@ -21,6 +21,7 @@ import (
 	"github.com/Eyevinn/ad-normalizer/internal/serve"
 	"github.com/Eyevinn/ad-normalizer/internal/store"
 	osaasclient "github.com/EyevinnOSC/client-go"
+	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/gzhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -29,6 +30,10 @@ import (
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		logger.Debug("Error loading .env file", slog.String("error", err.Error()))
+	}
 	config, err := config.ReadConfig()
 	if err != nil {
 		logger.Error("Failed to read configuration", slog.String("error", err.Error()))

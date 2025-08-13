@@ -45,3 +45,7 @@ update:
 .PHONY: check-licenses
 check-licenses: prepare
 	wwhrd check
+
+.PHONY: format
+format:
+	gofmt -l -s -w .
