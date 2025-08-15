@@ -57,6 +57,14 @@ func TestReplaceSubdomain(t *testing.T) {
 
 }
 
+func TestSubdomainLocalhost(t *testing.T) {
+	is := is.New(t)
+	oldUrl, _ := url.Parse("http://localhost:1337/video1.mp4")
+	newSubdomain := "new-subdomain"
+	res := ReplaceSubdomain(*oldUrl, newSubdomain)
+	is.Equal(res.Host, "new-subdomain.localhost:1337")
+}
+
 func TestReplaceMediaFiles(t *testing.T) {
 	vast := DefaultVast()
 	is := is.New(t)

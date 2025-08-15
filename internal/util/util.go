@@ -110,13 +110,20 @@ func CreateOutputUrl(bucket url.URL, folder string) string {
 	return newPath.String()
 }
 
+// ReplaceSubdomain replaces the subdomain of a URL with a new subdomain.
+// if the URL has no subdomain, it adds the new subdomain before the existing host.
 func ReplaceSubdomain(start url.URL, subdomain string) url.URL {
 	hostParts := strings.Split(start.Host, ".")
 	if len(hostParts) > 2 {
 		hostParts[0] = subdomain
-	} else {
+		start.Host = strings.Join(hostParts, ".")
+	} else if len(hostParts) == 2 {
 		hostParts = []string{subdomain, hostParts[0], hostParts[1]}
+		start.Host = strings.Join(hostParts, ".")
+	} else {
+		hostParts = []string{subdomain, start.Host}
+		start.Host = strings.Join(hostParts, ".")
 	}
-	start.Host = strings.Join(hostParts, ".")
 	return start
+
 }

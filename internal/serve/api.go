@@ -195,6 +195,7 @@ func (api *API) makeAdServerRequest(r *http.Request, ctx context.Context) ([]byt
 		logger.Error("failed to fetch ad server data", slog.String("error", err.Error()))
 		return nil, err
 	}
+	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		logger.Error("failed to fetch ad server data", slog.Int("statusCode", response.StatusCode))
 		return nil, structure.AdServerError{
