@@ -12,7 +12,7 @@ RUN adduser \
 RUN apk add --no-cache tzdata
 ## Needed if downstream users want to export metrics to f.ex. cloudwatch
 RUN apk update 
-RUN apk add curl tar 
+RUN apk add curl tar procps
 
 WORKDIR $GOPATH/src/smallest-golang/app/
 
