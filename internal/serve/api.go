@@ -235,11 +235,13 @@ func (api *API) processVmap(
 	breakWg := &sync.WaitGroup{}
 	for _, adBreak := range vmapData.AdBreaks {
 		logger.Debug("Processing ad break", slog.String("breakId", adBreak.Id))
-		breakWg.Add(1)
-		go func(vastData *vmap.VAST) {
-			defer breakWg.Done()
-			api.findMissingAndDispatchJobs(vastData)
-		}(adBreak.AdSource.VASTData.VAST)
+		if adBreak.AdSource.VASTData.VAST != nil {
+			breakWg.Add(1)
+			go func(vastData *vmap.VAST) {
+				defer breakWg.Done()
+				api.findMissingAndDispatchJobs(vastData)
+			}(adBreak.AdSource.VASTData.VAST)
+		}
 	}
 	breakWg.Wait()
 	return nil

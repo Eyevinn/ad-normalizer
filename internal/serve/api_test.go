@@ -3,6 +3,7 @@ package serve
 import (
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -237,6 +238,43 @@ func TestGetAssetList(t *testing.T) {
 	storeStub.reset()
 }
 
+func TestEmptyVmap(t *testing.T) {
+	is := is.New(t)
+	vmapReq, err := http.NewRequest(
+		"GET",
+		testServer.URL+"/vmap",
+		nil,
+	)
+	is.NoErr(err)
+	vmapReq.Header.Set("User-Agent", "TestUserAgent")
+	vmapReq.Header.Set("X-Forwarded-For", "123.123.123")
+	vmapReq.Header.Set("X-Device-User-Agent", "TestDeviceUserAgent")
+	vmapReq.Header.Set("accept", "application/xml")
+	qps := vmapReq.URL.Query()
+	qps.Set("requestType", "vmap")
+	qps.Set("empty", "true") // tell test server to return empty vmap
+	vmapReq.URL.RawQuery = qps.Encode()
+	recorder := httptest.NewRecorder()
+	api.HandleVmap(recorder, vmapReq)
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	is.Equal(recorder.Result().Header.Get("Content-Type"), "application/xml")
+	defer recorder.Result().Body.Close()
+
+	responseBody, err := io.ReadAll(recorder.Result().Body)
+	is.NoErr(err)
+	fmt.Println(string(responseBody))
+	vmapRes, err := vmap.DecodeVmap(responseBody)
+	is.NoErr(err)
+	is.Equal(len(vmapRes.AdBreaks), 1)
+	firstBreak := vmapRes.AdBreaks[0]
+	is.Equal(firstBreak.TimeOffset.Position, vmap.OffsetStart)
+	is.Equal(firstBreak.BreakType, "linear")
+	is.Equal(firstBreak.AdSource.VASTData.VAST, nil)
+
+	encoreHandler.reset()
+	storeStub.reset()
+}
+
 func TestReplaceVmap(t *testing.T) {
 	is := is.New(t)
 	f, err := os.Open("../test_data/testVmap.xml")
@@ -306,6 +344,7 @@ func TestReplaceVmap(t *testing.T) {
 func setupTestServer() *httptest.Server {
 	vastData, _ := os.ReadFile("../test_data/testVast.xml")
 	vmapData, _ := os.ReadFile("../test_data/testVmap.xml")
+	emptyVmapData, _ := os.ReadFile("../test_data/emptyVmap.xml")
 	return httptest.NewServer(http.HandlerFunc(
 		func(res http.ResponseWriter, req *http.Request) {
 			switch req.URL.Query().Get("requestType") {
@@ -325,10 +364,17 @@ func setupTestServer() *httptest.Server {
 					_, _ = res.Write(vastData)
 				}
 			case "vmap":
+
 				time.Sleep(time.Millisecond * 10)
 				res.Header().Set("Content-Type", "application/xml")
 				res.WriteHeader(200)
-				_, _ = res.Write(vmapData)
+				if req.URL.Query().Get("empty") == "true" {
+					fmt.Println("Returning empty VMAP")
+					fmt.Println(string(emptyVmapData))
+					_, _ = res.Write(emptyVmapData)
+				} else {
+					_, _ = res.Write(vmapData)
+				}
 			default:
 				res.WriteHeader(404)
 			}
