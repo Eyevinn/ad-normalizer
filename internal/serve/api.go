@@ -167,7 +167,13 @@ func (api *API) makeAdServerRequest(r *http.Request, ctx context.Context) ([]byt
 	_, span := otel.Tracer("api").Start(ctx, "makeAdServerRequest")
 	defer span.End()
 	newUrl := api.adServerUrl
-	if subdomain := r.URL.Query().Get("subdomain"); subdomain != "" {
+	subdomain := ""
+	for k := range r.URL.Query() {
+		if strings.ToLower(k) == "subdomain" {
+			subdomain = r.URL.Query().Get(k)
+		}
+	}
+	if subdomain != "" {
 		logger.Debug("Replacing subdomain in URL",
 			slog.String("subdomain", subdomain),
 			slog.String("originalUrl", newUrl.String()),

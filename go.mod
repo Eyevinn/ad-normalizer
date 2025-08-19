@@ -3,7 +3,7 @@ module github.com/Eyevinn/ad-normalizer
 go 1.24.2
 
 require (
-	github.com/Eyevinn/VMAP v0.3.1
+	github.com/Eyevinn/VMAP v0.3.2
 	github.com/EyevinnOSC/client-go v0.0.4
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/google/uuid v1.6.0

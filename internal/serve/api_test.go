@@ -161,7 +161,12 @@ func TestReplaceVast(t *testing.T) {
 	vastReq.Header.Set("accept", "application/xml")
 	// make sure we request a VAST response
 	qps := vastReq.URL.Query()
+	newUrl := strings.Replace(testServer.URL, "127", "128", 1)
+	parsedUrl, err := url.Parse(newUrl)
+	is.NoErr(err)
+	api.adServerUrl = *parsedUrl
 	qps.Set("requestType", "vast")
+	qps.Set("subDomain", "127")
 	vastReq.URL.RawQuery = qps.Encode()
 	recorder := httptest.NewRecorder()
 	api.HandleVast(recorder, vastReq)
@@ -179,6 +184,9 @@ func TestReplaceVast(t *testing.T) {
 	is.Equal(mediaFile.Text, "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8")
 	is.Equal(mediaFile.Width, 718)
 	is.Equal(mediaFile.Height, 404)
+
+	realUrl, _ := url.Parse(testServer.URL)
+	api.adServerUrl = *realUrl // Reset to original URL
 
 	encoreHandler.reset()
 	storeStub.reset()
