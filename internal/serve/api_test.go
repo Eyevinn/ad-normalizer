@@ -3,7 +3,6 @@ package serve
 import (
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -262,14 +261,13 @@ func TestEmptyVmap(t *testing.T) {
 
 	responseBody, err := io.ReadAll(recorder.Result().Body)
 	is.NoErr(err)
-	fmt.Println(string(responseBody))
 	vmapRes, err := vmap.DecodeVmap(responseBody)
 	is.NoErr(err)
 	is.Equal(len(vmapRes.AdBreaks), 1)
 	firstBreak := vmapRes.AdBreaks[0]
 	is.Equal(firstBreak.TimeOffset.Position, vmap.OffsetStart)
 	is.Equal(firstBreak.BreakType, "linear")
-	is.Equal(firstBreak.AdSource.VASTData.VAST, nil)
+	is.Equal(len(firstBreak.AdSource.VASTData.VAST.Ad), 0)
 
 	encoreHandler.reset()
 	storeStub.reset()
@@ -369,8 +367,6 @@ func setupTestServer() *httptest.Server {
 				res.Header().Set("Content-Type", "application/xml")
 				res.WriteHeader(200)
 				if req.URL.Query().Get("empty") == "true" {
-					fmt.Println("Returning empty VMAP")
-					fmt.Println(string(emptyVmapData))
 					_, _ = res.Write(emptyVmapData)
 				} else {
 					_, _ = res.Write(vmapData)
