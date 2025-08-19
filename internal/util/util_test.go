@@ -92,6 +92,17 @@ func TestReplaceMediaFiles(t *testing.T) {
 	is.Equal(len(assets), 1)
 }
 
+func TestCreateFillerAd(t *testing.T) {
+	is := is.New(t)
+	returnedAd := CreateFillerAd("http://example.com/video.mp4", 10)
+	is.Equal(returnedAd.Id, fillerId)
+	is.Equal(returnedAd.Sequence, 10)
+	creative := returnedAd.InLine.Creatives[0]
+	is.Equal(creative.Linear.MediaFiles[0].Text, "http://example.com/video.mp4")
+	is.Equal(creative.Linear.MediaFiles[0].Bitrate, 1)
+
+}
+
 func TestCreateOutputUrl(t *testing.T) {
 	is := is.New(t)
 	bucketUrl, _ := url.Parse("s3://example.com/transcoding-output/")

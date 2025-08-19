@@ -113,6 +113,8 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 
 	vastData := vmap.VAST{}
 	logger.Debug("Handling VAST request", slog.String("path", r.URL.Path))
+	qp := r.URL.Query()
+	fillerUrl := qp.Get("filler")
 	responseBody, err := api.makeAdServerRequest(r, ctx)
 	if err != nil {
 		logger.Error("failed to fetch VAST data", slog.String("error", err.Error()))
@@ -130,6 +132,12 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logger.Debug("Decoded VAST data", slog.Int("adCount", len(vastData.Ad)))
+	if fillerUrl != "" {
+		logger.Debug("Adding filler to the end of the VAST",
+			slog.String("fillerUrl", fillerUrl),
+		)
+		vastData.Ad = append(vastData.Ad, util.CreateFillerAd(fillerUrl, len(vastData.Ad)+1))
+	}
 	api.findMissingAndDispatchJobs(&vastData)
 	var serializedVast []byte
 	requestedContentType := r.Header.Get("Accept")

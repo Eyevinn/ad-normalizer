@@ -192,6 +192,65 @@ func TestReplaceVast(t *testing.T) {
 	storeStub.reset()
 }
 
+func TestReplaceVastWithFiller(t *testing.T) {
+	is := is.New(t)
+	re := regexp.MustCompile("[^a-zA-Z0-9]")
+	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	transcodeInfo := structure.TranscodeInfo{
+		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
+		AspectRatio: "16:9",
+		FrameRates:  []float64{25.0},
+		Status:      "COMPLETED",
+	}
+	_ = storeStub.Set(adKey, transcodeInfo)
+	// add a filler
+	fillerInfo := structure.TranscodeInfo{
+		Url:         "http://example.com/video.m3u8",
+		AspectRatio: "16:9",
+		FrameRates:  []float64{25.0},
+		Status:      "COMPLETED",
+	}
+	fillerKey := re.ReplaceAllString("http://example.com/video.mp4", "")
+	_ = storeStub.Set(fillerKey, fillerInfo)
+
+	vastReq, err := http.NewRequest(
+		"GET",
+		testServer.URL,
+		nil,
+	)
+	is.NoErr(err)
+	vastReq.Header.Set("User-Agent", "TestUserAgent")
+	vastReq.Header.Set("X-Forwarded-For", "123.123.123")
+	vastReq.Header.Set("X-Device-User-Agent", "TestDeviceUserAgent")
+	vastReq.Header.Set("accept", "application/xml")
+	qps := vastReq.URL.Query()
+	qps.Set("requestType", "vast")
+	qps.Set("filler", "http://example.com/video.mp4")
+	vastReq.URL.RawQuery = qps.Encode()
+	recorder := httptest.NewRecorder()
+	api.HandleVast(recorder, vastReq)
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	is.Equal(recorder.Result().Header.Get("Content-Type"), "application/xml")
+	defer recorder.Result().Body.Close()
+
+	responseBody, err := io.ReadAll(recorder.Result().Body)
+	is.NoErr(err)
+	vastRes, err := vmap.DecodeVast(responseBody)
+	is.NoErr(err)
+	is.Equal(len(vastRes.Ad), 2)
+	mediaFile := vastRes.Ad[0].InLine.Creatives[0].Linear.MediaFiles[0]
+	is.Equal(mediaFile.MediaType, "application/x-mpegURL")
+	is.Equal(mediaFile.Text, "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8")
+	is.Equal(mediaFile.Width, 718)
+	is.Equal(mediaFile.Height, 404)
+
+	filler := vastRes.Ad[1]
+	is.Equal(filler.Id, "NORMALIZER_FILLER")
+
+	encoreHandler.reset()
+	storeStub.reset()
+}
+
 func TestGetAssetList(t *testing.T) {
 	is := is.New(t)
 	// Populate the store with one ad
