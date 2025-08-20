@@ -26,6 +26,7 @@ type StoreStub struct {
 	sets      int
 	gets      int
 	deletes   int
+	blacklist []string
 }
 
 // Delete implements store.Store.
@@ -54,6 +55,20 @@ func (s *StoreStub) reset() {
 	s.sets = 0
 	s.gets = 0
 	s.deletes = 0
+}
+
+func (s *StoreStub) BlackList(key string) error {
+	s.blacklist = append(s.blacklist, key)
+	return nil
+}
+
+func (s *StoreStub) InBlackList(key string) (bool, error) {
+	for _, blacklistedKey := range s.blacklist {
+		if blacklistedKey == key {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (s *StoreStub) EnqueuePackagingJob(queueName string, message structure.PackagingQueueMessage) error {

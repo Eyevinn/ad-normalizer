@@ -59,6 +59,21 @@ func NewAPI(
 	}
 }
 
+func (api *API) HandleBlackList(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "HandleBlackList")
+	defer span.End()
+	if r.Method != http.MethodPost && r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.Method == http.MethodPost {
+		// TODO: format the post url and blacklist key, then add to blacklist
+	}
+	if r.Method == http.MethodDelete {
+		// TODO: remove the key from the blacklist
+	}
+}
+
 func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("api").Start(r.Context(), "HandleVmap")
 	vmapData := vmap.VMAP{}
