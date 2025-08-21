@@ -84,6 +84,24 @@ func getKey(keyField, keyRegex string, ad *vmap.Ad, mediaFile *vmap.MediaFile) s
 	return res
 }
 
+func UrlToKey(urlStr, keyRegex string) string {
+	re := regexp.MustCompile(keyRegex)
+	return re.ReplaceAllString(urlStr, "")
+}
+
+func ValidPath(path string) bool {
+	if path == "" {
+		return false
+	}
+	if path == "/" {
+		return false
+	}
+	if path == "." {
+		return false
+	}
+	return true
+}
+
 func ConvertToAssetDescriptionSlice(vast *vmap.VAST) []structure.AssetDescription {
 	// the vast is pre-fitlered, should be the same size
 	descriptions := make([]structure.AssetDescription, len(vast.Ad))

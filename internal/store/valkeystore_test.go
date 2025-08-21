@@ -110,9 +110,10 @@ func TestBlackList(t *testing.T) {
 	is.NoErr(err)
 	is.True(inBlackList)
 
-	// Check that a different key is not in the blacklist
-	inBlackList, err = store.InBlackList("another-key")
+	err = store.RemoveFromBlackList("test-key")
 	is.NoErr(err)
-	is.True(!inBlackList)
+	inBlackList, err = store.InBlackList("test-key")
+	is.NoErr(err)
+	is.True(!inBlackList) // Should not be in blacklist anymore
 
 }

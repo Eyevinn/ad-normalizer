@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"io"
@@ -69,6 +70,16 @@ func (s *StoreStub) InBlackList(key string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func (s *StoreStub) RemoveFromBlackList(key string) error {
+	for i, blacklistedKey := range s.blacklist {
+		if blacklistedKey == key {
+			s.blacklist = append(s.blacklist[:i], s.blacklist[i+1:]...)
+			return nil
+		}
+	}
+	return nil // Key not found in blacklist, nothing to remove
 }
 
 func (s *StoreStub) EnqueuePackagingJob(queueName string, message structure.PackagingQueueMessage) error {
@@ -205,6 +216,51 @@ func TestReplaceVast(t *testing.T) {
 
 	encoreHandler.reset()
 	storeStub.reset()
+}
+
+func TestReplaceVastWithBlacklisted(t *testing.T) {
+	is := is.New(t)
+	// Populate the store with one ad
+	re := regexp.MustCompile("[^a-zA-Z0-9]")
+	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	transcodeInfo := structure.TranscodeInfo{
+		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
+		AspectRatio: "16:9",
+		FrameRates:  []float64{25.0},
+		Status:      "COMPLETED",
+	}
+	_ = storeStub.Set(adKey, transcodeInfo)
+	vastReq, err := http.NewRequest(
+		"GET",
+		testServer.URL,
+		nil,
+	)
+	is.NoErr(err)
+	_ = storeStub.BlackList("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
+	vastReq.Header.Set("User-Agent", "TestUserAgent")
+	vastReq.Header.Set("X-Forwarded-For", "123.123.123")
+	vastReq.Header.Set("X-Device-User-Agent", "TestDeviceUserAgent")
+	vastReq.Header.Set("accept", "application/xml")
+	// make sure we request a VAST response
+	qps := vastReq.URL.Query()
+	is.NoErr(err)
+	qps.Set("requestType", "vast")
+	vastReq.URL.RawQuery = qps.Encode()
+	recorder := httptest.NewRecorder()
+	api.HandleVast(recorder, vastReq)
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	is.Equal(recorder.Result().Header.Get("Content-Type"), "application/xml")
+	defer recorder.Result().Body.Close()
+
+	responseBody, err := io.ReadAll(recorder.Result().Body)
+	is.NoErr(err)
+	vastRes, err := vmap.DecodeVast(responseBody)
+	is.NoErr(err)
+	is.Equal(len(vastRes.Ad), 0) // since the ad is blacklisted, we should not get any ads back
+
+	encoreHandler.reset()
+	storeStub.reset()
+	storeStub.blacklist = []string{} // Reset the blacklist
 }
 
 func TestReplaceVastWithFiller(t *testing.T) {
@@ -413,6 +469,38 @@ func TestReplaceVmap(t *testing.T) {
 	storeStub.reset()
 }
 
+func TestBlacklist(t *testing.T) {
+	is := is.New(t)
+	blacklistUrl := "https://adserver-assets.io/badfile.mp4"
+	reqBody := blacklistRequest{
+		MediaUrl: blacklistUrl,
+	}
+	serializedBody, err := json.Marshal(reqBody)
+	is.NoErr(err)
+	blacklistReq, err := http.NewRequest(
+		"POST",
+		testServer.URL+"/blacklist/",
+		bytes.NewBuffer(serializedBody),
+	)
+	is.NoErr(err)
+	recorder := httptest.NewRecorder()
+	api.HandleBlackList(recorder, blacklistReq)
+	is.Equal(recorder.Result().StatusCode, http.StatusNoContent)
+	is.Equal(len(storeStub.blacklist), 1)
+
+	//remove from blacklist
+	unblacklistReq, err := http.NewRequest(
+		"DELETE",
+		testServer.URL+"/blacklist/",
+		bytes.NewBuffer(serializedBody),
+	)
+	is.NoErr(err)
+	recorder = httptest.NewRecorder()
+	api.HandleBlackList(recorder, unblacklistReq)
+	is.Equal(recorder.Result().StatusCode, http.StatusNoContent)
+	is.Equal(len(storeStub.blacklist), 0)
+}
+
 func setupTestServer() *httptest.Server {
 	vastData, _ := os.ReadFile("../test_data/testVast.xml")
 	vmapData, _ := os.ReadFile("../test_data/testVmap.xml")
@@ -436,7 +524,6 @@ func setupTestServer() *httptest.Server {
 					_, _ = res.Write(vastData)
 				}
 			case "vmap":
-
 				time.Sleep(time.Millisecond * 10)
 				res.Header().Set("Content-Type", "application/xml")
 				res.WriteHeader(200)

@@ -59,18 +59,54 @@ func NewAPI(
 	}
 }
 
+type blacklistRequest struct {
+	MediaUrl string `json:"mediaUrl"`
+}
+
 func (api *API) HandleBlackList(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("api").Start(r.Context(), "HandleBlackList")
+	_, span := otel.Tracer("api").Start(r.Context(), "HandleBlackList")
 	defer span.End()
 	if r.Method != http.MethodPost && r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	bytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		logger.Error("failed to read request body", slog.String("error", err.Error()))
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+	var blRequest blacklistRequest
+	if err := json.Unmarshal(bytes, &blRequest); err != nil {
+		logger.Error("failed to unmarshal request body", slog.String("error", err.Error()))
+		http.Error(w, "Failed to unmarshal request body", http.StatusBadRequest)
+		return
+	}
 	if r.Method == http.MethodPost {
-		// TODO: format the post url and blacklist key, then add to blacklist
+		err = api.valkeyStore.BlackList(blRequest.MediaUrl)
+		if err != nil {
+			logger.Error("failed to blacklist media URL",
+				slog.String("mediaUrl", blRequest.MediaUrl),
+				slog.String("error", err.Error()),
+			)
+			http.Error(w, "Failed to blacklist media URL", http.StatusInternalServerError)
+			return
+		}
+		logger.Info("blacklisted media URL", slog.String("mediaUrl", blRequest.MediaUrl))
+		w.WriteHeader(http.StatusNoContent)
 	}
 	if r.Method == http.MethodDelete {
-		// TODO: remove the key from the blacklist
+		err = api.valkeyStore.RemoveFromBlackList(blRequest.MediaUrl)
+		if err != nil {
+			logger.Error("failed to unblacklist media URL",
+				slog.String("mediaUrl", blRequest.MediaUrl),
+				slog.String("error", err.Error()),
+			)
+			http.Error(w, "Failed to unblacklist media URL", http.StatusInternalServerError)
+			return
+		}
+		logger.Info("unblacklisted media URL", slog.String("mediaUrl", blRequest.MediaUrl))
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
@@ -321,6 +357,13 @@ func (api *API) partitionCreatives(
 			logger.Error("failed to get creative from store",
 				slog.String("error", err.Error()),
 				slog.String("creativeId", creative.CreativeId),
+			)
+			continue
+		}
+		if blacklisted, _ := api.valkeyStore.InBlackList(creative.MasterPlaylistUrl); blacklisted {
+			logger.Debug("creative is in blacklist, skipping",
+				slog.String("creativeId", creative.CreativeId),
+				slog.String("masterPlaylistUrl", creative.MasterPlaylistUrl),
 			)
 			continue
 		}
