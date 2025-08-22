@@ -73,6 +73,20 @@ The VMAP endpoint processes all VAST ads within the VMAP document, ensuring that
 
 Note that the VMAP endpoint does **not** support json as a response type.
 
+
+### Blacklist endpoint
+The service supports blacklisting of source files via the endpoint `api/v1/blacklist`. It accepts POST and DELETE requests.
+Both requests expect a body with the following format 
+```json
+{
+  "mediaUrl": "${your media URL}"
+}
+```
+A POST request will add the URL to the blacklist, and a DELETE will remove it.
+Whenever a VAST or VMAP response is provided by the ad server, the normalizer will filter out ads with a media file present in the blacklist. 
+
+The most probable use case for this feature is making sure that broken ad assets are not contiuosly added to the encore cue and failing transcodes.
+
 ## Requirements
 
 To run the ad normalizer as a service, the following other services are needed
@@ -116,7 +130,8 @@ Note: the ad normalizer assumes that your packager is set up with the output sub
 
 ### starting the service
 
-`npm run start`
+`go run ./...`
+
 
 ## Development
 
