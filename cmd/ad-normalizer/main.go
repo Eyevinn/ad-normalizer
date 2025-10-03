@@ -42,10 +42,12 @@ func main() {
 	defer stop()
 
 	otelShutdown, err := telemetry.SetupOtelSdk(ctx, config)
-
 	if err != nil {
 		return
 	}
+	
+	// Check if OTEL is enabled by testing if we have OTEL environment variables
+	otelEnabled := telemetry.IsOtelEnabled(config)
 
 	defer func() {
 		err = errors.Join(err, otelShutdown(context.Background()))
@@ -66,8 +68,8 @@ func main() {
 	packagerMux.HandleFunc("/success", api.HandlePackagingSuccess)
 	packagerMux.HandleFunc("/failure", api.HandlePackagingFailure)
 
-	apiMuxChain := setupMiddleWare(apiMux, "api")
-	packagerMuxChain := setupMiddleWare(packagerMux, "packager")
+	apiMuxChain := setupMiddleWare(apiMux, "api", otelEnabled)
+	packagerMuxChain := setupMiddleWare(packagerMux, "packager", otelEnabled)
 	mainmux := http.NewServeMux()
 
 	mainmux.HandleFunc("/encoreCallback", api.HandleEncoreCallback)
@@ -141,13 +143,20 @@ func recovery(next http.Handler) http.HandlerFunc {
 	}
 }
 
-func setupMiddleWare(mainHandler http.Handler, name string) http.Handler {
-	otelMiddleware := otelhttp.NewMiddleware(name, otelhttp.WithPropagators(otel.GetTextMapPropagator()))
+func setupMiddleWare(mainHandler http.Handler, name string, otelEnabled bool) http.Handler {
 	compressorMiddleware, err := gzhttp.NewWrapper(gzhttp.MinSize(2000), gzhttp.CompressionLevel(gzip.BestSpeed))
 	if err != nil {
 		panic(err)
 	}
-	return recovery(otelMiddleware(corsMiddleware(compressorMiddleware(mainHandler))))
+	
+	handlerChain := recovery(corsMiddleware(compressorMiddleware(mainHandler)))
+	
+	if otelEnabled {
+		otelMiddleware := otelhttp.NewMiddleware(name, otelhttp.WithPropagators(otel.GetTextMapPropagator()))
+		handlerChain = recovery(otelMiddleware(corsMiddleware(compressorMiddleware(mainHandler))))
+	}
+	
+	return handlerChain
 }
 
 func setupApi(config *config.AdNormalizerConfig) (*serve.API, error) {
