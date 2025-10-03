@@ -3,9 +3,12 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/Eyevinn/ad-normalizer/internal/config"
+	"github.com/Eyevinn/ad-normalizer/internal/logger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -18,6 +21,21 @@ import (
 
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
+
+func IsOtelEnabled(config config.AdNormalizerConfig) bool {
+	// For local development, always enable OTEL with stdout exporters
+	if config.InstanceID == "local" {
+		return true
+	}
+
+	// Check for required OTLP environment variables
+	_, hasOtlpEndpoint := os.LookupEnv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	_, hasOtlpMetricsEndpoint := os.LookupEnv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT")
+	_, hasOtlpTracesEndpoint := os.LookupEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
+
+	// OTEL is enabled if we have either the general endpoint or both specific endpoints
+	return hasOtlpEndpoint || (hasOtlpMetricsEndpoint && hasOtlpTracesEndpoint)
+}
 
 func newResource(config config.AdNormalizerConfig) (*resource.Resource, error) {
 	return resource.Merge(resource.Default(),
@@ -33,6 +51,14 @@ func SetupOtelSdk(
 	ctx context.Context,
 	config config.AdNormalizerConfig,
 ) (shutdown func(context.Context) error, err error) {
+	// Check if OpenTelemetry should be enabled
+	if !IsOtelEnabled(config) {
+		logger.Info("OpenTelemetry disabled - required environment variables not found")
+		// Return a no-op shutdown function
+		return func(context.Context) error { return nil }, nil
+	}
+
+	logger.Info("OpenTelemetry enabled", slog.String("instance_id", config.InstanceID))
 	var shutdownFuncs []func(context.Context) error
 
 	shutdown = func(ctx context.Context) error {
