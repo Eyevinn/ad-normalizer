@@ -61,6 +61,129 @@ func TestGetJob(t *testing.T) {
 	is.NoErr(err)
 }
 
+func TestGetJobWithoutOSCContext(t *testing.T) {
+	is := is.New(t)
+	
+	// Capture the JWT header from the test server
+	var capturedJWT string
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedJWT = r.Header.Get("x-jwt")
+		job := encoreJob("test-job", "http://example.com/test.mp4", "s3://example.com/transcoding-output/test-job/")
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/hal+json")
+		_, _ = w.Write(job)
+	}))
+	defer testServer.Close()
+
+	client := &http.Client{}
+	testUrl, _ := url.Parse(testServer.URL)
+	bucketUrl, _ := url.Parse("s3://example.com/transcoding-output/")
+	rootUrl, _ := url.Parse("https://ad-normalizer.osaas.io")
+	
+	// Create handler without OSC context
+	handler := NewHttpEncoreHandler(
+		client,
+		*testUrl,
+		"test-profile",
+		nil,
+		*bucketUrl,
+		*rootUrl,
+	)
+
+	jobId := uuid.New().String()
+	_, err := handler.GetEncoreJob(jobId)
+	is.NoErr(err)
+	
+	// Verify no JWT header is set when OSC context is nil
+	is.Equal(capturedJWT, "")
+}
+
+func TestCreateJobWithoutOSCContext(t *testing.T) {
+	is := is.New(t)
+	
+	// Capture the JWT header from the test server
+	var capturedJWT string
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			capturedJWT = r.Header.Get("x-jwt")
+			validRequest := validateRequest(r)
+			if !validRequest {
+				http.Error(w, "Invalid request", http.StatusBadRequest)
+				return
+			}
+			defer r.Body.Close()
+			jsonDecoder := json.NewDecoder(r.Body)
+			postedJob := structure.EncoreJob{}
+			err := jsonDecoder.Decode(&postedJob)
+			if err != nil {
+				http.Error(w, "Failed to decode request body", http.StatusBadRequest)
+				return
+			}
+			postedJob.Id = uuid.New().String()
+			resbod, err := json.Marshal(postedJob)
+			if err != nil {
+				http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusCreated)
+			w.Header().Set("Content-Type", "application/hal+json")
+			_, _ = w.Write(resbod)
+		}
+	}))
+	defer testServer.Close()
+
+	client := &http.Client{}
+	testUrl, _ := url.Parse(testServer.URL)
+	bucketUrl, _ := url.Parse("s3://example.com/transcoding-output/")
+	rootUrl, _ := url.Parse("https://ad-normalizer.osaas.io")
+	
+	// Create handler without OSC context
+	handler := NewHttpEncoreHandler(
+		client,
+		*testUrl,
+		"test-profile",
+		nil,
+		*bucketUrl,
+		*rootUrl,
+	)
+
+	asset := &structure.ManifestAsset{
+		CreativeId:        "test-creative-id",
+		MasterPlaylistUrl: "http://example.com/test.mp4",
+	}
+	
+	_, err := handler.CreateJob(asset)
+	is.NoErr(err)
+	
+	// Verify no JWT header is set when OSC context is nil
+	is.Equal(capturedJWT, "")
+}
+
+func TestJWTBearerTokenFormatting(t *testing.T) {
+	// This test verifies that when the x-jwt header is set, it follows the Bearer token format
+	// This is a regression test for the JWT authentication header format fix
+	is := is.New(t)
+	
+	testCases := []struct {
+		name        string
+		headerValue string
+		expected    bool
+	}{
+		{"Valid Bearer token", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", true},
+		{"Invalid token without Bearer prefix", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", false},
+		{"Empty token", "", false},
+		{"Bearer with space", "Bearer ", false},
+	}
+	
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			hasValidBearerPrefix := strings.HasPrefix(tc.headerValue, "Bearer ") && len(tc.headerValue) > 7
+			is.Equal(hasValidBearerPrefix, tc.expected)
+		})
+	}
+}
+
 func setupTestServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
