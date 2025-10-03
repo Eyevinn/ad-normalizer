@@ -17,6 +17,7 @@ import (
 )
 
 var encoreHandler EncoreHandler
+var capturedJWT string
 
 func TestMain(m *testing.M) {
 	testServer := setupTestServer()
@@ -64,34 +65,11 @@ func TestGetJob(t *testing.T) {
 func TestGetJobWithoutOSCContext(t *testing.T) {
 	is := is.New(t)
 	
-	// Capture the JWT header from the test server
-	var capturedJWT string
-	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		capturedJWT = r.Header.Get("x-jwt")
-		job := encoreJob("test-job", "http://example.com/test.mp4", "s3://example.com/transcoding-output/test-job/")
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/hal+json")
-		_, _ = w.Write(job)
-	}))
-	defer testServer.Close()
-
-	client := &http.Client{}
-	testUrl, _ := url.Parse(testServer.URL)
-	bucketUrl, _ := url.Parse("s3://example.com/transcoding-output/")
-	rootUrl, _ := url.Parse("https://ad-normalizer.osaas.io")
+	// Reset captured JWT before test
+	capturedJWT = ""
 	
-	// Create handler without OSC context
-	handler := NewHttpEncoreHandler(
-		client,
-		*testUrl,
-		"test-profile",
-		nil,
-		*bucketUrl,
-		*rootUrl,
-	)
-
 	jobId := uuid.New().String()
-	_, err := handler.GetEncoreJob(jobId)
+	_, err := encoreHandler.GetEncoreJob(jobId)
 	is.NoErr(err)
 	
 	// Verify no JWT header is set when OSC context is nil
@@ -101,59 +79,15 @@ func TestGetJobWithoutOSCContext(t *testing.T) {
 func TestCreateJobWithoutOSCContext(t *testing.T) {
 	is := is.New(t)
 	
-	// Capture the JWT header from the test server
-	var capturedJWT string
-	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPost:
-			capturedJWT = r.Header.Get("x-jwt")
-			validRequest := validateRequest(r)
-			if !validRequest {
-				http.Error(w, "Invalid request", http.StatusBadRequest)
-				return
-			}
-			defer r.Body.Close()
-			jsonDecoder := json.NewDecoder(r.Body)
-			postedJob := structure.EncoreJob{}
-			err := jsonDecoder.Decode(&postedJob)
-			if err != nil {
-				http.Error(w, "Failed to decode request body", http.StatusBadRequest)
-				return
-			}
-			postedJob.Id = uuid.New().String()
-			resbod, err := json.Marshal(postedJob)
-			if err != nil {
-				http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-				return
-			}
-			w.WriteHeader(http.StatusCreated)
-			w.Header().Set("Content-Type", "application/hal+json")
-			_, _ = w.Write(resbod)
-		}
-	}))
-	defer testServer.Close()
-
-	client := &http.Client{}
-	testUrl, _ := url.Parse(testServer.URL)
-	bucketUrl, _ := url.Parse("s3://example.com/transcoding-output/")
-	rootUrl, _ := url.Parse("https://ad-normalizer.osaas.io")
-	
-	// Create handler without OSC context
-	handler := NewHttpEncoreHandler(
-		client,
-		*testUrl,
-		"test-profile",
-		nil,
-		*bucketUrl,
-		*rootUrl,
-	)
+	// Reset captured JWT before test
+	capturedJWT = ""
 
 	asset := &structure.ManifestAsset{
 		CreativeId:        "test-creative-id",
 		MasterPlaylistUrl: "http://example.com/test.mp4",
 	}
 	
-	_, err := handler.CreateJob(asset)
+	_, err := encoreHandler.CreateJob(asset)
 	is.NoErr(err)
 	
 	// Verify no JWT header is set when OSC context is nil
@@ -186,6 +120,9 @@ func TestJWTBearerTokenFormatting(t *testing.T) {
 
 func setupTestServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Capture JWT header for tests that need it
+		capturedJWT = r.Header.Get("x-jwt")
+		
 		switch r.Method {
 		case http.MethodPost:
 			validRequest := validateRequest(r)
