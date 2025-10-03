@@ -93,7 +93,7 @@ func (eh *HttpEncoreHandler) GetEncoreJob(jobId string) (structure.EncoreJob, er
 			logger.Error("Failed to get Service Access Token for Encore", slog.String("error", err.Error()))
 			return job, fmt.Errorf("failed to get Service Access Token for Encore: %w", err)
 		}
-		jobRequest.Header.Set("x-jwt", sat)
+		jobRequest.Header.Set("x-jwt", "Bearer "+sat)
 	}
 	res, err := eh.Client.Do(jobRequest)
 	if err != nil {
@@ -138,7 +138,7 @@ func (eh *HttpEncoreHandler) submitJob(job structure.EncoreJob) (structure.Encor
 			logger.Error("Failed to get Service Access Token for Encore", slog.String("error", err.Error()))
 			return job, fmt.Errorf("failed to get Service Access Token for Encore: %w", err)
 		}
-		jobRequest.Header.Set("x-jwt", sat)
+		jobRequest.Header.Set("x-jwt", "Bearer "+sat)
 	}
 	resp, err := eh.Client.Do(jobRequest)
 	if err != nil {
