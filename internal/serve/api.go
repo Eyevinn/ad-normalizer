@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -57,6 +58,40 @@ func NewAPI(
 		packageQueue:   config.PackagingQueueName,
 		encoreUrl:      config.EncoreUrl,
 	}
+}
+
+type statusResponse struct {
+	Jobs []structure.TranscodeInfo `json:"jobs"`
+	Page int                       `json:"page"`
+	Size int                       `json:"size"`
+	Next string                    `json:"next,omitempty"`
+	Prev string                    `json:"prev,omitempty"`
+}
+
+func (api *API) HandleStatus(w http.ResponseWriter, r *http.Request) {
+	_, span := otel.Tracer("api").Start(r.Context(), "HandleStatus")
+	defer span.End()
+	var err error
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	query := r.URL.Query()
+	page := 1
+	size := 10
+	if p := query.Get("page"); p != "" {
+		page, err = strconv.Atoi(p)
+	}
+	if s := query.Get("size"); s != "" {
+		size, err = strconv.Atoi(s)
+	}
+
+	// TODO: Add logic for next page and prev page
+
+	// TODO: Add logic for filtering by status
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("OK"))
 }
 
 type blacklistRequest struct {

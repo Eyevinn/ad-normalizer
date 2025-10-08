@@ -3,6 +3,7 @@ package store
 import (
 	"log"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -116,4 +117,43 @@ func TestBlackList(t *testing.T) {
 	is.NoErr(err)
 	is.True(!inBlackList) // Should not be in blacklist anymore
 
+}
+
+func TestList(t *testing.T) {
+	is := is.New(t)
+	store, err := NewValkeyStore("redis://" + redisAdress)
+	is.NoErr(err)
+
+	// Add some test data
+	for i := 0; i < 15; i++ {
+		strVal := strconv.Itoa(i)
+		testData := structure.TranscodeInfo{
+			Url:         "http://example.com/video" + strVal + "/index.m3u8",
+			AspectRatio: "16:9",
+			FrameRates:  []float64{25.0},
+			Status:      "COMPLETED",
+		}
+		err = store.Set("test-key-"+strVal, testData)
+		is.NoErr(err)
+	}
+
+	results, err := store.List(0, 10) // Get first page with 10 items
+	is.NoErr(err)
+	is.Equal(len(results), 10)
+
+	res2, err := store.List(1, 10) // Get second page with 10 items
+	is.NoErr(err)
+	is.Equal(len(res2), 5) // Only 5 items should be left
+
+	results = append(results, res2...)
+	is.Equal(len(results), 15)
+	// Check ordering and cleanup
+	for i := range results {
+		strVal := strconv.Itoa(14 - i)
+		err = store.Delete("test-key-" + strVal)
+		is.NoErr(err)
+	}
+	results, err = store.List(0, 10) // Should be empty now
+	is.NoErr(err)
+	is.Equal(len(results), 0)
 }
