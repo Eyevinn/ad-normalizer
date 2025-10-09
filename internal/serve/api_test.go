@@ -59,7 +59,7 @@ func (s *StoreStub) List(page int, size int) ([]structure.TranscodeInfo, error) 
 		tci := structure.TranscodeInfo{
 			Url:    "http://example.com/video" + strVal + "/index.m3u8",
 			Status: "COMPLETED",
-			Title:  "Test Video " + strVal,
+			Source: "s3://fake-bucket/video" + strVal + ".mp4",
 		}
 		result = append(result, tci)
 	}
@@ -548,10 +548,10 @@ func TestHandleStatus(t *testing.T) {
 	for i, job := range response.Jobs {
 		expectedIndex := 9 - i // Since jobs are in descending order
 		expectedUrl := "http://example.com/video" + strconv.Itoa(expectedIndex) + "/index.m3u8"
-		expectedTitle := "Test Video " + strconv.Itoa(expectedIndex)
+		expectedSource := "s3://fake-bucket/video" + strconv.Itoa(expectedIndex) + ".mp4"
 		is.Equal(job.Url, expectedUrl)
 		is.Equal(job.Status, "COMPLETED")
-		is.Equal(job.Title, expectedTitle)
+		is.Equal(job.Source, expectedSource)
 	}
 }
 

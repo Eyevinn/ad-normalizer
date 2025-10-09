@@ -39,7 +39,7 @@ func GetCreatives(
 		creatives[adId] = structure.ManifestAsset{
 			CreativeId:        adId,
 			MasterPlaylistUrl: mediaFile.Text,
-			Title:             ad.InLine.AdTitle,
+			Source:            mediaFile.Text,
 		}
 		logger.Debug("Mapped creative",
 			slog.String("adId", adId),

@@ -403,7 +403,7 @@ func (api *API) findMissingAndDispatchJobs(
 			_ = api.valkeyStore.Set(creative.CreativeId, structure.TranscodeInfo{
 				Url:    creative.MasterPlaylistUrl,
 				Status: "QUEUED",
-				Title:  creative.Title,
+				Source: creative.MasterPlaylistUrl,
 			})
 		}(&creative)
 	}
@@ -443,14 +443,14 @@ func (api *API) partitionCreatives(
 				found[creative.CreativeId] = structure.ManifestAsset{
 					CreativeId:        creative.CreativeId,
 					MasterPlaylistUrl: transcodeInfo.Url,
-					Title:             transcodeInfo.Title,
+					Source:            transcodeInfo.Source,
 				}
 			}
 		} else {
 			missing[creative.CreativeId] = structure.ManifestAsset{
 				CreativeId:        creative.CreativeId,
 				MasterPlaylistUrl: creative.MasterPlaylistUrl,
-				Title:             creative.Title,
+				Source:            transcodeInfo.Source,
 			}
 		}
 	}
