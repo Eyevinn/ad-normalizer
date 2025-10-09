@@ -11,6 +11,7 @@ import (
 type ManifestAsset struct {
 	CreativeId        string
 	MasterPlaylistUrl string
+	Title             string
 }
 
 const DefaultTtl = 3600
@@ -26,6 +27,7 @@ type TranscodeInfo struct {
 	AspectRatio string    `json:"aspectRatio"`
 	FrameRates  []float64 `json:"frameRates"`
 	Status      string    `json:"status"`
+	Title       string    `json:"title,omitempty"`
 }
 
 func TranscodeInfoFromEncoreJob(job *EncoreJob, jitPackaging bool, assetServerUrl url.URL) (TranscodeInfo, error) {

@@ -37,6 +37,7 @@ func GetCreatives(
 		creatives[adId] = structure.ManifestAsset{
 			CreativeId:        adId,
 			MasterPlaylistUrl: mediaFile.Text,
+			Title:             ad.InLine.AdTitle,
 		}
 	}
 

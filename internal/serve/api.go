@@ -442,12 +442,14 @@ func (api *API) partitionCreatives(
 				found[creative.CreativeId] = structure.ManifestAsset{
 					CreativeId:        creative.CreativeId,
 					MasterPlaylistUrl: transcodeInfo.Url,
+					Title:             transcodeInfo.Title,
 				}
 			}
 		} else {
 			missing[creative.CreativeId] = structure.ManifestAsset{
 				CreativeId:        creative.CreativeId,
 				MasterPlaylistUrl: creative.MasterPlaylistUrl,
+				Title:             creative.Title,
 			}
 		}
 	}

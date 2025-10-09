@@ -59,6 +59,7 @@ func (s *StoreStub) List(page int, size int) ([]structure.TranscodeInfo, error) 
 		tci := structure.TranscodeInfo{
 			Url:    "http://example.com/video" + strVal + "/index.m3u8",
 			Status: "COMPLETED",
+			Title:  "Test Video " + strVal,
 		}
 		result = append(result, tci)
 	}
@@ -544,6 +545,14 @@ func TestHandleStatus(t *testing.T) {
 	is.Equal(len(response.Jobs), 10)
 	is.Equal(response.Next, "/status?page=1&size=10")
 	is.Equal(response.Prev, "")
+	for i, job := range response.Jobs {
+		expectedIndex := 9 - i // Since jobs are in descending order
+		expectedUrl := "http://example.com/video" + strconv.Itoa(expectedIndex) + "/index.m3u8"
+		expectedTitle := "Test Video " + strconv.Itoa(expectedIndex)
+		is.Equal(job.Url, expectedUrl)
+		is.Equal(job.Status, "COMPLETED")
+		is.Equal(job.Title, expectedTitle)
+	}
 }
 
 func setupTestServer() *httptest.Server {
