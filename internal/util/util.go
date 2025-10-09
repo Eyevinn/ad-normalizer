@@ -1,12 +1,14 @@
 package util
 
 import (
+	"log/slog"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/Eyevinn/VMAP/vmap"
+	"github.com/Eyevinn/ad-normalizer/internal/logger"
 	"github.com/Eyevinn/ad-normalizer/internal/structure"
 	"github.com/google/uuid"
 )
@@ -39,6 +41,10 @@ func GetCreatives(
 			MasterPlaylistUrl: mediaFile.Text,
 			Title:             ad.InLine.AdTitle,
 		}
+		logger.Debug("Mapped creative",
+			slog.String("adId", adId),
+			slog.String("url", mediaFile.Text),
+			slog.String("title", ad.InLine.AdTitle))
 	}
 
 	return creatives
