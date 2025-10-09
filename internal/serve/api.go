@@ -403,6 +403,7 @@ func (api *API) findMissingAndDispatchJobs(
 			_ = api.valkeyStore.Set(creative.CreativeId, structure.TranscodeInfo{
 				Url:    creative.MasterPlaylistUrl,
 				Status: "QUEUED",
+				Title:  creative.Title,
 			})
 		}(&creative)
 	}
