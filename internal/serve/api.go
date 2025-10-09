@@ -77,21 +77,56 @@ func (api *API) HandleStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	query := r.URL.Query()
-	page := 1
+	page := 0
 	size := 10
 	if p := query.Get("page"); p != "" {
 		page, err = strconv.Atoi(p)
+		if err != nil || page < 0 {
+			http.Error(w, "Invalid page parameter", http.StatusBadRequest)
+			return
+		}
 	}
 	if s := query.Get("size"); s != "" {
 		size, err = strconv.Atoi(s)
+		if err != nil || size <= 0 || size > 100 {
+			http.Error(w, "Invalid size parameter", http.StatusBadRequest)
+			return
+		}
 	}
 
 	// TODO: Add logic for next page and prev page
+	var prev, next string
+	if page > 0 {
+		prev = "/status?page=" + strconv.Itoa(page-1) + "&size=" + strconv.Itoa(size)
+	}
 
-	// TODO: Add logic for filtering by status
+	results, err := api.valkeyStore.List(page, size)
+	if err != nil {
+		logger.Error("failed to list jobs", slog.String("error", err.Error()))
+		http.Error(w, "Failed to list jobs", http.StatusInternalServerError)
+		return
+	}
 
+	if len(results) == size {
+		next = "/status?page=" + strconv.Itoa(page+1) + "&size=" + strconv.Itoa(size)
+	}
+	resp := statusResponse{
+		Jobs: results,
+		Page: page,
+		Size: len(results),
+		Next: next,
+		Prev: prev,
+	}
+	// Marshal to JSON and write response
+	ret, err := json.Marshal(resp)
+	if err != nil {
+		logger.Error("failed to marshal jobs", slog.String("error", err.Error()))
+		http.Error(w, "Failed to marshal jobs", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("OK"))
+	_, _ = w.Write(ret)
 }
 
 type blacklistRequest struct {

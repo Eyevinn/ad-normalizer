@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -49,6 +50,19 @@ func (s *StoreStub) Set(key string, value structure.TranscodeInfo, ttl ...int64)
 	s.sets++
 	s.mockStore[key] = value
 	return nil
+}
+
+func (s *StoreStub) List(page int, size int) ([]structure.TranscodeInfo, error) {
+	result := make([]structure.TranscodeInfo, 0, size)
+	for i := range size {
+		strVal := strconv.Itoa((page * size) + (size - 1 - i))
+		tci := structure.TranscodeInfo{
+			Url:    "http://example.com/video" + strVal + "/index.m3u8",
+			Status: "COMPLETED",
+		}
+		result = append(result, tci)
+	}
+	return result, nil
 }
 
 func (s *StoreStub) reset() {
@@ -499,6 +513,37 @@ func TestBlacklist(t *testing.T) {
 	api.HandleBlackList(recorder, unblacklistReq)
 	is.Equal(recorder.Result().StatusCode, http.StatusNoContent)
 	is.Equal(len(storeStub.blacklist), 0)
+}
+
+// TODO: Add test for status endpoint
+
+func TestHandleStatus(t *testing.T) {
+	is := is.New(t)
+
+	// Create test request
+	req, err := http.NewRequest(http.MethodGet, "/status", nil)
+	is.NoErr(err)
+
+	// Create response recorder
+	recorder := httptest.NewRecorder()
+
+	// Call the handler
+	api.HandleStatus(recorder, req)
+
+	// Check the response
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	is.Equal(recorder.Result().Header.Get("Content-Type"), "application/json")
+
+	// Parse the response body
+	var response statusResponse
+	err = json.NewDecoder(recorder.Body).Decode(&response)
+	is.NoErr(err)
+
+	// Verify response contents
+	is.Equal(response.Page, 0)
+	is.Equal(len(response.Jobs), 10)
+	is.Equal(response.Next, "/status?page=1&size=10")
+	is.Equal(response.Prev, "")
 }
 
 func setupTestServer() *httptest.Server {
