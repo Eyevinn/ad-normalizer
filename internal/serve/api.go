@@ -82,7 +82,6 @@ func (api *API) HandleJobList(w http.ResponseWriter, r *http.Request) {
 	if p := query.Get("page"); p != "" {
 		page, err = strconv.Atoi(p)
 		if err != nil || page < 0 {
-			logger.Error("invalid page parameter", slog.String("page", p), slog.String("error", err.Error()))
 			http.Error(w, "Invalid page parameter", http.StatusBadRequest)
 			return
 		}
@@ -90,7 +89,6 @@ func (api *API) HandleJobList(w http.ResponseWriter, r *http.Request) {
 	if s := query.Get("size"); s != "" {
 		size, err = strconv.Atoi(s)
 		if err != nil || size <= 0 || size > 100 {
-			logger.Error("invalid size parameter", slog.String("size", s), slog.String("error", err.Error()))
 			http.Error(w, "Invalid size parameter", http.StatusBadRequest)
 			return
 		}

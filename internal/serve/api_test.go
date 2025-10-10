@@ -523,7 +523,7 @@ func TestBlacklist(t *testing.T) {
 
 // TODO: Add test for status endpoint
 
-func TestHandleStatus(t *testing.T) {
+func TestHandleJobList(t *testing.T) {
 	is := is.New(t)
 
 	// Create test request
@@ -558,6 +558,74 @@ func TestHandleStatus(t *testing.T) {
 		is.Equal(job.Status, "COMPLETED")
 		is.Equal(job.Source, expectedSource)
 	}
+}
+
+func TestHandleJobListInvalidPageParameter(t *testing.T) {
+	is := is.New(t)
+
+	// Test with invalid page parameter
+	req, err := http.NewRequest(http.MethodGet, "/status?page=invalid", nil)
+	is.NoErr(err)
+
+	recorder := httptest.NewRecorder()
+	api.HandleJobList(recorder, req)
+
+	is.Equal(recorder.Result().StatusCode, http.StatusBadRequest)
+
+	body, err := io.ReadAll(recorder.Body)
+	is.NoErr(err)
+	is.True(strings.Contains(string(body), "Invalid page parameter"))
+}
+
+func TestHandleJobListInvalidSizeParameter(t *testing.T) {
+	is := is.New(t)
+
+	// Test with invalid size parameter
+	req, err := http.NewRequest(http.MethodGet, "/status?size=invalid", nil)
+	is.NoErr(err)
+
+	recorder := httptest.NewRecorder()
+	api.HandleJobList(recorder, req)
+
+	is.Equal(recorder.Result().StatusCode, http.StatusBadRequest)
+
+	body, err := io.ReadAll(recorder.Body)
+	is.NoErr(err)
+	is.True(strings.Contains(string(body), "Invalid size parameter"))
+}
+
+func TestHandleJobListNegativePageParameter(t *testing.T) {
+	is := is.New(t)
+
+	// Test with negative page parameter
+	req, err := http.NewRequest(http.MethodGet, "/status?page=-1", nil)
+	is.NoErr(err)
+
+	recorder := httptest.NewRecorder()
+	api.HandleJobList(recorder, req)
+
+	is.Equal(recorder.Result().StatusCode, http.StatusBadRequest)
+
+	body, err := io.ReadAll(recorder.Body)
+	is.NoErr(err)
+	is.True(strings.Contains(string(body), "Invalid page parameter"))
+}
+
+func TestHandleJobListInvalidSizeParameterZero(t *testing.T) {
+	is := is.New(t)
+
+	// Test with size parameter as zero
+	req, err := http.NewRequest(http.MethodGet, "/status?size=0", nil)
+	is.NoErr(err)
+
+	recorder := httptest.NewRecorder()
+	api.HandleJobList(recorder, req)
+
+	is.Equal(recorder.Result().StatusCode, http.StatusBadRequest)
+
+	body, err := io.ReadAll(recorder.Body)
+	is.NoErr(err)
+	is.True(strings.Contains(string(body), "Invalid size parameter"))
 }
 
 func setupTestServer() *httptest.Server {
