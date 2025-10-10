@@ -59,6 +59,7 @@ func TranscodeInfoFromEncoreJob(job *EncoreJob, jitPackaging bool, assetServerUr
 		AspectRatio: aspectRatio,
 		FrameRates:  job.GetFrameRates(),
 		Status:      jobStatus,
+		Source:      job.Inputs[0].Uri,
 	}, nil
 }
 

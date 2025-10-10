@@ -127,6 +127,11 @@ func (e *EncoreHandlerStub) GetEncoreJob(jobId string) (structure.EncoreJob, err
 				},
 			},
 		},
+		Inputs: []structure.EncoreInput{
+			{
+				Uri: "http://example.com/source/video.mp4",
+			},
+		},
 	}, nil
 }
 
@@ -543,7 +548,7 @@ func TestHandleStatus(t *testing.T) {
 	// Verify response contents
 	is.Equal(response.Page, 0)
 	is.Equal(len(response.Jobs), 10)
-	is.Equal(response.Next, "/status?page=1&size=10")
+	is.Equal(response.Next, "/jobs?page=1&size=10")
 	is.Equal(response.Prev, "")
 	for i, job := range response.Jobs {
 		expectedIndex := 9 - i // Since jobs are in descending order
