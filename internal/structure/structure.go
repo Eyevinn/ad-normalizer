@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type ManifestAsset struct {
@@ -28,6 +29,8 @@ type TranscodeInfo struct {
 	FrameRates  []float64 `json:"frameRates"`
 	Status      string    `json:"status"`
 	Source      string    `json:"source,omitempty"`
+	LastUpdate  int64     `json:"lastUpdate,omitempty"`
+	Error       string    `json:"error,omitempty"`
 }
 
 func TranscodeInfoFromEncoreJob(job *EncoreJob, jitPackaging bool, assetServerUrl url.URL) (TranscodeInfo, error) {
@@ -54,13 +57,18 @@ func TranscodeInfoFromEncoreJob(job *EncoreJob, jitPackaging bool, assetServerUr
 		)
 		vidUrl = packageUrl.String()
 	}
-	return TranscodeInfo{
+	tc := TranscodeInfo{
 		Url:         vidUrl,
 		AspectRatio: aspectRatio,
 		FrameRates:  job.GetFrameRates(),
 		Status:      jobStatus,
 		Source:      job.Inputs[0].Uri,
-	}, nil
+		LastUpdate:  time.Now().Unix(),
+	}
+	if job.Message != "" {
+		tc.Error = job.Message
+	}
+	return tc, nil
 }
 
 type EncoreJobProgress struct {

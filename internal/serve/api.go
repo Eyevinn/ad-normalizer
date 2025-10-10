@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Eyevinn/VMAP/vmap"
 	"github.com/Eyevinn/ad-normalizer/internal/config"
@@ -401,9 +402,10 @@ func (api *API) findMissingAndDispatchJobs(
 				slog.String("jobId", encoreJob.Id),
 			)
 			_ = api.valkeyStore.Set(creative.CreativeId, structure.TranscodeInfo{
-				Url:    creative.MasterPlaylistUrl,
-				Status: "QUEUED",
-				Source: creative.MasterPlaylistUrl,
+				Url:        creative.MasterPlaylistUrl,
+				Status:     "QUEUED",
+				Source:     creative.MasterPlaylistUrl,
+				LastUpdate: time.Now().Unix(),
 			})
 		}(&creative)
 	}

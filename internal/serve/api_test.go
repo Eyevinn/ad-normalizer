@@ -57,9 +57,10 @@ func (s *StoreStub) List(page int, size int) ([]structure.TranscodeInfo, error) 
 	for i := range size {
 		strVal := strconv.Itoa((page * size) + (size - 1 - i))
 		tci := structure.TranscodeInfo{
-			Url:    "http://example.com/video" + strVal + "/index.m3u8",
-			Status: "COMPLETED",
-			Source: "s3://fake-bucket/video" + strVal + ".mp4",
+			Url:        "http://example.com/video" + strVal + "/index.m3u8",
+			Status:     "COMPLETED",
+			Source:     "s3://fake-bucket/video" + strVal + ".mp4",
+			LastUpdate: time.Now().Unix(),
 		}
 		result = append(result, tci)
 	}
@@ -557,6 +558,7 @@ func TestHandleJobList(t *testing.T) {
 		is.Equal(job.Url, expectedUrl)
 		is.Equal(job.Status, "COMPLETED")
 		is.Equal(job.Source, expectedSource)
+		is.True(job.LastUpdate > 0)
 	}
 }
 
