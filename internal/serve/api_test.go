@@ -529,7 +529,7 @@ func TestHandleStatus(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
 	// Call the handler
-	api.HandleStatus(recorder, req)
+	api.HandleJobList(recorder, req)
 
 	// Check the response
 	is.Equal(recorder.Result().StatusCode, http.StatusOK)

@@ -68,7 +68,7 @@ type statusResponse struct {
 	Prev string                    `json:"prev,omitempty"`
 }
 
-func (api *API) HandleStatus(w http.ResponseWriter, r *http.Request) {
+func (api *API) HandleJobList(w http.ResponseWriter, r *http.Request) {
 	_, span := otel.Tracer("api").Start(r.Context(), "HandleStatus")
 	defer span.End()
 	var err error
