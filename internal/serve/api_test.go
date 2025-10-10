@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -49,6 +50,21 @@ func (s *StoreStub) Set(key string, value structure.TranscodeInfo, ttl ...int64)
 	s.sets++
 	s.mockStore[key] = value
 	return nil
+}
+
+func (s *StoreStub) List(page int, size int) ([]structure.TranscodeInfo, error) {
+	result := make([]structure.TranscodeInfo, 0, size)
+	for i := range size {
+		strVal := strconv.Itoa((page * size) + (size - 1 - i))
+		tci := structure.TranscodeInfo{
+			Url:        "http://example.com/video" + strVal + "/index.m3u8",
+			Status:     "COMPLETED",
+			Source:     "s3://fake-bucket/video" + strVal + ".mp4",
+			LastUpdate: time.Now().Unix(),
+		}
+		result = append(result, tci)
+	}
+	return result, nil
 }
 
 func (s *StoreStub) reset() {
@@ -110,6 +126,11 @@ func (e *EncoreHandlerStub) GetEncoreJob(jobId string) (structure.EncoreJob, err
 						FrameRate: "25",
 					},
 				},
+			},
+		},
+		Inputs: []structure.EncoreInput{
+			{
+				Uri: "http://example.com/source/video.mp4",
 			},
 		},
 	}, nil
@@ -499,6 +520,114 @@ func TestBlacklist(t *testing.T) {
 	api.HandleBlackList(recorder, unblacklistReq)
 	is.Equal(recorder.Result().StatusCode, http.StatusNoContent)
 	is.Equal(len(storeStub.blacklist), 0)
+}
+
+// TODO: Add test for status endpoint
+
+func TestHandleJobList(t *testing.T) {
+	is := is.New(t)
+
+	// Create test request
+	req, err := http.NewRequest(http.MethodGet, "/status", nil)
+	is.NoErr(err)
+
+	// Create response recorder
+	recorder := httptest.NewRecorder()
+
+	// Call the handler
+	api.HandleJobList(recorder, req)
+
+	// Check the response
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	is.Equal(recorder.Result().Header.Get("Content-Type"), "application/json")
+
+	// Parse the response body
+	var response statusResponse
+	err = json.NewDecoder(recorder.Body).Decode(&response)
+	is.NoErr(err)
+
+	// Verify response contents
+	is.Equal(response.Page, 0)
+	is.Equal(len(response.Jobs), 10)
+	is.Equal(response.Next, "/jobs?page=1&size=10")
+	is.Equal(response.Prev, "")
+	for i, job := range response.Jobs {
+		expectedIndex := 9 - i // Since jobs are in descending order
+		expectedUrl := "http://example.com/video" + strconv.Itoa(expectedIndex) + "/index.m3u8"
+		expectedSource := "s3://fake-bucket/video" + strconv.Itoa(expectedIndex) + ".mp4"
+		is.Equal(job.Url, expectedUrl)
+		is.Equal(job.Status, "COMPLETED")
+		is.Equal(job.Source, expectedSource)
+		is.True(job.LastUpdate > 0)
+	}
+}
+
+func TestHandleJobListInvalidPageParameter(t *testing.T) {
+	is := is.New(t)
+
+	// Test with invalid page parameter
+	req, err := http.NewRequest(http.MethodGet, "/status?page=invalid", nil)
+	is.NoErr(err)
+
+	recorder := httptest.NewRecorder()
+	api.HandleJobList(recorder, req)
+
+	is.Equal(recorder.Result().StatusCode, http.StatusBadRequest)
+
+	body, err := io.ReadAll(recorder.Body)
+	is.NoErr(err)
+	is.True(strings.Contains(string(body), "Invalid page parameter"))
+}
+
+func TestHandleJobListInvalidSizeParameter(t *testing.T) {
+	is := is.New(t)
+
+	// Test with invalid size parameter
+	req, err := http.NewRequest(http.MethodGet, "/status?size=invalid", nil)
+	is.NoErr(err)
+
+	recorder := httptest.NewRecorder()
+	api.HandleJobList(recorder, req)
+
+	is.Equal(recorder.Result().StatusCode, http.StatusBadRequest)
+
+	body, err := io.ReadAll(recorder.Body)
+	is.NoErr(err)
+	is.True(strings.Contains(string(body), "Invalid size parameter"))
+}
+
+func TestHandleJobListNegativePageParameter(t *testing.T) {
+	is := is.New(t)
+
+	// Test with negative page parameter
+	req, err := http.NewRequest(http.MethodGet, "/status?page=-1", nil)
+	is.NoErr(err)
+
+	recorder := httptest.NewRecorder()
+	api.HandleJobList(recorder, req)
+
+	is.Equal(recorder.Result().StatusCode, http.StatusBadRequest)
+
+	body, err := io.ReadAll(recorder.Body)
+	is.NoErr(err)
+	is.True(strings.Contains(string(body), "Invalid page parameter"))
+}
+
+func TestHandleJobListInvalidSizeParameterZero(t *testing.T) {
+	is := is.New(t)
+
+	// Test with size parameter as zero
+	req, err := http.NewRequest(http.MethodGet, "/status?size=0", nil)
+	is.NoErr(err)
+
+	recorder := httptest.NewRecorder()
+	api.HandleJobList(recorder, req)
+
+	is.Equal(recorder.Result().StatusCode, http.StatusBadRequest)
+
+	body, err := io.ReadAll(recorder.Body)
+	is.NoErr(err)
+	is.True(strings.Contains(string(body), "Invalid size parameter"))
 }
 
 func setupTestServer() *httptest.Server {

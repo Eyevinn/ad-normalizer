@@ -10,8 +10,10 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Eyevinn/VMAP/vmap"
 	"github.com/Eyevinn/ad-normalizer/internal/config"
@@ -57,6 +59,75 @@ func NewAPI(
 		packageQueue:   config.PackagingQueueName,
 		encoreUrl:      config.EncoreUrl,
 	}
+}
+
+type statusResponse struct {
+	Jobs []structure.TranscodeInfo `json:"jobs"`
+	Page int                       `json:"page"`
+	Size int                       `json:"size"`
+	Next string                    `json:"next,omitempty"`
+	Prev string                    `json:"prev,omitempty"`
+}
+
+func (api *API) HandleJobList(w http.ResponseWriter, r *http.Request) {
+	_, span := otel.Tracer("api").Start(r.Context(), "HandleStatus")
+	defer span.End()
+	var err error
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	query := r.URL.Query()
+	page := 0
+	size := 10
+	if p := query.Get("page"); p != "" {
+		page, err = strconv.Atoi(p)
+		if err != nil || page < 0 {
+			http.Error(w, "Invalid page parameter", http.StatusBadRequest)
+			return
+		}
+	}
+	if s := query.Get("size"); s != "" {
+		size, err = strconv.Atoi(s)
+		if err != nil || size <= 0 || size > 100 {
+			http.Error(w, "Invalid size parameter", http.StatusBadRequest)
+			return
+		}
+	}
+
+	// TODO: Add logic for next page and prev page
+	var prev, next string
+	if page > 0 {
+		prev = "/status?page=" + strconv.Itoa(page-1) + "&size=" + strconv.Itoa(size)
+	}
+
+	results, err := api.valkeyStore.List(page, size)
+	if err != nil {
+		logger.Error("failed to list jobs", slog.String("error", err.Error()))
+		http.Error(w, "Failed to list jobs", http.StatusInternalServerError)
+		return
+	}
+
+	if len(results) == size {
+		next = "/jobs?page=" + strconv.Itoa(page+1) + "&size=" + strconv.Itoa(size)
+	}
+	resp := statusResponse{
+		Jobs: results,
+		Page: page,
+		Size: len(results),
+		Next: next,
+		Prev: prev,
+	}
+	// Marshal to JSON and write response
+	ret, err := json.Marshal(resp)
+	if err != nil {
+		logger.Error("failed to marshal jobs", slog.String("error", err.Error()))
+		http.Error(w, "Failed to marshal jobs", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(ret)
 }
 
 type blacklistRequest struct {
@@ -331,8 +402,10 @@ func (api *API) findMissingAndDispatchJobs(
 				slog.String("jobId", encoreJob.Id),
 			)
 			_ = api.valkeyStore.Set(creative.CreativeId, structure.TranscodeInfo{
-				Url:    creative.MasterPlaylistUrl,
-				Status: "QUEUED",
+				Url:        creative.MasterPlaylistUrl,
+				Status:     "QUEUED",
+				Source:     creative.MasterPlaylistUrl,
+				LastUpdate: time.Now().Unix(),
 			})
 		}(&creative)
 	}
@@ -372,12 +445,14 @@ func (api *API) partitionCreatives(
 				found[creative.CreativeId] = structure.ManifestAsset{
 					CreativeId:        creative.CreativeId,
 					MasterPlaylistUrl: transcodeInfo.Url,
+					Source:            transcodeInfo.Source,
 				}
 			}
 		} else {
 			missing[creative.CreativeId] = structure.ManifestAsset{
 				CreativeId:        creative.CreativeId,
 				MasterPlaylistUrl: creative.MasterPlaylistUrl,
+				Source:            transcodeInfo.Source,
 			}
 		}
 	}

@@ -14,6 +14,7 @@ import (
 )
 
 const BLACKLIST_KEY = "blacklist"
+const TIME_INDEX_KEY = "job_time_index"
 
 type Store interface {
 	Get(key string) (structure.TranscodeInfo, bool, error)
@@ -23,6 +24,7 @@ type Store interface {
 	BlackList(value string) error
 	InBlackList(value string) (bool, error)
 	RemoveFromBlackList(value string) error
+	List(page int, size int) ([]structure.TranscodeInfo, error)
 }
 
 type ValkeyStore struct {
@@ -53,6 +55,10 @@ func (vs *ValkeyStore) Delete(key string) error {
 	err := vs.client.Do(ctx, vs.client.B().Del().Key(key).Build()).Error()
 	if err != nil {
 		return fmt.Errorf("failed to delete key %s: %w", key, err)
+	}
+	err = deleteFromTimeIndex(vs, key)
+	if err != nil {
+		return fmt.Errorf("failed to delete key %s from time index: %w", key, err)
 	}
 	return nil
 }
@@ -128,6 +134,10 @@ func (vs *ValkeyStore) Set(key string, value structure.TranscodeInfo, ttl ...int
 			slog.String("url", value.Url),
 			slog.String("status", value.Status),
 		)
+	}
+	err = vs.updateTimeIndex(key)
+	if err != nil {
+		return fmt.Errorf("failed to update time index for key %s: %w", key, err)
 	}
 	return nil
 }
@@ -221,4 +231,75 @@ func (vs *ValkeyStore) RemoveFromBlackList(value string) error {
 	}
 	logger.Info("Removed URL from blacklist", slog.String("key", value))
 	return nil
+}
+
+func (vs *ValkeyStore) updateTimeIndex(key string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err := vs.client.Do(
+		ctx,
+		vs.client.B().
+			Zadd().
+			Key(TIME_INDEX_KEY).
+			ScoreMember().
+			ScoreMember(float64(time.Now().UnixMilli()), key).
+			Build()).
+		Error()
+	if err != nil {
+		return fmt.Errorf("failed to update time index for key %s: %w", key, err)
+	}
+	return err
+}
+
+func deleteFromTimeIndex(vs *ValkeyStore, key string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err := vs.client.Do(
+		ctx,
+		vs.client.B().
+			Zrem().
+			Key(TIME_INDEX_KEY).
+			Member(key).
+			Build()).
+		Error()
+	if err != nil {
+		return fmt.Errorf("failed to delete key %s from time index: %w", key, err)
+	}
+	return err
+}
+
+func (vs *ValkeyStore) List(page int, size int) ([]structure.TranscodeInfo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	start := int64(page * size) // 1-index to 0-index
+	end := int64(start + int64(size) - 1)
+	keys, err := vs.client.Do(
+		ctx,
+		vs.client.B().
+			Zrevrange().
+			Key(TIME_INDEX_KEY).
+			Start(start).
+			Stop(end).
+			Build()).AsStrSlice()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get keys from time index: %w", err)
+	}
+	results := make([]structure.TranscodeInfo, 0, len(keys))
+	mGetRes, err := valkey.MGet(vs.client, ctx, keys)
+	for _, key := range keys {
+		data, ok := mGetRes[key]
+		if !ok {
+			continue // Key does not exist
+		}
+		// TODO: Error handling
+		bytesData, _ := data.AsBytes()
+		var value structure.TranscodeInfo
+		err = json.Unmarshal(bytesData, &value)
+		if err != nil {
+			logger.Error("Failed to unmarshal value from Valkey", slog.String("key", key))
+			continue
+		}
+		results = append(results, value)
+	}
+	return results, err
 }

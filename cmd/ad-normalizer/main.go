@@ -61,6 +61,7 @@ func main() {
 	apiMux.HandleFunc("/vmap", api.HandleVmap)
 	apiMux.HandleFunc("/vast", api.HandleVast)
 	apiMux.HandleFunc("/blacklist", api.HandleBlackList)
+	apiMux.HandleFunc("/jobs", api.HandleJobList)
 
 	packagerMux := http.NewServeMux()
 	packagerMux.HandleFunc("/success", api.HandlePackagingSuccess)

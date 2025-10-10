@@ -12,6 +12,7 @@ type EncoreJob struct {
 	Inputs              []EncoreInput  `json:"inputs,omitempty"`
 	Outputs             []EncoreOutput `json:"output,omitempty"`
 	ProgressCallbackUri string         `json:"progressCallbackUri,omitempty"`
+	Message             string         `json:"message,omitempty"`
 }
 
 func (ep *EncoreJob) GetFrameRates() []float64 {

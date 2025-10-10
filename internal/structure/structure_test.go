@@ -36,6 +36,12 @@ func TestTranscodeInfoFromEncoreJob(t *testing.T) {
 				},
 			},
 		},
+		Inputs: []EncoreInput{
+			{
+				Uri:       "http://example.com/source/video.mp4",
+				MediaType: "audiovideo",
+			},
+		},
 	}
 	assetServerUrl, err := url.Parse("http://cdn.osaas.io")
 	is.NoErr(err)
