@@ -99,7 +99,7 @@ func (s *StoreStub) RemoveFromBlackList(key string) error {
 }
 
 func (s *StoreStub) GetBlackList(page int, size int) ([]string, int64, error) {
-	return []string{}, 0, nil
+	return s.blacklist, int64(len(s.blacklist)), nil
 }
 
 func (s *StoreStub) EnqueuePackagingJob(queueName string, message structure.PackagingQueueMessage) error {
@@ -512,6 +512,31 @@ func TestBlacklist(t *testing.T) {
 	api.HandleBlackList(recorder, blacklistReq)
 	is.Equal(recorder.Result().StatusCode, http.StatusNoContent)
 	is.Equal(len(storeStub.blacklist), 1)
+
+	getBlacklistReq, err := http.NewRequest(
+		"GET",
+		testServer.URL+"/blacklist/",
+		nil,
+	)
+	is.NoErr(err)
+	recorder = httptest.NewRecorder()
+	api.HandleBlackList(recorder, getBlacklistReq)
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	is.Equal(recorder.Result().Header.Get("Content-Type"), "application/json")
+	defer recorder.Result().Body.Close()
+
+	responseBody, err := io.ReadAll(recorder.Result().Body)
+	is.NoErr(err)
+	var blResponse blacklistResponse
+	err = json.Unmarshal(responseBody, &blResponse)
+	is.NoErr(err)
+	is.Equal(len(blResponse.MediaUrls), 1)
+	is.Equal(blResponse.MediaUrls[0], blacklistUrl)
+	is.Equal(blResponse.Page, 0)
+	is.Equal(blResponse.Size, 1)
+	is.Equal(blResponse.TotalCount, int64(1))
+	is.Equal(blResponse.Next, "")
+	is.Equal(blResponse.Prev, "")
 
 	//remove from blacklist
 	unblacklistReq, err := http.NewRequest(

@@ -146,6 +146,19 @@ type blacklistResponse struct {
 	TotalCount int64    `json:"totalCount"`
 }
 
+func readBlacklistRequest(r *http.Request) (blacklistRequest, error) {
+	bytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		return blacklistRequest{}, err
+	}
+	var blRequest blacklistRequest
+	if err := json.Unmarshal(bytes, &blRequest); err != nil {
+		return blRequest, err
+	}
+
+	return blRequest, nil
+}
+
 func (api *API) HandleBlackList(w http.ResponseWriter, r *http.Request) {
 	_, span := otel.Tracer("api").Start(r.Context(), "HandleBlackList")
 	defer span.End()
@@ -153,20 +166,14 @@ func (api *API) HandleBlackList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	bytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		logger.Error("failed to read request body", slog.String("error", err.Error()))
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
-		return
-	}
-	var blRequest blacklistRequest
-	if err := json.Unmarshal(bytes, &blRequest); err != nil {
-		logger.Error("failed to unmarshal request body", slog.String("error", err.Error()))
-		http.Error(w, "Failed to unmarshal request body", http.StatusBadRequest)
-		return
-	}
 	switch r.Method {
 	case http.MethodPost:
+		blRequest, err := readBlacklistRequest(r)
+		if err != nil {
+			logger.Error("failed to read blacklist request", slog.String("error", err.Error()))
+			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			return
+		}
 		err = api.valkeyStore.BlackList(blRequest.MediaUrl)
 		if err != nil {
 			logger.Error("failed to blacklist media URL",
@@ -180,6 +187,12 @@ func (api *API) HandleBlackList(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 
 	case http.MethodDelete:
+		blRequest, err := readBlacklistRequest(r)
+		if err != nil {
+			logger.Error("failed to read blacklist request", slog.String("error", err.Error()))
+			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			return
+		}
 		err = api.valkeyStore.RemoveFromBlackList(blRequest.MediaUrl)
 		if err != nil {
 			logger.Error("failed to unblacklist media URL",
@@ -196,14 +209,14 @@ func (api *API) HandleBlackList(w http.ResponseWriter, r *http.Request) {
 		page := 0
 		size := 10
 		if p := query.Get("page"); p != "" {
-			page, err = strconv.Atoi(p)
+			page, err := strconv.Atoi(p)
 			if err != nil || page < 0 {
 				http.Error(w, "Invalid page parameter", http.StatusBadRequest)
 				return
 			}
 		}
 		if s := query.Get("size"); s != "" {
-			size, err = strconv.Atoi(s)
+			size, err := strconv.Atoi(s)
 			if err != nil || size <= 0 || size > 100 {
 				http.Error(w, "Invalid size parameter", http.StatusBadRequest)
 				return

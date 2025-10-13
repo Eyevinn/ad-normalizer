@@ -111,6 +111,12 @@ func TestBlackList(t *testing.T) {
 	is.NoErr(err)
 	is.True(inBlackList)
 
+	fullBlacklist, cardinality, err := store.GetBlackList(0, 10)
+	is.NoErr(err)
+	is.Equal(cardinality, int64(1))
+	is.Equal(len(fullBlacklist), 1)
+	is.Equal(fullBlacklist[0], "test-key")
+
 	err = store.RemoveFromBlackList("test-key")
 	is.NoErr(err)
 	inBlackList, err = store.InBlackList("test-key")
