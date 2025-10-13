@@ -52,7 +52,7 @@ func (s *StoreStub) Set(key string, value structure.TranscodeInfo, ttl ...int64)
 	return nil
 }
 
-func (s *StoreStub) List(page int, size int) ([]structure.TranscodeInfo, error) {
+func (s *StoreStub) List(page int, size int) ([]structure.TranscodeInfo, int64, error) {
 	result := make([]structure.TranscodeInfo, 0, size)
 	for i := range size {
 		strVal := strconv.Itoa((page * size) + (size - 1 - i))
@@ -64,7 +64,7 @@ func (s *StoreStub) List(page int, size int) ([]structure.TranscodeInfo, error) 
 		}
 		result = append(result, tci)
 	}
-	return result, nil
+	return result, int64(size), nil
 }
 
 func (s *StoreStub) reset() {

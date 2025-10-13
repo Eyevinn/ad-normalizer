@@ -24,7 +24,7 @@ type Store interface {
 	BlackList(value string) error
 	InBlackList(value string) (bool, error)
 	RemoveFromBlackList(value string) error
-	List(page int, size int) ([]structure.TranscodeInfo, error)
+	List(page int, size int) ([]structure.TranscodeInfo, int64, error)
 }
 
 type ValkeyStore struct {
@@ -268,7 +268,7 @@ func deleteFromTimeIndex(vs *ValkeyStore, key string) error {
 	return err
 }
 
-func (vs *ValkeyStore) List(page int, size int) ([]structure.TranscodeInfo, error) {
+func (vs *ValkeyStore) List(page int, size int) ([]structure.TranscodeInfo, int64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	start := int64(page * size) // 1-index to 0-index
@@ -282,7 +282,16 @@ func (vs *ValkeyStore) List(page int, size int) ([]structure.TranscodeInfo, erro
 			Stop(end).
 			Build()).AsStrSlice()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get keys from time index: %w", err)
+		return nil, 0, fmt.Errorf("failed to get keys from time index: %w", err)
+	}
+	cardinality, err := vs.client.Do(
+		ctx,
+		vs.client.B().
+			Zcard().
+			Key(TIME_INDEX_KEY).
+			Build()).AsInt64()
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get cardinality of time index: %w", err)
 	}
 	results := make([]structure.TranscodeInfo, 0, len(keys))
 	mGetRes, err := valkey.MGet(vs.client, ctx, keys)
@@ -301,5 +310,5 @@ func (vs *ValkeyStore) List(page int, size int) ([]structure.TranscodeInfo, erro
 		}
 		results = append(results, value)
 	}
-	return results, err
+	return results, cardinality, err
 }

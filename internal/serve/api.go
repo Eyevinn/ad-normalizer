@@ -27,6 +27,7 @@ import (
 
 const userAgentHeader = "X-Device-User-Agent"
 const forwardedForHeader = "X-Forwarded-For"
+const jobPath = "/jobs"
 
 type API struct {
 	valkeyStore    store.Store
@@ -62,11 +63,12 @@ func NewAPI(
 }
 
 type statusResponse struct {
-	Jobs []structure.TranscodeInfo `json:"jobs"`
-	Page int                       `json:"page"`
-	Size int                       `json:"size"`
-	Next string                    `json:"next,omitempty"`
-	Prev string                    `json:"prev,omitempty"`
+	Jobs        []structure.TranscodeInfo `json:"jobs"`
+	Page        int                       `json:"page"`
+	Size        int                       `json:"size"`
+	Next        string                    `json:"next,omitempty"`
+	Prev        string                    `json:"prev,omitempty"`
+	TotalAmount int64                     `json:"totalAmount"`
 }
 
 func (api *API) HandleJobList(w http.ResponseWriter, r *http.Request) {
@@ -98,10 +100,10 @@ func (api *API) HandleJobList(w http.ResponseWriter, r *http.Request) {
 	// TODO: Add logic for next page and prev page
 	var prev, next string
 	if page > 0 {
-		prev = "/status?page=" + strconv.Itoa(page-1) + "&size=" + strconv.Itoa(size)
+		prev = jobPath + "?page=" + strconv.Itoa(page-1) + "&size=" + strconv.Itoa(size)
 	}
 
-	results, err := api.valkeyStore.List(page, size)
+	results, cardinality, err := api.valkeyStore.List(page, size)
 	if err != nil {
 		logger.Error("failed to list jobs", slog.String("error", err.Error()))
 		http.Error(w, "Failed to list jobs", http.StatusInternalServerError)
@@ -109,14 +111,15 @@ func (api *API) HandleJobList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(results) == size {
-		next = "/jobs?page=" + strconv.Itoa(page+1) + "&size=" + strconv.Itoa(size)
+		next = jobPath + "?page=" + strconv.Itoa(page+1) + "&size=" + strconv.Itoa(size)
 	}
 	resp := statusResponse{
-		Jobs: results,
-		Page: page,
-		Size: len(results),
-		Next: next,
-		Prev: prev,
+		Jobs:        results,
+		Page:        page,
+		Size:        len(results),
+		Next:        next,
+		Prev:        prev,
+		TotalAmount: cardinality,
 	}
 	// Marshal to JSON and write response
 	ret, err := json.Marshal(resp)

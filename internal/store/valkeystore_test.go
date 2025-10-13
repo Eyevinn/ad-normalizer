@@ -137,13 +137,15 @@ func TestList(t *testing.T) {
 		is.NoErr(err)
 	}
 
-	results, err := store.List(0, 10) // Get first page with 10 items
+	results, cardinality, err := store.List(0, 10) // Get first page with 10 items
 	is.NoErr(err)
 	is.Equal(len(results), 10)
+	is.Equal(cardinality, int64(15))
 
-	res2, err := store.List(1, 10) // Get second page with 10 items
+	res2, cardinality, err := store.List(1, 10) // Get second page with 10 items
 	is.NoErr(err)
 	is.Equal(len(res2), 5) // Only 5 items should be left
+	is.Equal(cardinality, int64(15))
 
 	results = append(results, res2...)
 	is.Equal(len(results), 15)
@@ -153,7 +155,8 @@ func TestList(t *testing.T) {
 		err = store.Delete("test-key-" + strVal)
 		is.NoErr(err)
 	}
-	results, err = store.List(0, 10) // Should be empty now
+	results, cardinality, err = store.List(0, 10) // Should be empty now
 	is.NoErr(err)
 	is.Equal(len(results), 0)
+	is.Equal(cardinality, int64(0))
 }
