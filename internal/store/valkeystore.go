@@ -24,6 +24,7 @@ type Store interface {
 	BlackList(value string) error
 	InBlackList(value string) (bool, error)
 	RemoveFromBlackList(value string) error
+	GetBlackList(page int, size int) ([]string, int64, error)
 	List(page int, size int) ([]structure.TranscodeInfo, int64, error)
 }
 
@@ -233,6 +234,34 @@ func (vs *ValkeyStore) RemoveFromBlackList(value string) error {
 	return nil
 }
 
+func (vs *ValkeyStore) GetBlackList(page int, size int) ([]string, int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	start := int64(page * size)
+	end := int64(start + int64(size) - 1)
+	values, err := vs.client.Do(
+		ctx,
+		vs.client.B().
+			Zrevrange().
+			Key(BLACKLIST_KEY).
+			Start(start).
+			Stop(end).
+			Build()).AsStrSlice()
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get values from blacklist: %w", err)
+	}
+	cardinality, err := vs.client.Do(
+		ctx,
+		vs.client.B().
+			Zcard().
+			Key(BLACKLIST_KEY).
+			Build()).AsInt64()
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get cardinality of blacklist: %w", err)
+	}
+	return values, cardinality, nil
+}
+
 func (vs *ValkeyStore) updateTimeIndex(key string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -271,7 +300,7 @@ func deleteFromTimeIndex(vs *ValkeyStore, key string) error {
 func (vs *ValkeyStore) List(page int, size int) ([]structure.TranscodeInfo, int64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	start := int64(page * size) // 1-index to 0-index
+	start := int64(page * size)
 	end := int64(start + int64(size) - 1)
 	keys, err := vs.client.Do(
 		ctx,

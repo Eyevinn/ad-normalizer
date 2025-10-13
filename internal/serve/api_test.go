@@ -98,6 +98,10 @@ func (s *StoreStub) RemoveFromBlackList(key string) error {
 	return nil // Key not found in blacklist, nothing to remove
 }
 
+func (s *StoreStub) GetBlackList(page int, size int) ([]string, int64, error) {
+	return []string{}, 0, nil
+}
+
 func (s *StoreStub) EnqueuePackagingJob(queueName string, message structure.PackagingQueueMessage) error {
 	// This is a stub, in a real implementation this would enqueue the job to a queue
 	return nil
