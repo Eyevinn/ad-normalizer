@@ -163,7 +163,7 @@ func (e *EncoreHandlerStub) CreateJob(creative *structure.ManifestAsset) (struct
 }
 
 var api *API
-var testServer *httptest.Server
+var ts *httptest.Server
 var encoreHandler *EncoreHandlerStub
 var storeStub *StoreStub
 
@@ -173,10 +173,10 @@ func TestMain(m *testing.M) {
 		kpis:      normalizerMetrics.NormalizerMetrics{},
 	}
 
-	testServer = setupTestServer()
-	defer testServer.Close()
+	ts = setupTestServer()
+	defer ts.Close()
 	encoreHandler = &EncoreHandlerStub{}
-	adserverUrl, _ := url.Parse(testServer.URL)
+	adserverUrl, _ := url.Parse(ts.URL)
 	assetServerUrl, _ := url.Parse("https://asset-server.example.com")
 	apiConf := config.AdNormalizerConfig{
 		AdServerUrl:    *adserverUrl,
@@ -215,7 +215,7 @@ func TestReplaceVast(t *testing.T) {
 	_ = storeStub.Set(adKey, transcodeInfo)
 	vastReq, err := http.NewRequest(
 		"GET",
-		testServer.URL,
+		ts.URL,
 		nil,
 	)
 	is.NoErr(err)
@@ -225,7 +225,7 @@ func TestReplaceVast(t *testing.T) {
 	vastReq.Header.Set("accept", "application/xml")
 	// make sure we request a VAST response
 	qps := vastReq.URL.Query()
-	newUrl := strings.Replace(testServer.URL, "127", "128", 1)
+	newUrl := strings.Replace(ts.URL, "127", "128", 1)
 	parsedUrl, err := url.Parse(newUrl)
 	is.NoErr(err)
 	api.adServerUrl = *parsedUrl
@@ -249,7 +249,7 @@ func TestReplaceVast(t *testing.T) {
 	is.Equal(mediaFile.Width, 718)
 	is.Equal(mediaFile.Height, 404)
 
-	realUrl, _ := url.Parse(testServer.URL)
+	realUrl, _ := url.Parse(ts.URL)
 	api.adServerUrl = *realUrl // Reset to original URL
 
 	is.Equal(storeStub.kpis.BrokenAds, 0)
@@ -274,7 +274,7 @@ func TestReplaceVastWithBlacklisted(t *testing.T) {
 	_ = storeStub.Set(adKey, transcodeInfo)
 	vastReq, err := http.NewRequest(
 		"GET",
-		testServer.URL,
+		ts.URL,
 		nil,
 	)
 	is.NoErr(err)
@@ -332,7 +332,7 @@ func TestReplaceVastWithFiller(t *testing.T) {
 
 	vastReq, err := http.NewRequest(
 		"GET",
-		testServer.URL,
+		ts.URL,
 		nil,
 	)
 	is.NoErr(err)
@@ -365,7 +365,7 @@ func TestReplaceVastWithFiller(t *testing.T) {
 	is.Equal(filler.Id, "NORMALIZER_FILLER")
 
 	is.Equal(storeStub.kpis.BrokenAds, 0)
-	is.Equal(storeStub.kpis.IngestedAds, 0)
+	is.Equal(storeStub.kpis.IngestedAds, 1)
 	is.Equal(storeStub.kpis.ServedAds, 2)
 
 	encoreHandler.reset()
@@ -386,7 +386,7 @@ func TestGetAssetList(t *testing.T) {
 	_ = storeStub.Set(adKey, transcodeInfo)
 	vastReq, err := http.NewRequest(
 		"GET",
-		testServer.URL,
+		ts.URL,
 		nil,
 	)
 	is.NoErr(err)
@@ -421,7 +421,7 @@ func TestEmptyVmap(t *testing.T) {
 	is := is.New(t)
 	vmapReq, err := http.NewRequest(
 		"GET",
-		testServer.URL+"/vmap",
+		ts.URL+"/vmap",
 		nil,
 	)
 	is.NoErr(err)
@@ -473,7 +473,7 @@ func TestReplaceVmap(t *testing.T) {
 	_ = storeStub.Set(adKey, transcodeInfo)
 	vmapReq, err := http.NewRequest(
 		"GET",
-		testServer.URL+"/vmap",
+		ts.URL+"/vmap",
 		nil,
 	)
 	is.NoErr(err)
@@ -534,7 +534,7 @@ func TestBlacklist(t *testing.T) {
 	is.NoErr(err)
 	blacklistReq, err := http.NewRequest(
 		"POST",
-		testServer.URL+"/blacklist/",
+		ts.URL+"/blacklist/",
 		bytes.NewBuffer(serializedBody),
 	)
 	is.NoErr(err)
@@ -545,7 +545,7 @@ func TestBlacklist(t *testing.T) {
 
 	getBlacklistReq, err := http.NewRequest(
 		"GET",
-		testServer.URL+"/blacklist/",
+		ts.URL+"/blacklist/",
 		nil,
 	)
 	is.NoErr(err)
@@ -571,7 +571,7 @@ func TestBlacklist(t *testing.T) {
 	//remove from blacklist
 	unblacklistReq, err := http.NewRequest(
 		"DELETE",
-		testServer.URL+"/blacklist/",
+		ts.URL+"/blacklist/",
 		bytes.NewBuffer(serializedBody),
 	)
 	is.NoErr(err)

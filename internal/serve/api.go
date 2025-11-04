@@ -491,6 +491,14 @@ func (api *API) findMissingAndDispatchJobs(
 			})
 		}(&creative)
 	}
+
+	api.reportKpi(normalizerMetrics.AdsHandledEventArguments{
+		Subdomain:   subdomain,
+		BrokenAds:   filteredOut,
+		IngestedAds: len(missing),
+		ServedAds:   len(found),
+	})
+
 	// TODO: Error handling
 	_ = util.ReplaceMediaFiles(
 		vast,
@@ -498,12 +506,7 @@ func (api *API) findMissingAndDispatchJobs(
 		api.keyRegex,
 		api.keyField,
 	)
-	api.reportKpi(normalizerMetrics.AdsHandledEventArguments{
-		Subdomain:   subdomain,
-		BrokenAds:   filteredOut,
-		IngestedAds: len(missing),
-		ServedAds:   len(found),
-	})
+
 }
 
 // TODO: Return amt blacklisted as well
