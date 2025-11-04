@@ -1,4 +1,4 @@
-package metrics
+package normalizerMetrics
 
 import (
 	"bytes"
@@ -138,6 +138,16 @@ func (c *normalizerKpiCollector) recordMetrics(args AdsHandledEventArguments) {
 			Service: args.Subdomain,
 		}
 		c.kpiMap[key] = metrics
+	}
+
+	if args.BrokenAds > 0 {
+		metrics.BrokenAds += args.BrokenAds
+	}
+	if args.IngestedAds > 0 {
+		metrics.IngestedAds += args.IngestedAds
+	}
+	if args.ServedAds > 0 {
+		metrics.ServedAds += args.ServedAds
 	}
 }
 

@@ -18,6 +18,7 @@ import (
 	"github.com/Eyevinn/VMAP/vmap"
 	"github.com/Eyevinn/ad-normalizer/internal/config"
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
+	"github.com/Eyevinn/ad-normalizer/internal/normalizerMetrics"
 	"github.com/Eyevinn/ad-normalizer/internal/structure"
 	"github.com/google/uuid"
 	"github.com/matryer/is"
@@ -29,6 +30,13 @@ type StoreStub struct {
 	gets      int
 	deletes   int
 	blacklist []string
+	kpis      normalizerMetrics.NormalizerMetrics
+}
+
+func (s *StoreStub) kpiReport(args normalizerMetrics.AdsHandledEventArguments) {
+	s.kpis.BrokenAds += args.BrokenAds
+	s.kpis.IngestedAds += args.IngestedAds
+	s.kpis.ServedAds += args.ServedAds
 }
 
 // Delete implements store.Store.
@@ -72,6 +80,7 @@ func (s *StoreStub) reset() {
 	s.sets = 0
 	s.gets = 0
 	s.deletes = 0
+	s.kpis = normalizerMetrics.NormalizerMetrics{}
 }
 
 func (s *StoreStub) BlackList(key string) error {
@@ -160,6 +169,7 @@ var storeStub *StoreStub
 func TestMain(m *testing.M) {
 	storeStub = &StoreStub{
 		mockStore: make(map[string]structure.TranscodeInfo),
+		kpis:      normalizerMetrics.NormalizerMetrics{},
 	}
 
 	testServer = setupTestServer()
@@ -179,6 +189,7 @@ func TestMain(m *testing.M) {
 		apiConf,
 		encoreHandler,
 		&http.Client{}, // Use nil for the client in tests, or you can create a mock client
+		storeStub.kpiReport,
 	)
 
 	// Run the tests
@@ -239,6 +250,10 @@ func TestReplaceVast(t *testing.T) {
 	realUrl, _ := url.Parse(testServer.URL)
 	api.adServerUrl = *realUrl // Reset to original URL
 
+	is.Equal(storeStub.kpis.BrokenAds, 0)
+	is.Equal(storeStub.kpis.IngestedAds, 1)
+	is.Equal(storeStub.kpis.ServedAds, 1)
+
 	encoreHandler.reset()
 	storeStub.reset()
 }
@@ -282,6 +297,10 @@ func TestReplaceVastWithBlacklisted(t *testing.T) {
 	vastRes, err := vmap.DecodeVast(responseBody)
 	is.NoErr(err)
 	is.Equal(len(vastRes.Ad), 0) // since the ad is blacklisted, we should not get any ads back
+
+	is.Equal(storeStub.kpis.BrokenAds, 1)
+	is.Equal(storeStub.kpis.IngestedAds, 1)
+	is.Equal(storeStub.kpis.ServedAds, 0)
 
 	encoreHandler.reset()
 	storeStub.reset()
@@ -342,6 +361,10 @@ func TestReplaceVastWithFiller(t *testing.T) {
 
 	filler := vastRes.Ad[1]
 	is.Equal(filler.Id, "NORMALIZER_FILLER")
+
+	is.Equal(storeStub.kpis.BrokenAds, 0)
+	is.Equal(storeStub.kpis.IngestedAds, 1)
+	is.Equal(storeStub.kpis.ServedAds, 2)
 
 	encoreHandler.reset()
 	storeStub.reset()
@@ -490,6 +513,11 @@ func TestReplaceVmap(t *testing.T) {
 	is.Equal(mediaFile.Text, "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8")
 	is.Equal(mediaFile.Width, 718)
 	is.Equal(mediaFile.Height, 404)
+
+	is.Equal(storeStub.kpis.BrokenAds, 0)
+	is.Equal(storeStub.kpis.IngestedAds, 1)
+	is.Equal(storeStub.kpis.ServedAds, 1)
+
 	encoreHandler.reset()
 	storeStub.reset()
 }

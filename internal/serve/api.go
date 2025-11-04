@@ -19,6 +19,7 @@ import (
 	"github.com/Eyevinn/ad-normalizer/internal/config"
 	"github.com/Eyevinn/ad-normalizer/internal/encore"
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
+	"github.com/Eyevinn/ad-normalizer/internal/normalizerMetrics"
 	"github.com/Eyevinn/ad-normalizer/internal/store"
 	"github.com/Eyevinn/ad-normalizer/internal/structure"
 	"github.com/Eyevinn/ad-normalizer/internal/util"
@@ -41,6 +42,7 @@ type API struct {
 	jitPackage     bool
 	packageQueue   string
 	encoreUrl      url.URL
+	reportKpi      func(normalizerMetrics.AdsHandledEventArguments)
 }
 
 func NewAPI(
@@ -48,6 +50,7 @@ func NewAPI(
 	config config.AdNormalizerConfig,
 	encoreHandler encore.EncoreHandler,
 	client *http.Client,
+	kpiReportFunc func(normalizerMetrics.AdsHandledEventArguments),
 ) *API {
 	return &API{
 		valkeyStore:    valkeyStore,
@@ -60,6 +63,7 @@ func NewAPI(
 		jitPackage:     config.JitPackage,
 		packageQueue:   config.PackagingQueueName,
 		encoreUrl:      config.EncoreUrl,
+		reportKpi:      kpiReportFunc,
 	}
 }
 
@@ -261,7 +265,7 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("api").Start(r.Context(), "HandleVmap")
 	vmapData := vmap.VMAP{}
 	logger.Debug("Handling VMAP request", slog.String("path", r.URL.Path))
-	byteResponse, err := api.makeAdServerRequest(r, ctx)
+	byteResponse, subdomain, err := api.makeAdServerRequest(r, ctx)
 	if err != nil {
 		logger.Error("failed to fetch VMAP data", slog.String("error", err.Error()))
 		var adServerErr structure.AdServerError
@@ -287,7 +291,7 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode VMAP data", http.StatusInternalServerError)
 		return
 	}
-	if err := api.processVmap(&vmapData); err != nil {
+	if err := api.processVmap(&vmapData, subdomain); err != nil {
 		logger.Error("failed to process VMAP data", slog.String("error", err.Error()))
 		http.Error(w, "Failed to process VMAP data", http.StatusInternalServerError)
 		return
@@ -313,7 +317,7 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Handling VAST request", slog.String("path", r.URL.Path))
 	qp := r.URL.Query()
 	fillerUrl := qp.Get("filler")
-	responseBody, err := api.makeAdServerRequest(r, ctx)
+	responseBody, subdomain, err := api.makeAdServerRequest(r, ctx)
 	if err != nil {
 		logger.Error("failed to fetch VAST data", slog.String("error", err.Error()))
 		http.Error(w, "Failed to fetch VAST data", http.StatusInternalServerError)
@@ -336,7 +340,7 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 		)
 		vastData.Ad = append(vastData.Ad, util.CreateFillerAd(fillerUrl, len(vastData.Ad)+1))
 	}
-	api.findMissingAndDispatchJobs(&vastData)
+	api.findMissingAndDispatchJobs(&vastData, subdomain)
 	var serializedVast []byte
 	requestedContentType := r.Header.Get("Accept")
 	if requestedContentType == "application/json" {
@@ -369,7 +373,7 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 // Makes a request to the ad server and returns the response body.
 // In the form of a byte slice. It's up to the caller to decode it as needed.
 // If the response is gzipped, it will decompress it.
-func (api *API) makeAdServerRequest(r *http.Request, ctx context.Context) ([]byte, error) {
+func (api *API) makeAdServerRequest(r *http.Request, ctx context.Context) ([]byte, string, error) {
 	_, span := otel.Tracer("api").Start(ctx, "makeAdServerRequest")
 	defer span.End()
 	newUrl := api.adServerUrl
@@ -396,7 +400,7 @@ func (api *API) makeAdServerRequest(r *http.Request, ctx context.Context) ([]byt
 		logger.Error("failed to create ad server request",
 			slog.String("error", err.Error()),
 		)
-		return nil, err
+		return nil, subdomain, err
 	}
 	span.AddEvent("Created ad server request")
 	setupHeaders(r, adServerReq)
@@ -405,12 +409,12 @@ func (api *API) makeAdServerRequest(r *http.Request, ctx context.Context) ([]byt
 	response, err := api.client.Do(adServerReq)
 	if err != nil {
 		logger.Error("failed to fetch ad server data", slog.String("error", err.Error()))
-		return nil, err
+		return nil, subdomain, err
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		logger.Error("failed to fetch ad server data", slog.Int("statusCode", response.StatusCode))
-		return nil, structure.AdServerError{
+		return nil, subdomain, structure.AdServerError{
 			StatusCode: response.StatusCode,
 			Message:    "Failed to fetch ad server data",
 		}
@@ -422,31 +426,32 @@ func (api *API) makeAdServerRequest(r *http.Request, ctx context.Context) ([]byt
 		responseBody, err = decompressGzip(response.Body)
 		if err != nil {
 			logger.Error("failed to decompress gzip response", slog.String("error", err.Error()))
-			return nil, err
+			return nil, subdomain, err
 		}
 		span.AddEvent("Decompressed gzip response")
 	} else {
 		responseBody, err = io.ReadAll(response.Body)
 		if err != nil {
 			logger.Error("failed to read response body", slog.String("error", err.Error()))
-			return nil, err
+			return nil, subdomain, err
 		}
 	}
-	return responseBody, nil
+	return responseBody, subdomain, nil
 }
 
 func (api *API) processVmap(
 	vmapData *vmap.VMAP,
+	subdomain string,
 ) error {
 	breakWg := &sync.WaitGroup{}
 	for _, adBreak := range vmapData.AdBreaks {
 		logger.Debug("Processing ad break", slog.String("breakId", adBreak.Id))
 		if adBreak.AdSource.VASTData.VAST != nil {
 			breakWg.Add(1)
-			go func(vastData *vmap.VAST) {
+			go func(vastData *vmap.VAST, subdomain string) {
 				defer breakWg.Done()
-				api.findMissingAndDispatchJobs(vastData)
-			}(adBreak.AdSource.VASTData.VAST)
+				api.findMissingAndDispatchJobs(vastData, subdomain)
+			}(adBreak.AdSource.VASTData.VAST, subdomain)
 		}
 	}
 	breakWg.Wait()
@@ -455,10 +460,11 @@ func (api *API) processVmap(
 
 func (api *API) findMissingAndDispatchJobs(
 	vast *vmap.VAST,
+	subdomain string,
 ) {
 	logger.Debug("Finding missing creatives in VAST", slog.Int("adCount", len(vast.Ad)))
 	creatives := util.GetCreatives(vast, api.keyField, api.keyRegex)
-	found, missing := api.partitionCreatives(creatives)
+	found, missing, filteredOut := api.partitionCreatives(creatives)
 	logger.Debug("partitioned creatives", slog.Int("found", len(found)), slog.Int("missing", len(missing)))
 
 	// No need to wait for the goroutines to finish
@@ -492,14 +498,22 @@ func (api *API) findMissingAndDispatchJobs(
 		api.keyRegex,
 		api.keyField,
 	)
+	api.reportKpi(normalizerMetrics.AdsHandledEventArguments{
+		Subdomain:   subdomain,
+		BrokenAds:   filteredOut,
+		IngestedAds: len(missing),
+		ServedAds:   len(found),
+	})
 }
 
+// TODO: Return amt blacklisted as well
 func (api *API) partitionCreatives(
 	creatives map[string]structure.ManifestAsset,
-) (map[string]structure.ManifestAsset, map[string]structure.ManifestAsset) {
+) (map[string]structure.ManifestAsset, map[string]structure.ManifestAsset, int) {
 	found := make(map[string]structure.ManifestAsset, len(creatives))
 	missing := make(map[string]structure.ManifestAsset, len(creatives))
 	logger.Debug("partioning creatives", slog.Int("totalCreatives", len(creatives)))
+	filteredOut := 0
 	for _, creative := range creatives {
 		transcodeInfo, urlFound, err := api.valkeyStore.Get(creative.CreativeId)
 		if err != nil {
@@ -514,6 +528,7 @@ func (api *API) partitionCreatives(
 				slog.String("creativeId", creative.CreativeId),
 				slog.String("masterPlaylistUrl", creative.MasterPlaylistUrl),
 			)
+			filteredOut++
 			continue
 		}
 		if urlFound {
@@ -532,7 +547,7 @@ func (api *API) partitionCreatives(
 			}
 		}
 	}
-	return found, missing
+	return found, missing, filteredOut
 }
 
 func decompressGzip(body io.Reader) ([]byte, error) {

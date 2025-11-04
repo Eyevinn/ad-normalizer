@@ -33,6 +33,7 @@ type AdNormalizerConfig struct {
 	InstanceID         string
 	Environment        string
 	Port               int
+	KpiPostUrl         string
 }
 
 func ReadConfig() (AdNormalizerConfig, error) {
@@ -197,6 +198,12 @@ func ReadConfig() (AdNormalizerConfig, error) {
 			conf.InFlightTtl = inFlightTtlInt
 		}
 	}
+
+	postUrl, found := os.LookupEnv("KPI_POST_URL")
+	if !found {
+		logger.Info("No environment variable KPI_POST_URL was found, KPIs will not be posted")
+	}
+	conf.KpiPostUrl = postUrl
 
 	version, found := os.LookupEnv("VERSION")
 	if !found {
