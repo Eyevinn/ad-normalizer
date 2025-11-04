@@ -162,21 +162,16 @@ func (e *EncoreHandlerStub) CreateJob(creative *structure.ManifestAsset) (struct
 	return newJob, nil
 }
 
-var api *API
-var ts *httptest.Server
-var encoreHandler *EncoreHandlerStub
-var storeStub *StoreStub
-
-func TestMain(m *testing.M) {
-	storeStub = &StoreStub{
+func setupApi() (*API, *httptest.Server, *StoreStub, *EncoreHandlerStub) {
+	storeStub := &StoreStub{
 		mockStore: make(map[string]structure.TranscodeInfo),
 		kpis:      normalizerMetrics.NormalizerMetrics{},
 	}
 
-	ts = setupTestServer()
-	defer ts.Close()
-	encoreHandler = &EncoreHandlerStub{}
-	adserverUrl, _ := url.Parse(ts.URL)
+	testServer := setupTestServer()
+	defer testServer.Close()
+	encoreHandler := &EncoreHandlerStub{}
+	adserverUrl, _ := url.Parse(testServer.URL)
 	assetServerUrl, _ := url.Parse("https://asset-server.example.com")
 	apiConf := config.AdNormalizerConfig{
 		AdServerUrl:    *adserverUrl,
@@ -186,23 +181,19 @@ func TestMain(m *testing.M) {
 		KpiPostUrl:     "http://kpi-post.example.com/metrics",
 	}
 	// Initialize the API with the mock store
-	api = NewAPI(
+	api := NewAPI(
 		storeStub,
 		apiConf,
 		encoreHandler,
 		&http.Client{}, // Use nil for the client in tests, or you can create a mock client
 		storeStub.kpiReport,
 	)
-
-	// Run the tests
-	exitCode := m.Run()
-
-	// Clean up if necessary
-	os.Exit(exitCode)
+	return api, testServer, storeStub, encoreHandler
 }
 
 func TestReplaceVast(t *testing.T) {
 	is := is.New(t)
+	api, ts, storeStub, encoreHandler := setupApi()
 	// Populate the store with one ad
 	re := regexp.MustCompile("[^a-zA-Z0-9]")
 	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
@@ -262,6 +253,7 @@ func TestReplaceVast(t *testing.T) {
 
 func TestReplaceVastWithBlacklisted(t *testing.T) {
 	is := is.New(t)
+	api, ts, storeStub, encoreHandler := setupApi()
 	// Populate the store with one ad
 	re := regexp.MustCompile("[^a-zA-Z0-9]")
 	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
@@ -312,6 +304,8 @@ func TestReplaceVastWithBlacklisted(t *testing.T) {
 func TestReplaceVastWithFiller(t *testing.T) {
 	is := is.New(t)
 	re := regexp.MustCompile("[^a-zA-Z0-9]")
+
+	api, ts, storeStub, encoreHandler := setupApi()
 	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
 	transcodeInfo := structure.TranscodeInfo{
 		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
@@ -376,6 +370,7 @@ func TestGetAssetList(t *testing.T) {
 	is := is.New(t)
 	// Populate the store with one ad
 	re := regexp.MustCompile("[^a-zA-Z0-9]")
+	api, ts, storeStub, encoreHandler := setupApi()
 	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
 	transcodeInfo := structure.TranscodeInfo{
 		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
@@ -419,6 +414,7 @@ func TestGetAssetList(t *testing.T) {
 
 func TestEmptyVmap(t *testing.T) {
 	is := is.New(t)
+	api, ts, storeStub, encoreHandler := setupApi()
 	vmapReq, err := http.NewRequest(
 		"GET",
 		ts.URL+"/vmap",
@@ -460,6 +456,8 @@ func TestReplaceVmap(t *testing.T) {
 		_ = f.Close()
 	}()
 	is.NoErr(err)
+
+	api, ts, storeStub, encoreHandler := setupApi()
 
 	// Populate the store with one ad
 	re := regexp.MustCompile("[^a-zA-Z0-9]")
@@ -526,6 +524,7 @@ func TestReplaceVmap(t *testing.T) {
 
 func TestBlacklist(t *testing.T) {
 	is := is.New(t)
+	api, ts, storeStub, _ := setupApi()
 	blacklistUrl := "https://adserver-assets.io/badfile.mp4"
 	reqBody := blacklistRequest{
 		MediaUrl: blacklistUrl,
@@ -585,7 +584,7 @@ func TestBlacklist(t *testing.T) {
 
 func TestHandleJobList(t *testing.T) {
 	is := is.New(t)
-
+	api, _, _, _ := setupApi()
 	// Create test request
 	req, err := http.NewRequest(http.MethodGet, "/status", nil)
 	is.NoErr(err)
@@ -623,7 +622,7 @@ func TestHandleJobList(t *testing.T) {
 
 func TestHandleJobListInvalidPageParameter(t *testing.T) {
 	is := is.New(t)
-
+	api, _, _, _ := setupApi()
 	// Test with invalid page parameter
 	req, err := http.NewRequest(http.MethodGet, "/status?page=invalid", nil)
 	is.NoErr(err)
@@ -640,7 +639,7 @@ func TestHandleJobListInvalidPageParameter(t *testing.T) {
 
 func TestHandleJobListInvalidSizeParameter(t *testing.T) {
 	is := is.New(t)
-
+	api, _, _, _ := setupApi()
 	// Test with invalid size parameter
 	req, err := http.NewRequest(http.MethodGet, "/status?size=invalid", nil)
 	is.NoErr(err)
@@ -657,7 +656,7 @@ func TestHandleJobListInvalidSizeParameter(t *testing.T) {
 
 func TestHandleJobListNegativePageParameter(t *testing.T) {
 	is := is.New(t)
-
+	api, _, _, _ := setupApi()
 	// Test with negative page parameter
 	req, err := http.NewRequest(http.MethodGet, "/status?page=-1", nil)
 	is.NoErr(err)
@@ -674,7 +673,7 @@ func TestHandleJobListNegativePageParameter(t *testing.T) {
 
 func TestHandleJobListInvalidSizeParameterZero(t *testing.T) {
 	is := is.New(t)
-
+	api, _, _, _ := setupApi()
 	// Test with size parameter as zero
 	req, err := http.NewRequest(http.MethodGet, "/status?size=0", nil)
 	is.NoErr(err)

@@ -5,11 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 
-	"github.com/Eyevinn/ad-normalizer/internal/config"
-	"github.com/Eyevinn/ad-normalizer/internal/normalizerMetrics"
 	"github.com/Eyevinn/ad-normalizer/internal/structure"
 	"github.com/matryer/is"
 )
@@ -54,37 +51,13 @@ func TestEncoreCallback(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 
-			ss := &StoreStub{
-				mockStore: make(map[string]structure.TranscodeInfo),
-				kpis:      normalizerMetrics.NormalizerMetrics{},
-			}
-
-			ts = setupTestServer()
-			defer ts.Close()
-			eh := &EncoreHandlerStub{}
-			adserverUrl, _ := url.Parse(ts.URL)
-			assetServerUrl, _ := url.Parse("https://asset-server.example.com")
-			ac := config.AdNormalizerConfig{
-				AdServerUrl:    *adserverUrl,
-				AssetServerUrl: *assetServerUrl,
-				KeyField:       "url",
-				KeyRegex:       "[^a-zA-Z0-9]",
-				KpiPostUrl:     "http://kpi-post.example.com/metrics",
-			}
-			// Initialize the API with the mock store
-			runApiInstance := NewAPI(
-				ss,
-				ac,
-				eh,
-				&http.Client{}, // Use nil for the client in tests, or you can create a mock client
-				ss.kpiReport,
-			)
+			api, _, ss, _ := setupApi()
 			reqBody, err := json.Marshal(c.progressUpdate)
 			is.NoErr(err)
 			req, err := http.NewRequest("POST", "/encore/callback", bytes.NewBuffer(reqBody))
 			is.NoErr(err)
 			rr := httptest.NewRecorder()
-			runApiInstance.HandleEncoreCallback(rr, req)
+			api.HandleEncoreCallback(rr, req)
 			is.Equal(rr.Code, http.StatusOK)
 			is.Equal(ss.sets, c.expectSets)
 			is.Equal(ss.deletes, c.expectDeletes)
