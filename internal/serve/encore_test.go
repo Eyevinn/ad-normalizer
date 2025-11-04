@@ -51,7 +51,8 @@ func TestEncoreCallback(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 
-			api, _, ss, _ := setupApi()
+			api, ts, ss, _ := setupApi()
+			defer ts.Close()
 			reqBody, err := json.Marshal(c.progressUpdate)
 			is.NoErr(err)
 			req, err := http.NewRequest("POST", "/encore/callback", bytes.NewBuffer(reqBody))
