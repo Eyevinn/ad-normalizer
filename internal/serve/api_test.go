@@ -81,6 +81,7 @@ func (s *StoreStub) reset() {
 	s.gets = 0
 	s.deletes = 0
 	s.kpis = normalizerMetrics.NormalizerMetrics{}
+	s.blacklist = []string{} // Reset the blacklist
 }
 
 func (s *StoreStub) BlackList(key string) error {
@@ -304,7 +305,7 @@ func TestReplaceVastWithBlacklisted(t *testing.T) {
 
 	encoreHandler.reset()
 	storeStub.reset()
-	storeStub.blacklist = []string{} // Reset the blacklist
+
 }
 
 func TestReplaceVastWithFiller(t *testing.T) {
