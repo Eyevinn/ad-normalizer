@@ -183,6 +183,7 @@ func TestMain(m *testing.M) {
 		AssetServerUrl: *assetServerUrl,
 		KeyField:       "url",
 		KeyRegex:       "[^a-zA-Z0-9]",
+		KpiPostUrl:     "http://kpi-post.example.com/metrics",
 	}
 	// Initialize the API with the mock store
 	api = NewAPI(
