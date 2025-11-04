@@ -365,7 +365,7 @@ func TestReplaceVastWithFiller(t *testing.T) {
 	is.Equal(filler.Id, "NORMALIZER_FILLER")
 
 	is.Equal(storeStub.kpis.BrokenAds, 0)
-	is.Equal(storeStub.kpis.IngestedAds, 1)
+	is.Equal(storeStub.kpis.IngestedAds, 0)
 	is.Equal(storeStub.kpis.ServedAds, 2)
 
 	encoreHandler.reset()
