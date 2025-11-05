@@ -61,6 +61,7 @@ func TestKpiCollector(t *testing.T) {
 	is.Equal(metrics.BrokenAds, 7)
 	is.Equal(metrics.IngestedAds, 150)
 	is.Equal(metrics.ServedAds, 143)
+	is.Equal(metrics.Service, "test-subdomain")
 
 	// Wait for export interval to trigger
 	time.Sleep(time.Millisecond * 250)
