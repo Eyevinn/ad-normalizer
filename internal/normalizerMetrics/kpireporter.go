@@ -135,7 +135,10 @@ func (c *normalizerKpiCollector) recordMetrics(args AdsHandledEventArguments) {
 	metrics, exists := c.kpiMap[key]
 	if !exists {
 		metrics = &NormalizerMetrics{
-			Service: args.Subdomain,
+			Service:     args.Subdomain,
+			BrokenAds:   0,
+			IngestedAds: 0,
+			ServedAds:   0,
 		}
 		c.kpiMap[key] = metrics
 	}
@@ -149,6 +152,7 @@ func (c *normalizerKpiCollector) recordMetrics(args AdsHandledEventArguments) {
 	if args.ServedAds > 0 {
 		metrics.ServedAds += args.ServedAds
 	}
+
 }
 
 func (c *normalizerKpiCollector) AdsHandled(args AdsHandledEventArguments) {
