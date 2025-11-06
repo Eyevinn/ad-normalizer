@@ -152,6 +152,13 @@ func (c *normalizerKpiCollector) recordMetrics(args AdsHandledEventArguments) {
 	if args.ServedAds > 0 {
 		metrics.ServedAds += args.ServedAds
 	}
+	logger.Debug(
+		"added metrics, new state:",
+		slog.String("key", key),
+		slog.Int("broken", metrics.BrokenAds),
+		slog.Int("ingested", metrics.IngestedAds),
+		slog.Int("served", metrics.ServedAds),
+	)
 
 }
 
