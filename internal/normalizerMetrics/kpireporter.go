@@ -104,6 +104,7 @@ func (c *normalizerKpiCollector) postMetrics(data []byte) {
 	if err != nil {
 		logger.Error("Failed to create KPI report request", slog.String("err", err.Error()))
 	}
+	r.Close = true
 	r.Header.Add("Content-Type", "application/json")
 
 	client := &http.Client{}
