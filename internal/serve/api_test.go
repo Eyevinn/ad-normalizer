@@ -699,6 +699,75 @@ func TestHandleJobListInvalidSizeParameterZero(t *testing.T) {
 	is.True(strings.Contains(string(body), "Invalid size parameter"))
 }
 
+func TestHandlePreIngestCreatives(t *testing.T) {
+	is := is.New(t)
+	api, ts, storeStub, _ := setupApi()
+	defer ts.Close()
+
+	re := regexp.MustCompile("[^a-zA-Z0-9]")
+	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	err := storeStub.Set(adKey, structure.TranscodeInfo{
+		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
+		AspectRatio: "16:9",
+		FrameRates:  []float64{25.0},
+		Status:      "COMPLETED",
+	})
+	is.NoErr(err)
+
+	preIngestCreativeRequest := preIngestCreativeRequest{
+		MediaUrls: []string{
+			"https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4",
+			"https://testcontent.eyevinn.technology/ads/new-ad.mp4",
+		},
+	}
+	serializedBody, err := json.Marshal(preIngestCreativeRequest)
+	is.NoErr(err)
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"/pre-ingest-creatives",
+		bytes.NewBuffer(serializedBody),
+	)
+	is.NoErr(err)
+	recorder := httptest.NewRecorder()
+	api.HandlePreIngestCreatives(recorder, req)
+
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	defer recorder.Result().Body.Close()
+
+	responseBody, err := io.ReadAll(recorder.Result().Body)
+	is.NoErr(err)
+
+	var response preIngestCreativeResponse
+	err = json.Unmarshal(responseBody, &response)
+	is.NoErr(err)
+
+	is.Equal(response.NotYetprocessed, 1) // One creative is unknown and should be processed
+}
+
+func TestHandlePreIngestCreativesMethodNotAllowed(t *testing.T) {
+	is := is.New(t)
+	api, ts, _, _ := setupApi()
+	defer ts.Close()
+
+	// Test with GET method (should be rejected)
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/pre-ingest-creatives",
+		nil,
+	)
+	is.NoErr(err)
+
+	recorder := httptest.NewRecorder()
+	api.HandlePreIngestCreatives(recorder, req)
+
+	is.Equal(recorder.Result().StatusCode, http.StatusMethodNotAllowed)
+
+	body, err := io.ReadAll(recorder.Body)
+	is.NoErr(err)
+	is.True(strings.Contains(string(body), "Method not allowed"))
+}
+
 func setupTestServer() *httptest.Server {
 	vastData, _ := os.ReadFile("../test_data/testVast.xml")
 	vmapData, _ := os.ReadFile("../test_data/testVmap.xml")
