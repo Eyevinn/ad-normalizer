@@ -50,6 +50,22 @@ func GetCreatives(
 	return creatives
 }
 
+func MakeCreatives(creativeUrls []string, keyRegext string) map[string]structure.ManifestAsset {
+	creatives := make(map[string]structure.ManifestAsset, len(creativeUrls))
+	for _, creativeUrl := range creativeUrls {
+		adId := UrlToKey(creativeUrl, keyRegext)
+		creatives[adId] = structure.ManifestAsset{
+			CreativeId:        adId,
+			MasterPlaylistUrl: creativeUrl,
+			Source:            creativeUrl,
+		}
+		logger.Debug("Mapped creative",
+			slog.String("adId", adId),
+			slog.String("url", creativeUrl))
+	}
+	return creatives
+}
+
 func CreateFillerAd(fillerUrl string, sequenceNum int) vmap.Ad {
 	return vmap.Ad{
 		Id:       fillerId,

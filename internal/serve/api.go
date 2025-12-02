@@ -458,18 +458,10 @@ func (api *API) processVmap(
 	return nil
 }
 
-func (api *API) findMissingAndDispatchJobs(
-	vast *vmap.VAST,
-	subdomain string,
-) {
-	logger.Debug("Finding missing creatives in VAST", slog.Int("adCount", len(vast.Ad)))
-	creatives := util.GetCreatives(vast, api.keyField, api.keyRegex)
-	found, missing, filteredOut := api.partitionCreatives(creatives)
-	logger.Debug("partitioned creatives", slog.Int("found", len(found)), slog.Int("missing", len(missing)))
-
+func (api *API) dispatchJobs(missingCreatives map[string]structure.ManifestAsset) {
 	// No need to wait for the goroutines to finish
 	// Since the creatives won't be used in this response anyway
-	for _, creative := range missing {
+	for _, creative := range missingCreatives {
 		go func(creative *structure.ManifestAsset) {
 			encoreJob, err := api.encoreHandler.CreateJob(creative)
 			if err != nil {
@@ -491,6 +483,18 @@ func (api *API) findMissingAndDispatchJobs(
 			})
 		}(&creative)
 	}
+}
+
+func (api *API) findMissingAndDispatchJobs(
+	vast *vmap.VAST,
+	subdomain string,
+) {
+	logger.Debug("Finding missing creatives in VAST", slog.Int("adCount", len(vast.Ad)))
+	creatives := util.GetCreatives(vast, api.keyField, api.keyRegex)
+	found, missing, filteredOut := api.partitionCreatives(creatives)
+	logger.Debug("partitioned creatives", slog.Int("found", len(found)), slog.Int("missing", len(missing)))
+
+	api.dispatchJobs(missing)
 
 	api.reportKpi(normalizerMetrics.AdsHandledEventArguments{
 		Subdomain:   subdomain,
@@ -507,6 +511,18 @@ func (api *API) findMissingAndDispatchJobs(
 		api.keyField,
 	)
 
+}
+
+// Same as findMissingAndDispatchJobs but for JSON requests, since the original is built around VAST
+// Returns an int representing the number of missing creatives that jobs will be created for
+func (api *API) findMissingAndDispatchJobsJson(request *preIngestCreativeRequest) int {
+	logger.Debug("Finding missing creatives in pre-ingest request", slog.Int("mediaUrlCount", len(request.MediaUrls)))
+	// convert to ManifestAsset
+	creatives := util.MakeCreatives(request.MediaUrls, api.keyRegex)
+	found, missing, _ := api.partitionCreatives(creatives)
+	logger.Debug("partitioned creatives", slog.Int("found", len(found)), slog.Int("missing", len(missing)))
+	api.dispatchJobs(missing)
+	return len(missing)
 }
 
 // TODO: Return amt blacklisted as well
@@ -551,6 +567,56 @@ func (api *API) partitionCreatives(
 		}
 	}
 	return found, missing, filteredOut
+}
+
+type preIngestCreativeRequest struct {
+	MediaUrls []string `json:"mediaUrls"`
+}
+
+type preIngestCreativeResponse struct {
+	NotYetprocessed int `json:"notYetProcessed"`
+}
+
+func (api *API) PreIngestCreatives(w http.ResponseWriter, r *http.Request) {
+	_, span := otel.Tracer("api").Start(r.Context(), "PreIngestCreatives")
+	defer span.End()
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	piRequest, err := readPreIngestRequest(r)
+	if err != nil {
+		logger.Error("failed to read request body", slog.String("error", err.Error()))
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+	amtMissing := api.findMissingAndDispatchJobsJson(&piRequest)
+	resp := preIngestCreativeResponse{
+		NotYetprocessed: amtMissing,
+	}
+	ret, err := json.Marshal(resp)
+	if err != nil {
+		logger.Error("failed to marshal response", slog.String("error", err.Error()))
+		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(ret)
+	span.End()
+}
+
+func readPreIngestRequest(r *http.Request) (preIngestCreativeRequest, error) {
+	bytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		return preIngestCreativeRequest{}, err
+	}
+	var piRequest preIngestCreativeRequest
+	if err := json.Unmarshal(bytes, &piRequest); err != nil {
+		return piRequest, err
+	}
+
+	return piRequest, nil
 }
 
 func decompressGzip(body io.Reader) ([]byte, error) {
