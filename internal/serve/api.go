@@ -577,7 +577,7 @@ type preIngestCreativeResponse struct {
 	NotYetprocessed int `json:"notYetProcessed"`
 }
 
-func (api *API) PreIngestCreatives(w http.ResponseWriter, r *http.Request) {
+func (api *API) HandlePreIngestCreatives(w http.ResponseWriter, r *http.Request) {
 	_, span := otel.Tracer("api").Start(r.Context(), "PreIngestCreatives")
 	defer span.End()
 	if r.Method != http.MethodPost {
