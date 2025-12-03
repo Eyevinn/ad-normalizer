@@ -742,7 +742,7 @@ func TestHandlePreIngestCreatives(t *testing.T) {
 	err = json.Unmarshal(responseBody, &response)
 	is.NoErr(err)
 
-	is.Equal(response.NotYetprocessed, 1) // One creative is unknown and should be processed
+	is.Equal(response.NotYetProcessed, 1) // One creative is unknown and should be processed
 }
 
 func TestHandlePreIngestCreativesMethodNotAllowed(t *testing.T) {

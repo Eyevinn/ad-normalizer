@@ -592,7 +592,7 @@ func (api *API) HandlePreIngestCreatives(w http.ResponseWriter, r *http.Request)
 	}
 	amtMissing := api.findMissingAndDispatchJobsJson(&piRequest)
 	resp := preIngestCreativeResponse{
-		NotYetprocessed: amtMissing,
+		NotYetProcessed: amtMissing,
 	}
 	ret, err := json.Marshal(resp)
 	if err != nil {
