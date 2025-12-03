@@ -574,7 +574,7 @@ type preIngestCreativeRequest struct {
 }
 
 type preIngestCreativeResponse struct {
-	NotYetprocessed int `json:"notYetProcessed"`
+	NotYetProcessed int `json:"notYetProcessed"`
 }
 
 func (api *API) HandlePreIngestCreatives(w http.ResponseWriter, r *http.Request) {
