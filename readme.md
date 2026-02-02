@@ -2,16 +2,32 @@
 
 A Proxy put in front of an ad server that dispatches transcoding and packaging of VAST and VMAP creatives.
 
-[![Badge OSC](https://img.shields.io/badge/Evaluate-24243B?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiIGZpbGw9InVybCgjcGFpbnQwX2xpbmVhcl8yODIxXzMxNjcyKSIvPgo8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI3IiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiLz4KPGRlZnM%2BCjxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQwX2xpbmVhcl8yODIxXzMxNjcyIiB4MT0iMTIiIHkxPSIwIiB4Mj0iMTIiIHkyPSIyNCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgo8c3RvcCBzdG9wLWNvbG9yPSIjQzE4M0ZGIi8%2BCjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzREQzlGRiIvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM%2BCjwvc3ZnPgo%3D)](https://app.osaas.io/browse/eyevinn-ad-normalizer)
+[![Badge OSC](https://img.shields.io/badge/Open%20Source%20Cloud-24243B?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiIGZpbGw9InVybCgjcGFpbnQwX2xpbmVhcl8yODIxXzMxNjcyKSIvPgo8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI3IiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiLz4KPGRlZnM%2BCjxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQwX2xpbmVhcl8yODIxXzMxNjcyIiB4MT0iMTIiIHkxPSIwIiB4Mj0iMTIiIHkyPSIyNCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgo8c3RvcCBzdG9wLWNvbG9yPSIjQzE4M0ZGIi8%2BCjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzREQzlGRiIvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM%2BCjwvc3ZnPgo%3D)](https://app.osaas.io/browse/eyevinn-ad-normalizer)
 
-The ad normalizer uses redis to keep track of transcoded creatives, and returns the master playlist URLs for the ad assets specified in the VAST or VMAP response from the underlying ad server if they exist; if the service does not know of any packaged assets for a creative, it creates a transcoding job in SVT Encore using the URL provided in the app configuration;
-it listens to encore callbacks, and handles job updates.
+## Quick Start with Open Source Cloud
 
-On receiving a job successful callback, the normalizer creates a packaging job for the transcoded assets using [encore-packager](https://github.com/Eyevinn/encore-packager). The packager sends a callback on job completion or failure. If the packaging job is successful, the URL of the resulting multivariant playlist is added to the redis cache.
+> **The fastest way to get started** — Launch a fully configured Ad Normalizer with all dependencies in [Eyevinn Open Source Cloud (OSaaS)](https://app.osaas.io/browse/eyevinn-ad-normalizer).
 
-The image below illustrates a typical normalizer flow:
+With Open Source Cloud you get:
+- Pre-configured Redis, SVT Encore, Encore Packager, and S3 storage
+- No infrastructure setup required
+- Ready to use in minutes
 
-![Normalizer work flow](/images/normalizer_workflow.svg)
+### Deploy the Complete Ad Pipeline
+
+1. **OSC Web Console** — The easiest way. Go to the [Solutions](https://app.osaas.io/solutions) section in the OSC console and deploy the complete ad pipeline with a few clicks.
+
+2. **Terraform** — For infrastructure-as-code workflows, use our [Terraform example](https://github.com/EyevinnOSC/terraform-examples/tree/main/examples/ad-pipeline) to deploy the complete ad pipeline with a single command.
+
+![Ad Pipeline Architecture](https://raw.githubusercontent.com/EyevinnOSC/terraform-examples/main/examples/ad-pipeline/Ad-pipeline_diagram.png)
+
+---
+
+## How It Works
+
+The ad normalizer uses Redis to keep track of transcoded creatives, and returns the master playlist URLs for the ad assets specified in the VAST or VMAP response from the underlying ad server if they exist. If the service does not know of any packaged assets for a creative, it creates a transcoding job in SVT Encore using the URL provided in the app configuration and listens to Encore callbacks to handle job updates.
+
+On receiving a successful job callback, the normalizer creates a packaging job for the transcoded assets using [encore-packager](https://github.com/Eyevinn/encore-packager). The packager sends a callback on job completion or failure. If the packaging job is successful, the URL of the resulting multivariant playlist is added to the Redis cache.
 
 ## API
 
@@ -89,21 +105,27 @@ The most probable use case for this feature is making sure that broken ad assets
 
 ## Requirements
 
-To run the ad normalizer as a service, the following other services are needed
+### Option 1: Open Source Cloud (Recommended)
 
-- A redis instance
+Use [Eyevinn Open Source Cloud](https://app.osaas.io/browse/eyevinn-ad-normalizer) to get a fully managed environment with all dependencies pre-configured. This is the recommended approach for most users.
 
-A media processing pipeline consisting of the following:
+### Option 2: Self-Hosted
 
-- A running instance of [SVT Encore](https://github.com/svt/encore)
-- A running instance of [Encore Packager](https://github.com/Eyevinn/encore-packager)
-- A minio (or other s3-compatible storage) bucket to store transcoded and packaged assets
+To run the ad normalizer on your own infrastructure, you need:
 
-Such a pipeline can easily be created using [Eyevinn open source cloud](https://docs.osaas.io/osaas.wiki/Solution%3A-VOD-Transcoding.html)
+- A Redis instance
+- A media processing pipeline:
+  - [SVT Encore](https://github.com/svt/encore) — transcoding
+  - [Encore Packager](https://github.com/Eyevinn/encore-packager) — HLS packaging
+  - S3-compatible storage (e.g., MinIO) — storing transcoded and packaged assets
 
-Note: the ad normalizer assumes that your packager is set up with the output subfolder template `$EXTERNALID$/$JOBID$`
+> **Tip:** You can also create just the media processing pipeline using [Open Source Cloud](https://docs.osaas.io/osaas.wiki/Solution%3A-VOD-Transcoding.html) while running the normalizer yourself.
 
-## Usage
+**Note:** The ad normalizer assumes that your packager is set up with the output subfolder template `$EXTERNALID$/$JOBID$`
+
+## Usage (Self-Hosted)
+
+> **Using Open Source Cloud?** Environment variables are configured through the web interface — [get started here](https://app.osaas.io/browse/eyevinn-ad-normalizer).
 
 ### Environment variables
 
@@ -128,9 +150,11 @@ Note: the ad normalizer assumes that your packager is set up with the output sub
 | `VERSION`           | The service version. Used for metrics and telemetry                                                                                                   | none           | no        |
 | `ENVIRONMENT`       | The environment the service is running in. Used for telemetry and metrics                                                                             | none           | no        |
 
-### starting the service
+### Starting the service
 
-`go run ./...`
+```bash
+go run ./...
+```
 
 
 ## Development
