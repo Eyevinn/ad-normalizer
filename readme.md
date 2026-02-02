@@ -21,8 +21,6 @@ The ad normalizer uses Redis to keep track of transcoded creatives, and returns 
 
 On receiving a successful job callback, the normalizer creates a packaging job for the transcoded assets using [encore-packager](https://github.com/Eyevinn/encore-packager). The packager sends a callback on job completion or failure. If the packaging job is successful, the URL of the resulting multivariant playlist is added to the Redis cache.
 
-![Normalizer work flow](/images/normalizer_workflow.svg)
-
 ## API
 
 The service provides two main endpoints:
