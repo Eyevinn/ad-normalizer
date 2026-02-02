@@ -13,6 +13,10 @@ With Open Source Cloud you get:
 - No infrastructure setup required
 - Ready to use in minutes
 
+For automated setup, use our [Terraform example](https://github.com/EyevinnOSC/terraform-examples/tree/main/examples/ad-pipeline) to deploy the complete ad pipeline with a single command.
+
+![Ad Pipeline Architecture](https://raw.githubusercontent.com/EyevinnOSC/terraform-examples/main/examples/ad-pipeline/Ad-pipeline_diagram.png)
+
 ---
 
 ## How It Works
