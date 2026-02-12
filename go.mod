@@ -1,6 +1,6 @@
 module github.com/Eyevinn/ad-normalizer
 
-go 1.24.2
+go 1.26.0
 
 require (
 	github.com/Eyevinn/VMAP v0.3.3
