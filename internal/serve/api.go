@@ -590,10 +590,12 @@ func (api *API) HandlePreIngestCreatives(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
+	logger.Info("Received pre-ingest request", slog.Int("amount", len(piRequest.MediaUrls)))
 	amtMissing := api.findMissingAndDispatchJobsJson(&piRequest)
 	resp := preIngestCreativeResponse{
 		NotYetProcessed: amtMissing,
 	}
+	logger.Info("Dispatched transcoding jobs for pre-ingest request", slog.Int("amount", amtMissing))
 	ret, err := json.Marshal(resp)
 	if err != nil {
 		logger.Error("failed to marshal response", slog.String("error", err.Error()))
