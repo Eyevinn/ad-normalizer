@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -90,10 +91,8 @@ func (s *StoreStub) BlackList(key string) error {
 }
 
 func (s *StoreStub) InBlackList(key string) (bool, error) {
-	for _, blacklistedKey := range s.blacklist {
-		if blacklistedKey == key {
-			return true, nil
-		}
+	if slices.Contains(s.blacklist, key) {
+		return true, nil
 	}
 	return false, nil
 }

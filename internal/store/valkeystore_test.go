@@ -131,7 +131,7 @@ func TestList(t *testing.T) {
 	is.NoErr(err)
 
 	// Add some test data
-	for i := 0; i < 15; i++ {
+	for i := range 15 {
 		strVal := strconv.Itoa(i)
 		testData := structure.TranscodeInfo{
 			Url:         "http://example.com/video" + strVal + "/index.m3u8",
