@@ -234,11 +234,13 @@ func ReadConfig() (AdNormalizerConfig, error) {
 
 	pprofPort, found := os.LookupEnv("PPROF_PORT")
 	if !found {
-		logger.Info("No environment variable PPROF_PORT found, pprof will be disabled")
+		logger.Info("No environment variable PPROF_PORT found, using default 6060")
+		conf.PProfPort = "6060"
 	} else {
-		port, err := strconv.Atoi(pprofPort)
-		if err != nil {
-			logger.Error("Failed to parse PPROF_PORT", slog.String("error", err.Error()))
+		port, parseErr := strconv.Atoi(pprofPort)
+		if parseErr != nil || port < 1 || port > 65535 {
+			logger.Error("Invalid PPROF_PORT value, using default 6060", slog.String("value", pprofPort))
+			conf.PProfPort = "6060"
 		} else {
 			conf.PProfPort = strconv.Itoa(port)
 		}
