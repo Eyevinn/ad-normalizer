@@ -91,6 +91,7 @@ func main() {
 
 	var pprofServ *http.Server
 	if config.PProfPort != "" {
+		http.DefaultServeMux.HandleFunc("/ping", healthCheck)
 		pprofServ = &http.Server{
 			Addr:    ":" + config.PProfPort,
 			Handler: http.DefaultServeMux,
