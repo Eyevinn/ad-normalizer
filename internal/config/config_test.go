@@ -25,6 +25,7 @@ func TestReadConfig(t *testing.T) {
 		{"ROOT_URL", "http://ad-normalizer.osaas.io"},
 		{"PACKAGING_QUEUE", "normalizer-package"},
 		{"IN_FLIGHT_TTL", "10"},
+		{"PPROF_PORT", "6060"},
 	}
 	for _, v := range configVars {
 		t.Setenv(v.name, v.value)
@@ -40,4 +41,5 @@ func TestReadConfig(t *testing.T) {
 	is.Equal(config.KeyRegex, "^[^a-zA-Z0-9]")
 	is.Equal(config.EncoreProfile, "ad-profile")
 	is.Equal(config.ValkeyCluster, true)
+	is.Equal(config.PProfPort, "6060")
 }
