@@ -91,10 +91,11 @@ func main() {
 
 	var pprofServ *http.Server
 	if config.PProfPort != "" {
-		http.DefaultServeMux.HandleFunc("/ping", healthCheck)
+		http.HandleFunc("/ping", healthCheck)
 		pprofServ = &http.Server{
-			Addr:    ":" + config.PProfPort,
-			Handler: http.DefaultServeMux,
+			Addr:              ":" + config.PProfPort,
+			Handler:           http.DefaultServeMux,
+			ReadHeaderTimeout: 5 * time.Second,
 		}
 		go func() {
 			logger.Info("Starting pprof server...", slog.String("port", config.PProfPort))
