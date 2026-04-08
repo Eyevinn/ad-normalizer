@@ -44,7 +44,7 @@ func TestReadConfig(t *testing.T) {
 	is.Equal(config.PProfPort, "6060")
 }
 
-func TestPProfPortDefault(t *testing.T) {
+func TestPProfPortNotSet(t *testing.T) {
 	is := is.New(t)
 	configVars := []struct {
 		name  string
@@ -62,7 +62,7 @@ func TestPProfPortDefault(t *testing.T) {
 	}
 	config, err := ReadConfig()
 	is.NoErr(err)
-	is.Equal(config.PProfPort, "6060")
+	is.Equal(config.PProfPort, "")
 }
 
 func TestPProfPortInvalid(t *testing.T) {

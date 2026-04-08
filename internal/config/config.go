@@ -233,10 +233,7 @@ func ReadConfig() (AdNormalizerConfig, error) {
 	conf.Environment = environment
 
 	pprofPort, found := os.LookupEnv("PPROF_PORT")
-	if !found {
-		logger.Info("No environment variable PPROF_PORT found, using default 6060")
-		conf.PProfPort = "6060"
-	} else {
+	if found {
 		port, parseErr := strconv.Atoi(pprofPort)
 		if parseErr != nil || port < 1 || port > 65535 {
 			logger.Error("Invalid PPROF_PORT value, using default 6060", slog.String("value", pprofPort))

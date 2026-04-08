@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	_ "net/http/pprof"
+	httppprof "net/http/pprof"
 
 	"github.com/Eyevinn/ad-normalizer/cmd/ad-normalizer/telemetry"
 	"github.com/Eyevinn/ad-normalizer/internal/config"
@@ -91,10 +91,16 @@ func main() {
 
 	var pprofServ *http.Server
 	if config.PProfPort != "" {
-		http.HandleFunc("/ping", healthCheck)
+		pprofMux := http.NewServeMux()
+		pprofMux.HandleFunc("/ping", healthCheck)
+		pprofMux.HandleFunc("/debug/pprof/", httppprof.Index)
+		pprofMux.HandleFunc("/debug/pprof/cmdline", httppprof.Cmdline)
+		pprofMux.HandleFunc("/debug/pprof/profile", httppprof.Profile)
+		pprofMux.HandleFunc("/debug/pprof/symbol", httppprof.Symbol)
+		pprofMux.HandleFunc("/debug/pprof/trace", httppprof.Trace)
 		pprofServ = &http.Server{
 			Addr:              ":" + config.PProfPort,
-			Handler:           http.DefaultServeMux,
+			Handler:           pprofMux,
 			ReadHeaderTimeout: 5 * time.Second,
 		}
 		go func() {
