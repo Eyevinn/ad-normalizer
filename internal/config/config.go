@@ -34,6 +34,7 @@ type AdNormalizerConfig struct {
 	Environment        string
 	Port               int
 	KpiPostUrl         string
+	PProfPort          string
 }
 
 func ReadConfig() (AdNormalizerConfig, error) {
@@ -230,6 +231,17 @@ func ReadConfig() (AdNormalizerConfig, error) {
 		logger.Info("No environment variable ENVIRONMENT found")
 	}
 	conf.Environment = environment
+
+	pprofPort, found := os.LookupEnv("PPROF_PORT")
+	if found {
+		port, parseErr := strconv.Atoi(pprofPort)
+		if parseErr != nil || port < 1 || port > 65535 {
+			logger.Error("Invalid PPROF_PORT value, using default 6060", slog.String("value", pprofPort))
+			conf.PProfPort = "6060"
+		} else {
+			conf.PProfPort = strconv.Itoa(port)
+		}
+	}
 
 	return conf, err
 }

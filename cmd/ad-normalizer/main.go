@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	httppprof "net/http/pprof"
+
 	"github.com/Eyevinn/ad-normalizer/cmd/ad-normalizer/telemetry"
 	"github.com/Eyevinn/ad-normalizer/internal/config"
 	"github.com/Eyevinn/ad-normalizer/internal/encore"
@@ -82,14 +84,31 @@ func main() {
 	mainmux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiMuxChain))
 	mainmux.Handle("/packagerCallback/", http.StripPrefix("/packagerCallback", packagerMuxChain))
 
-	//Do not expose pprod debug endpoints in production
-	if config.Environment != "PRODUCTION" {
-		mainmux.Handle("/debug/", http.DefaultServeMux)
-	}
-
 	server := &http.Server{
 		Addr:    ":" + strconv.Itoa(config.Port),
 		Handler: mainmux,
+	}
+
+	var pprofServ *http.Server
+	if config.PProfPort != "" {
+		pprofMux := http.NewServeMux()
+		pprofMux.HandleFunc("/ping", healthCheck)
+		pprofMux.HandleFunc("/debug/pprof/", httppprof.Index)
+		pprofMux.HandleFunc("/debug/pprof/cmdline", httppprof.Cmdline)
+		pprofMux.HandleFunc("/debug/pprof/profile", httppprof.Profile)
+		pprofMux.HandleFunc("/debug/pprof/symbol", httppprof.Symbol)
+		pprofMux.HandleFunc("/debug/pprof/trace", httppprof.Trace)
+		pprofServ = &http.Server{
+			Addr:              ":" + config.PProfPort,
+			Handler:           pprofMux,
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+		go func() {
+			logger.Info("Starting pprof server...", slog.String("port", config.PProfPort))
+			if err := pprofServ.ListenAndServe(); err != http.ErrServerClosed {
+				logger.Error("Failed to start pprof server", slog.String("error", err.Error()))
+			}
+		}()
 	}
 
 	go func() {
@@ -106,6 +125,11 @@ func main() {
 	logger.Info("Shutting down server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	if pprofServ != nil {
+		if err := pprofServ.Shutdown(ctx); err != nil {
+			logger.Error("Pprof server shutdown error", slog.String("error", err.Error()))
+		}
+	}
 	if err := server.Shutdown(ctx); err != nil {
 		logger.Error("Server shutdown error", slog.String("error", err.Error()))
 		stop()
