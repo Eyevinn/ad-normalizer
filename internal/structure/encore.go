@@ -31,6 +31,15 @@ func (ep *EncoreJob) GetFrameRates() []float64 {
 	return slices.Compact(framerates)
 }
 
+func (ep *EncoreJob) HasAudioOutput() bool {
+	for _, o := range ep.Outputs {
+		if len(o.AudioStreams) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 type EncoreInput struct {
 	Uri       string  `json:"uri"`
 	SeekTo    float64 `json:"seekTo,omitempty"`
