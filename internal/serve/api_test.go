@@ -140,6 +140,15 @@ func (e *EncoreHandlerStub) GetEncoreJob(jobId string) (structure.EncoreJob, err
 					},
 				},
 			},
+			{
+				MediaType: "Audio",
+				AudioStreams: []structure.EncoreAudioStream{
+					{
+						Codec:    "AAC",
+						Channels: 2,
+					},
+				},
+			},
 		},
 		Inputs: []structure.EncoreInput{
 			{

@@ -88,6 +88,14 @@ func (api *API) handleTranscodeCompleted(progress *structure.EncoreJobProgress) 
 		)
 		return err
 	}
+	if !job.HasAudioOutput() {
+		logger.Error("encore job has no audio output, skipping",
+			slog.String("jobId", progress.JobId),
+			slog.String("creativeId", progress.ExternalId),
+		)
+		_ = api.valkeyStore.Delete(progress.ExternalId)
+		return nil
+	}
 	transcodeInfo, err := structure.TranscodeInfoFromEncoreJob(&job, api.jitPackage, api.assetServerUrl)
 	if err != nil {
 		logger.Error("failed to create transcode info from encore job",
