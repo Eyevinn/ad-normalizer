@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"io"
 	"log/slog"
@@ -284,7 +283,7 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	vmapData, err = vmap.DecodeVmap(byteResponse)
+	vmapData, err = vmap.DecodeVmapScan(byteResponse)
 	span.AddEvent("Decoded VMAP data")
 	if err != nil {
 		logger.Error("failed to decode VMAP data", slog.String("error", err.Error()))
@@ -297,7 +296,7 @@ func (api *API) HandleVmap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	span.AddEvent("Processed VMAP data")
-	serializedVmap, err := xml.Marshal(vmapData)
+	serializedVmap, err := vmap.MarshalVmap(&vmapData)
 	if err != nil {
 		logger.Error("failed to marshal VMAP data", slog.String("error", err.Error()))
 		http.Error(w, "Failed to marshal VMAP data", http.StatusInternalServerError)
@@ -323,7 +322,7 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to fetch VAST data", http.StatusInternalServerError)
 		return
 	}
-	vastData, err = vmap.DecodeVast(responseBody)
+	vastData, err = vmap.DecodeVastScan(responseBody)
 	span.AddEvent("Decoded VAST data")
 	if err != nil {
 		logger.Error("failed to decode VAST data",
@@ -356,7 +355,7 @@ func (api *API) HandleVast(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 	} else {
 		span.AddEvent("Processed VAST data")
-		serializedVast, err = xml.Marshal(vastData)
+		serializedVast, err = vmap.MarshalVast(&vastData)
 		span.AddEvent("Serialized VAST data")
 		if err != nil {
 			logger.Error("failed to marshal VAST data", slog.String("error", err.Error()))
