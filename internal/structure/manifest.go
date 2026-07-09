@@ -13,7 +13,7 @@ const (
 	ManifestFormatDASH ManifestFormat = "dash"
 )
 
-const dashManifestFileName = "mainfest.mpd"
+const dashManifestFileName = "manifest.mpd"
 
 func (mf ManifestFormat) Extension() string {
 	switch mf {

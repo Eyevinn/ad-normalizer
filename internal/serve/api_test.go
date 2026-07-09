@@ -298,7 +298,7 @@ func TestReplaceVastWithDashPrefer(t *testing.T) {
 	is.Equal(len(vastRes.Ad), 1)
 	mediaFile := vastRes.Ad[0].InLine.Creatives[0].Linear.MediaFiles[0]
 	is.Equal(mediaFile.MediaType, "application/dash+xml")
-	is.Equal(mediaFile.Text, "https://testcontent.eyevinn.technology/ads/mainfest.mpd")
+	is.Equal(mediaFile.Text, "https://testcontent.eyevinn.technology/ads/manifest.mpd")
 
 	encoreHandler.reset()
 	storeStub.reset()
@@ -529,7 +529,7 @@ func TestGetAssetListWithDashPrefer(t *testing.T) {
 	err = json.Unmarshal(responseBody, &assetList)
 	is.NoErr(err)
 	is.Equal(len(assetList), 1)
-	is.Equal(assetList[0].Uri, "https://testcontent.eyevinn.technology/ads/mainfest.mpd")
+	is.Equal(assetList[0].Uri, "https://testcontent.eyevinn.technology/ads/manifest.mpd")
 	is.Equal(assetList[0].Duration, 10.25)
 
 	encoreHandler.reset()
@@ -684,7 +684,7 @@ func TestReplaceVmapWithDashPrefer(t *testing.T) {
 	firstCreative := vmapRes.AdBreaks[0].AdSource.VASTData.VAST.Ad[0].InLine.Creatives[0]
 	mediaFile := firstCreative.Linear.MediaFiles[0]
 	is.Equal(mediaFile.MediaType, "application/dash+xml")
-	is.Equal(mediaFile.Text, "https://testcontent.eyevinn.technology/ads/mainfest.mpd")
+	is.Equal(mediaFile.Text, "https://testcontent.eyevinn.technology/ads/manifest.mpd")
 
 	encoreHandler.reset()
 	storeStub.reset()
