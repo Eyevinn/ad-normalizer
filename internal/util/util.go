@@ -154,6 +154,7 @@ func ReplaceMediaFiles(
 	assets map[string]structure.ManifestAsset,
 	keyRegex string,
 	keyField string,
+	manifestFormat structure.ManifestFormat,
 ) error {
 	newAds := make([]vmap.Ad, 0, len(vast.Ad))
 	for _, ad := range vast.Ad {
@@ -163,7 +164,7 @@ func ReplaceMediaFiles(
 			newAd := ad
 			newMediaFile := *mediaFile // Copy to overwrite
 			newMediaFile.Text = asset.MasterPlaylistUrl
-			newMediaFile.MediaType = "application/x-mpegURL"
+			newMediaFile.MediaType = manifestFormat.MediaType()
 			newAd.InLine.Creatives[0].Linear.MediaFiles = []vmap.MediaFile{
 				newMediaFile,
 			}
