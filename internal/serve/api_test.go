@@ -260,6 +260,74 @@ func TestReplaceVast(t *testing.T) {
 	storeStub.reset()
 }
 
+func TestReplaceVastWithDashPrefer(t *testing.T) {
+	is := is.New(t)
+	api, ts, storeStub, encoreHandler := setupApi()
+	defer ts.Close()
+	re := regexp.MustCompile("[^a-zA-Z0-9]")
+	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	transcodeInfo := structure.TranscodeInfo{
+		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
+		AspectRatio: "16:9",
+		FrameRates:  []float64{25.0},
+		Status:      "COMPLETED",
+	}
+	_ = storeStub.Set(adKey, transcodeInfo)
+	vastReq, err := http.NewRequest(
+		"GET",
+		ts.URL,
+		nil,
+	)
+	is.NoErr(err)
+	vastReq.Header.Set("accept", "application/xml")
+	vastReq.Header.Set("prefer", "manifest-format=dash")
+	qps := vastReq.URL.Query()
+	qps.Set("requestType", "vast")
+	vastReq.URL.RawQuery = qps.Encode()
+	recorder := httptest.NewRecorder()
+	api.HandleVast(recorder, vastReq)
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	is.Equal(recorder.Result().Header.Get("Preference-Applied"), "manifest-format=dash")
+	is.Equal(recorder.Result().Header.Get("Vary"), "Prefer")
+	defer recorder.Result().Body.Close()
+
+	responseBody, err := io.ReadAll(recorder.Result().Body)
+	is.NoErr(err)
+	vastRes, err := vmap.DecodeVast(responseBody)
+	is.NoErr(err)
+	is.Equal(len(vastRes.Ad), 1)
+	mediaFile := vastRes.Ad[0].InLine.Creatives[0].Linear.MediaFiles[0]
+	is.Equal(mediaFile.MediaType, "application/dash+xml")
+	is.Equal(mediaFile.Text, "https://testcontent.eyevinn.technology/ads/mainfest.mpd")
+
+	encoreHandler.reset()
+	storeStub.reset()
+}
+
+func TestRequestedManifestFormat(t *testing.T) {
+	is := is.New(t)
+	request, err := http.NewRequest("GET", "/", nil)
+	is.NoErr(err)
+	manifestFormat, applied := requestedManifestFormat(request)
+	is.Equal(manifestFormat, structure.ManifestFormatHLS)
+	is.Equal(applied, false)
+
+	request.Header.Set("Prefer", "manifest-format=vnd.apple.mpegurl")
+	manifestFormat, applied = requestedManifestFormat(request)
+	is.Equal(manifestFormat, structure.ManifestFormatHLS)
+	is.Equal(applied, true)
+
+	request.Header.Set("Prefer", "respond-async, manifest-format=application/dash+xml")
+	manifestFormat, applied = requestedManifestFormat(request)
+	is.Equal(manifestFormat, structure.ManifestFormatDASH)
+	is.Equal(applied, true)
+
+	request.Header.Set("Prefer", "manifest-format=unsupported")
+	manifestFormat, applied = requestedManifestFormat(request)
+	is.Equal(manifestFormat, structure.ManifestFormatHLS)
+	is.Equal(applied, false)
+}
+
 func TestReplaceVastWithBlacklisted(t *testing.T) {
 	is := is.New(t)
 	api, ts, storeStub, encoreHandler := setupApi()
@@ -424,6 +492,50 @@ func TestGetAssetList(t *testing.T) {
 	storeStub.reset()
 }
 
+func TestGetAssetListWithDashPrefer(t *testing.T) {
+	is := is.New(t)
+	re := regexp.MustCompile("[^a-zA-Z0-9]")
+	api, ts, storeStub, encoreHandler := setupApi()
+	defer ts.Close()
+	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	transcodeInfo := structure.TranscodeInfo{
+		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
+		AspectRatio: "16:9",
+		FrameRates:  []float64{25.0},
+		Status:      "COMPLETED",
+	}
+	_ = storeStub.Set(adKey, transcodeInfo)
+	vastReq, err := http.NewRequest(
+		"GET",
+		ts.URL,
+		nil,
+	)
+	is.NoErr(err)
+	vastReq.Header.Set("Accept", "application/json")
+	vastReq.Header.Set("Prefer", "manifest-format=application/dash+xml")
+	qps := vastReq.URL.Query()
+	qps.Set("requestType", "vast")
+	vastReq.URL.RawQuery = qps.Encode()
+	recorder := httptest.NewRecorder()
+	api.HandleVast(recorder, vastReq)
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	is.Equal(recorder.Result().Header.Get("Content-Type"), "application/json")
+	is.Equal(recorder.Result().Header.Get("Preference-Applied"), "manifest-format=dash")
+	defer recorder.Result().Body.Close()
+
+	responseBody, err := io.ReadAll(recorder.Result().Body)
+	is.NoErr(err)
+	var assetList []structure.AssetDescription
+	err = json.Unmarshal(responseBody, &assetList)
+	is.NoErr(err)
+	is.Equal(len(assetList), 1)
+	is.Equal(assetList[0].Uri, "https://testcontent.eyevinn.technology/ads/mainfest.mpd")
+	is.Equal(assetList[0].Duration, 10.25)
+
+	encoreHandler.reset()
+	storeStub.reset()
+}
+
 func TestEmptyVmap(t *testing.T) {
 	is := is.New(t)
 	api, ts, storeStub, encoreHandler := setupApi()
@@ -530,6 +642,49 @@ func TestReplaceVmap(t *testing.T) {
 	is.Equal(storeStub.kpis.BrokenAds, 0)
 	is.Equal(storeStub.kpis.IngestedAds, 1)
 	is.Equal(storeStub.kpis.ServedAds, 1)
+
+	encoreHandler.reset()
+	storeStub.reset()
+}
+
+func TestReplaceVmapWithDashPrefer(t *testing.T) {
+	is := is.New(t)
+	api, ts, storeStub, encoreHandler := setupApi()
+	defer ts.Close()
+	re := regexp.MustCompile("[^a-zA-Z0-9]")
+	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	transcodeInfo := structure.TranscodeInfo{
+		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
+		AspectRatio: "16:9",
+		FrameRates:  []float64{25.0},
+		Status:      "COMPLETED",
+	}
+	_ = storeStub.Set(adKey, transcodeInfo)
+	vmapReq, err := http.NewRequest(
+		"GET",
+		ts.URL+"/vmap",
+		nil,
+	)
+	is.NoErr(err)
+	vmapReq.Header.Set("accept", "application/xml")
+	vmapReq.Header.Set("prefer", "manifest-format=dash")
+	qps := vmapReq.URL.Query()
+	qps.Set("requestType", "vmap")
+	vmapReq.URL.RawQuery = qps.Encode()
+	recorder := httptest.NewRecorder()
+	api.HandleVmap(recorder, vmapReq)
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	is.Equal(recorder.Result().Header.Get("Preference-Applied"), "manifest-format=dash")
+	defer recorder.Result().Body.Close()
+
+	responseBody, err := io.ReadAll(recorder.Result().Body)
+	is.NoErr(err)
+	vmapRes, err := vmap.DecodeVmap(responseBody)
+	is.NoErr(err)
+	firstCreative := vmapRes.AdBreaks[0].AdSource.VASTData.VAST.Ad[0].InLine.Creatives[0]
+	mediaFile := firstCreative.Linear.MediaFiles[0]
+	is.Equal(mediaFile.MediaType, "application/dash+xml")
+	is.Equal(mediaFile.Text, "https://testcontent.eyevinn.technology/ads/mainfest.mpd")
 
 	encoreHandler.reset()
 	storeStub.reset()

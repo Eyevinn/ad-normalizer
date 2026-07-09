@@ -18,6 +18,13 @@ func TestCreatePackagerUrl(t *testing.T) {
 	is.Equal(assetUrl.Path, "assets/1234567890abcdef/test-asset.m3u8")
 }
 
+func TestManifestUrlForFormat(t *testing.T) {
+	is := is.New(t)
+	hlsUrl := "https://cdn.example.com/assets/ad/index.m3u8?token=abc#frag"
+	is.Equal(ManifestUrlForFormat(hlsUrl, ManifestFormatHLS), hlsUrl)
+	is.Equal(ManifestUrlForFormat(hlsUrl, ManifestFormatDASH), "https://cdn.example.com/assets/ad/mainfest.mpd?token=abc#frag")
+}
+
 func TestTranscodeInfoFromEncoreJob(t *testing.T) {
 	is := is.New(t)
 	testJob := EncoreJob{

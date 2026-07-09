@@ -48,6 +48,7 @@ The service provides two main endpoints:
 
 The service accepts requests to the endpoint `api/v1/vast`; if the request specifies the content type as `application/xml` or leaves it blank,
 it will return a modified VAST file where the mediafile objects have their links replaced with playlist URLs.
+HLS manifests are returned by default. DASH manifests can be requested with the `Prefer` header:
 
 ```
 % curl -v  "http://localhost:8000/api/v1/vast?dur=30"
@@ -60,6 +61,12 @@ or
 ```
 
 will return the same XML result.
+
+```
+% curl -v -H 'accept: application/xml' -H 'prefer: manifest-format=dash' "http://localhost:8000/api/v1/vast?dur=30"
+```
+
+will return XML with DASH manifest URLs. To explicitly request the default HLS format, use `prefer: manifest-format=vnd.apple.mpegurl`.
 
 if `application/json` content-type is explicitly requested, the normalizer returns JSON conforming to the asset list standard used for HLS interstitials:
 
@@ -96,7 +103,7 @@ or
 
 will return a modified VMAP
 
-The VMAP endpoint processes all VAST ads within the VMAP document, ensuring that all video assets are properly transcoded and available in HLS format.
+The VMAP endpoint processes all VAST ads within the VMAP document, ensuring that all video assets are properly transcoded and available in the requested manifest format. HLS is returned by default, and DASH can be requested with `prefer: manifest-format=dash`.
 
 Note that the VMAP endpoint does **not** support json as a response type.
 

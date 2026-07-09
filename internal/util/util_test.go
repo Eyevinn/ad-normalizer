@@ -87,7 +87,7 @@ func TestReplaceMediaFiles(t *testing.T) {
 		CreativeId:        "httpexamplecomvideo2mp4",
 		MasterPlaylistUrl: "http://example.com/video2/index.m3u8",
 	}
-	err := ReplaceMediaFiles(vast, assets, "[^a-zA-Z0-9]", "url")
+	err := ReplaceMediaFiles(vast, assets, "[^a-zA-Z0-9]", "url", structure.ManifestFormatHLS)
 	is.NoErr(err)
 	is.Equal(len(assets), 1)
 }
