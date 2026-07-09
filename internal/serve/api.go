@@ -652,7 +652,11 @@ func requestedManifestFormat(r *http.Request) (structure.ManifestFormat, bool) {
 	return structure.ManifestFormatHLS, false
 }
 
-func setManifestPreferenceHeaders(w http.ResponseWriter, manifestFormat structure.ManifestFormat, preferenceApplied bool) {
+func setManifestPreferenceHeaders(
+	w http.ResponseWriter,
+	manifestFormat structure.ManifestFormat,
+	preferenceApplied bool,
+) {
 	if preferenceApplied {
 		w.Header().Set(
 			preferenceAppliedHeader,
