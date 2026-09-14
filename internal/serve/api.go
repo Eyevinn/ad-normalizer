@@ -527,7 +527,7 @@ func (api *API) findMissingAndDispatchJobs(
 func (api *API) findMissingAndDispatchJobsJson(request *preIngestCreativeRequest) int {
 	logger.Debug("Finding missing creatives in pre-ingest request", slog.Int("mediaUrlCount", len(request.MediaUrls)))
 	// convert to ManifestAsset
-	creatives := util.MakeCreatives(request.MediaUrls, api.keyRegex)
+	creatives := util.MakeCreatives(request.MediaUrls)
 	found, missing, _ := api.partitionCreatives(creatives, structure.ManifestFormatHLS)
 	logger.Debug("partitioned creatives", slog.Int("found", len(found)), slog.Int("missing", len(missing)))
 	api.dispatchJobs(missing)
@@ -569,6 +569,20 @@ func (api *API) partitionCreatives(
 				}
 			}
 		} else {
+			if util.CreativeIdTooLong(creative.CreativeId) {
+				logger.Warn("creative id too long to transcode, blacklisting media URL",
+					slog.String("creativeId", creative.CreativeId),
+					slog.String("masterPlaylistUrl", creative.MasterPlaylistUrl),
+				)
+				if err := api.valkeyStore.BlackList(creative.MasterPlaylistUrl); err != nil {
+					logger.Error("failed to blacklist media URL",
+						slog.String("error", err.Error()),
+						slog.String("masterPlaylistUrl", creative.MasterPlaylistUrl),
+					)
+				}
+				filteredOut++
+				continue
+			}
 			missing[creative.CreativeId] = structure.ManifestAsset{
 				CreativeId:        creative.CreativeId,
 				MasterPlaylistUrl: creative.MasterPlaylistUrl,

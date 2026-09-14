@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -21,6 +20,7 @@ import (
 	"github.com/Eyevinn/ad-normalizer/internal/logger"
 	"github.com/Eyevinn/ad-normalizer/internal/normalizerMetrics"
 	"github.com/Eyevinn/ad-normalizer/internal/structure"
+	"github.com/Eyevinn/ad-normalizer/internal/util"
 	"github.com/google/uuid"
 	"github.com/matryer/is"
 )
@@ -204,8 +204,7 @@ func TestReplaceVast(t *testing.T) {
 	api, ts, storeStub, encoreHandler := setupApi()
 	defer ts.Close()
 	// Populate the store with one ad
-	re := regexp.MustCompile("[^a-zA-Z0-9]")
-	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	adKey := util.HashCreativeUrl("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
 	transcodeInfo := structure.TranscodeInfo{
 		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
 		AspectRatio: "16:9",
@@ -264,8 +263,7 @@ func TestReplaceVastWithDashPrefer(t *testing.T) {
 	is := is.New(t)
 	api, ts, storeStub, encoreHandler := setupApi()
 	defer ts.Close()
-	re := regexp.MustCompile("[^a-zA-Z0-9]")
-	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	adKey := util.HashCreativeUrl("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
 	transcodeInfo := structure.TranscodeInfo{
 		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
 		AspectRatio: "16:9",
@@ -333,8 +331,7 @@ func TestReplaceVastWithBlacklisted(t *testing.T) {
 	api, ts, storeStub, encoreHandler := setupApi()
 	defer ts.Close()
 	// Populate the store with one ad
-	re := regexp.MustCompile("[^a-zA-Z0-9]")
-	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	adKey := util.HashCreativeUrl("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
 	transcodeInfo := structure.TranscodeInfo{
 		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
 		AspectRatio: "16:9",
@@ -381,11 +378,10 @@ func TestReplaceVastWithBlacklisted(t *testing.T) {
 
 func TestReplaceVastWithFiller(t *testing.T) {
 	is := is.New(t)
-	re := regexp.MustCompile("[^a-zA-Z0-9]")
 
 	api, ts, storeStub, encoreHandler := setupApi()
 	defer ts.Close()
-	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	adKey := util.HashCreativeUrl("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
 	transcodeInfo := structure.TranscodeInfo{
 		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
 		AspectRatio: "16:9",
@@ -400,7 +396,7 @@ func TestReplaceVastWithFiller(t *testing.T) {
 		FrameRates:  []float64{25.0},
 		Status:      "COMPLETED",
 	}
-	fillerKey := re.ReplaceAllString("http://example.com/video.mp4", "")
+	fillerKey := util.HashCreativeUrl("http://example.com/video.mp4")
 	_ = storeStub.Set(fillerKey, fillerInfo)
 
 	vastReq, err := http.NewRequest(
@@ -448,10 +444,9 @@ func TestReplaceVastWithFiller(t *testing.T) {
 func TestGetAssetList(t *testing.T) {
 	is := is.New(t)
 	// Populate the store with one ad
-	re := regexp.MustCompile("[^a-zA-Z0-9]")
 	api, ts, storeStub, encoreHandler := setupApi()
 	defer ts.Close()
-	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	adKey := util.HashCreativeUrl("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
 	transcodeInfo := structure.TranscodeInfo{
 		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
 		AspectRatio: "16:9",
@@ -494,10 +489,9 @@ func TestGetAssetList(t *testing.T) {
 
 func TestGetAssetListWithDashPrefer(t *testing.T) {
 	is := is.New(t)
-	re := regexp.MustCompile("[^a-zA-Z0-9]")
 	api, ts, storeStub, encoreHandler := setupApi()
 	defer ts.Close()
-	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	adKey := util.HashCreativeUrl("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
 	transcodeInfo := structure.TranscodeInfo{
 		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
 		AspectRatio: "16:9",
@@ -585,8 +579,7 @@ func TestReplaceVmap(t *testing.T) {
 	api, ts, storeStub, encoreHandler := setupApi()
 	defer ts.Close()
 	// Populate the store with one ad
-	re := regexp.MustCompile("[^a-zA-Z0-9]")
-	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	adKey := util.HashCreativeUrl("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
 	transcodeInfo := structure.TranscodeInfo{
 		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
 		AspectRatio: "16:9",
@@ -651,8 +644,7 @@ func TestReplaceVmapWithDashPrefer(t *testing.T) {
 	is := is.New(t)
 	api, ts, storeStub, encoreHandler := setupApi()
 	defer ts.Close()
-	re := regexp.MustCompile("[^a-zA-Z0-9]")
-	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	adKey := util.HashCreativeUrl("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
 	transcodeInfo := structure.TranscodeInfo{
 		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
 		AspectRatio: "16:9",
@@ -867,8 +859,7 @@ func TestHandlePreIngestCreatives(t *testing.T) {
 	api, ts, storeStub, _ := setupApi()
 	defer ts.Close()
 
-	re := regexp.MustCompile("[^a-zA-Z0-9]")
-	adKey := re.ReplaceAllString("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4", "")
+	adKey := util.HashCreativeUrl("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
 	err := storeStub.Set(adKey, structure.TranscodeInfo{
 		Url:         "https://testcontent.eyevinn.technology/ads/alvedon-10s.m3u8",
 		AspectRatio: "16:9",
@@ -906,6 +897,49 @@ func TestHandlePreIngestCreatives(t *testing.T) {
 	is.NoErr(err)
 
 	is.Equal(response.NotYetProcessed, 1) // One creative is unknown and should be processed
+}
+
+// Creative ids are now a fixed-length hash of the URL, so a long URL can no
+// longer produce an over-long Encore filename on its own (see
+// util.HashCreativeUrl). The length guard in partitionCreatives is kept as a
+// fallback regardless - e.g. for the default (non-"url") keyField mode, which
+// keys off the raw UniversalAdId - so it's exercised directly here.
+func TestPartitionCreativesTooLongCreativeId(t *testing.T) {
+	is := is.New(t)
+	api, ts, storeStub, _ := setupApi()
+	defer ts.Close()
+
+	longCreativeId := strings.Repeat("a", 250)
+	offendingUrl := "https://testcontent.eyevinn.technology/ads/offending.mp4"
+	okUrl := "https://testcontent.eyevinn.technology/ads/new-ad.mp4"
+
+	creatives := map[string]structure.ManifestAsset{
+		longCreativeId: {
+			CreativeId:        longCreativeId,
+			MasterPlaylistUrl: offendingUrl,
+			Source:            offendingUrl,
+		},
+		"shortid": {
+			CreativeId:        "shortid",
+			MasterPlaylistUrl: okUrl,
+			Source:            okUrl,
+		},
+	}
+
+	found, missing, filteredOut := api.partitionCreatives(creatives, structure.ManifestFormatHLS)
+	is.Equal(len(found), 0)
+	is.Equal(len(missing), 1) // only the short id should be dispatched
+	_, stillMissing := missing[longCreativeId]
+	is.True(!stillMissing)
+	is.Equal(filteredOut, 1)
+
+	blacklisted, err := storeStub.InBlackList(offendingUrl)
+	is.NoErr(err)
+	is.True(blacklisted) // the offending media URL should be blacklisted
+
+	notBlacklisted, err := storeStub.InBlackList(okUrl)
+	is.NoErr(err)
+	is.True(!notBlacklisted)
 }
 
 func TestHandlePreIngestCreativesMethodNotAllowed(t *testing.T) {
