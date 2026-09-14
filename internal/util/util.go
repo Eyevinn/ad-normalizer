@@ -15,6 +15,20 @@ import (
 
 const fillerId = "NORMALIZER_FILLER"
 
+// MaxEncoreFilenameLength is the maximum length allowed for an Encore output
+// filename, i.e. the creative id with EncoreOutputSuffix appended.
+const MaxEncoreFilenameLength = 255
+
+// EncoreOutputSuffix is the suffix Encore appends to a job's base name to
+// produce the transcoded output filename.
+const EncoreOutputSuffix = "_x264_1080_25.mp4"
+
+// CreativeIdTooLong reports whether creativeId would produce an Encore output
+// filename longer than MaxEncoreFilenameLength once EncoreOutputSuffix is appended.
+func CreativeIdTooLong(creativeId string) bool {
+	return len(creativeId)+len(EncoreOutputSuffix) > MaxEncoreFilenameLength
+}
+
 func GetBestMediaFileFromVastAd(ad *vmap.Ad) *vmap.MediaFile {
 	bestMediaFile := &vmap.MediaFile{}
 	for _, c := range ad.InLine.Creatives {

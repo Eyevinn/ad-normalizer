@@ -10,6 +10,14 @@ import (
 	"github.com/matryer/is"
 )
 
+func TestCreativeIdTooLong(t *testing.T) {
+	is := is.New(t)
+	// 255 - len("_x264_1080_25.mp4") == 237, so this is exactly at the limit
+	atLimit := strings.Repeat("a", 255-len(EncoreOutputSuffix))
+	is.True(!CreativeIdTooLong(atLimit))
+	is.True(CreativeIdTooLong(atLimit + "a"))
+}
+
 func TestGetBestMediaFileFromVastAd(t *testing.T) {
 	is := is.New(t)
 	ad := defaultAd()

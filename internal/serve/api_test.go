@@ -908,6 +908,52 @@ func TestHandlePreIngestCreatives(t *testing.T) {
 	is.Equal(response.NotYetProcessed, 1) // One creative is unknown and should be processed
 }
 
+func TestHandlePreIngestCreativesTooLong(t *testing.T) {
+	is := is.New(t)
+	api, ts, storeStub, _ := setupApi()
+	defer ts.Close()
+
+	// Long enough that the stripped creative id plus the encore output
+	// suffix exceeds the 255 character filename limit.
+	longUrl := "https://testcontent.eyevinn.technology/ads/" + strings.Repeat("a", 250) + ".mp4"
+	shortUrl := "https://testcontent.eyevinn.technology/ads/new-ad.mp4"
+
+	preIngestCreativeRequest := preIngestCreativeRequest{
+		MediaUrls: []string{longUrl, shortUrl},
+	}
+	serializedBody, err := json.Marshal(preIngestCreativeRequest)
+	is.NoErr(err)
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"/pre-ingest-creatives",
+		bytes.NewBuffer(serializedBody),
+	)
+	is.NoErr(err)
+	recorder := httptest.NewRecorder()
+	api.HandlePreIngestCreatives(recorder, req)
+
+	is.Equal(recorder.Result().StatusCode, http.StatusOK)
+	defer recorder.Result().Body.Close()
+
+	responseBody, err := io.ReadAll(recorder.Result().Body)
+	is.NoErr(err)
+
+	var response preIngestCreativeResponse
+	err = json.Unmarshal(responseBody, &response)
+	is.NoErr(err)
+
+	is.Equal(response.NotYetProcessed, 1) // only the short URL should be dispatched
+
+	blacklisted, err := storeStub.InBlackList(longUrl)
+	is.NoErr(err)
+	is.True(blacklisted) // the offending media URL should be blacklisted
+
+	notBlacklisted, err := storeStub.InBlackList(shortUrl)
+	is.NoErr(err)
+	is.True(!notBlacklisted)
+}
+
 func TestHandlePreIngestCreativesMethodNotAllowed(t *testing.T) {
 	is := is.New(t)
 	api, ts, _, _ := setupApi()

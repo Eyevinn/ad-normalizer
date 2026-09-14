@@ -569,6 +569,20 @@ func (api *API) partitionCreatives(
 				}
 			}
 		} else {
+			if util.CreativeIdTooLong(creative.CreativeId) {
+				logger.Warn("creative id too long to transcode, blacklisting media URL",
+					slog.String("creativeId", creative.CreativeId),
+					slog.String("masterPlaylistUrl", creative.MasterPlaylistUrl),
+				)
+				if err := api.valkeyStore.BlackList(creative.MasterPlaylistUrl); err != nil {
+					logger.Error("failed to blacklist media URL",
+						slog.String("error", err.Error()),
+						slog.String("masterPlaylistUrl", creative.MasterPlaylistUrl),
+					)
+				}
+				filteredOut++
+				continue
+			}
 			missing[creative.CreativeId] = structure.ManifestAsset{
 				CreativeId:        creative.CreativeId,
 				MasterPlaylistUrl: creative.MasterPlaylistUrl,
