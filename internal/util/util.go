@@ -1,6 +1,8 @@
 package util
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"log/slog"
 	"net/url"
 	"regexp"
@@ -27,6 +29,14 @@ const EncoreOutputSuffix = "_x264_1080_25.mp4"
 // filename longer than MaxEncoreFilenameLength once EncoreOutputSuffix is appended.
 func CreativeIdTooLong(creativeId string) bool {
 	return len(creativeId)+len(EncoreOutputSuffix) > MaxEncoreFilenameLength
+}
+
+// HashCreativeUrl deterministically derives a fixed-length id from a creative
+// URL: the same URL always hashes to the same id, but the id's length no
+// longer depends on the URL's length.
+func HashCreativeUrl(urlStr string) string {
+	sum := sha256.Sum256([]byte(urlStr))
+	return hex.EncodeToString(sum[:])
 }
 
 func GetBestMediaFileFromVastAd(ad *vmap.Ad) *vmap.MediaFile {
@@ -64,10 +74,10 @@ func GetCreatives(
 	return creatives
 }
 
-func MakeCreatives(creativeUrls []string, keyRegext string) map[string]structure.ManifestAsset {
+func MakeCreatives(creativeUrls []string) map[string]structure.ManifestAsset {
 	creatives := make(map[string]structure.ManifestAsset, len(creativeUrls))
 	for _, creativeUrl := range creativeUrls {
-		adId := UrlToKey(creativeUrl, keyRegext)
+		adId := UrlToKey(creativeUrl)
 		creatives[adId] = structure.ManifestAsset{
 			CreativeId:        adId,
 			MasterPlaylistUrl: creativeUrl,
@@ -112,8 +122,7 @@ func getKey(keyField, keyRegex string, ad *vmap.Ad, mediaFile *vmap.MediaFile) s
 	case "resolution":
 		res = strconv.Itoa(mediaFile.Width) + "x" + strconv.Itoa(mediaFile.Height)
 	case "url":
-		re := regexp.MustCompile(keyRegex)
-		res = re.ReplaceAllString(mediaFile.Text, "")
+		res = HashCreativeUrl(mediaFile.Text)
 	default:
 		re := regexp.MustCompile(keyRegex)
 		res = re.ReplaceAllString(ad.InLine.Creatives[0].UniversalAdId.Id, "")
@@ -121,9 +130,8 @@ func getKey(keyField, keyRegex string, ad *vmap.Ad, mediaFile *vmap.MediaFile) s
 	return res
 }
 
-func UrlToKey(urlStr, keyRegex string) string {
-	re := regexp.MustCompile(keyRegex)
-	return re.ReplaceAllString(urlStr, "")
+func UrlToKey(urlStr string) string {
+	return HashCreativeUrl(urlStr)
 }
 
 func ValidPath(path string) bool {

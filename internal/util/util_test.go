@@ -43,7 +43,7 @@ func TestGetCreatives(t *testing.T) {
 		{
 			key:         "url",
 			regex:       "[^a-zA-Z0-9]",
-			expectedKey: "httpexamplecomvideo2mp4",
+			expectedKey: HashCreativeUrl("http://example.com/video2.mp4"),
 		},
 	}
 	for _, c := range cases {

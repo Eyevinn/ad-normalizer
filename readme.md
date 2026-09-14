@@ -157,7 +157,7 @@ To run the ad normalizer on your own infrastructure, you need:
 | `OUTPUT_BUCKET_URL` | The url to the output folder for the packaged assets                                                                                                  | none           | yes       |
 | `OSC_ACCESS_TOKEN`  | your OSC access token. Only needed when running encore in Eyevinn OSC                                                                                 | none           | no        |
 | `KEY_FIELD`         | The VAST field used as key in the cache. possible non-default values are `resolution` and `url`. If no value is provided, it used the universal Ad Id | universalAdId  | no        |
-| `KEY_REGEX`         | RegExp string used to strip away unwanted characters from the key string                                                                              | `[^a-zA-Z0-9]` | no        |
+| `KEY_REGEX`         | RegExp string used to strip away unwanted characters from the key string. Not used when `KEY_FIELD` is `url`, since the URL is hashed into a fixed-length key instead | `[^a-zA-Z0-9]` | no        |
 | `ENCORE_PROFILE`    | The transcoding profile used by encore when processing the ads                                                                                        | program        | no        |
 | `ASSET_SERVER_URL`  | Base URL used in the links created for manifests. Typical use case is a CDN URL. If not set, a https version of output bucket URL is used             | none           | no        |
 | `REDIS_CLUSTER`     | Flag to signal that redis is in cluster mode. Only needed when actually running redis in cluster mode                                                 | false          | no        |

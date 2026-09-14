@@ -527,7 +527,7 @@ func (api *API) findMissingAndDispatchJobs(
 func (api *API) findMissingAndDispatchJobsJson(request *preIngestCreativeRequest) int {
 	logger.Debug("Finding missing creatives in pre-ingest request", slog.Int("mediaUrlCount", len(request.MediaUrls)))
 	// convert to ManifestAsset
-	creatives := util.MakeCreatives(request.MediaUrls, api.keyRegex)
+	creatives := util.MakeCreatives(request.MediaUrls)
 	found, missing, _ := api.partitionCreatives(creatives, structure.ManifestFormatHLS)
 	logger.Debug("partitioned creatives", slog.Int("found", len(found)), slog.Int("missing", len(missing)))
 	api.dispatchJobs(missing)
