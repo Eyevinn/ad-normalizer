@@ -36,6 +36,8 @@ type NormalizerMetricsRequest = map[string]NormalizerMetrics // Key is same as S
 type normalizerKpiCollector struct {
 	kpiMap  map[string]*NormalizerMetrics
 	ch      chan AdsHandledEventArguments
+	syncCh  chan chan struct{}
+	doneCh  chan struct{}
 	ctx     context.Context
 	postUrl string
 }
@@ -45,6 +47,8 @@ func NewNormalizerKpiCollector(exportInterval time.Duration, postUrl string) (No
 	collector := &normalizerKpiCollector{}
 	collector.kpiMap = make(map[string]*NormalizerMetrics)
 	collector.ch = make(chan AdsHandledEventArguments, 1000)
+	collector.syncCh = make(chan chan struct{})
+	collector.doneCh = make(chan struct{})
 	collector.ctx = ctx
 
 	_, err := url.Parse(postUrl)
@@ -69,15 +73,41 @@ func (c *normalizerKpiCollector) runCollector(exportInterval time.Duration) {
 		select {
 		case args := <-c.ch:
 			c.recordMetrics(args)
+		case reply := <-c.syncCh:
+			// drain any queued metrics before signalling
+			c.drainAndSignal(reply)
 		case <-ticker.C:
 			c.exportMetrics()
 		case <-c.ctx.Done():
 			logger.Info("Stopping KPI exporter", slog.String("err", c.ctx.Err().Error()))
 			close(c.ch)
 			c.exportMetrics()
+			close(c.doneCh)
 			return
 		}
 	}
+}
+
+// drainAndSignal processes all buffered events then closes reply.
+// Must only be called from the runCollector goroutine.
+func (c *normalizerKpiCollector) drainAndSignal(reply chan struct{}) {
+	for {
+		select {
+		case args := <-c.ch:
+			c.recordMetrics(args)
+		default:
+			close(reply)
+			return
+		}
+	}
+}
+
+// waitForIdle blocks until all AdsHandled events sent before this call have
+// been processed by the collector goroutine. It is intended for use in tests.
+func (c *normalizerKpiCollector) waitForIdle() {
+	reply := make(chan struct{})
+	c.syncCh <- reply
+	<-reply
 }
 
 func (c *normalizerKpiCollector) exportMetrics() {

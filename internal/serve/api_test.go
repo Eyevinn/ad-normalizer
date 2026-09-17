@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 )
 
 type StoreStub struct {
+	mu        sync.Mutex
 	mockStore map[string]structure.TranscodeInfo
 	sets      int
 	gets      int
@@ -35,6 +37,8 @@ type StoreStub struct {
 }
 
 func (s *StoreStub) kpiReport(args normalizerMetrics.AdsHandledEventArguments) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.kpis.BrokenAds += args.BrokenAds
 	s.kpis.IngestedAds += args.IngestedAds
 	s.kpis.ServedAds += args.ServedAds
@@ -42,12 +46,16 @@ func (s *StoreStub) kpiReport(args normalizerMetrics.AdsHandledEventArguments) {
 
 // Delete implements store.Store.
 func (s *StoreStub) Delete(key string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	delete(s.mockStore, key)
 	s.deletes++
 	return nil
 }
 
 func (s *StoreStub) Get(key string) (structure.TranscodeInfo, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.gets++
 	if value, exists := s.mockStore[key]; exists {
 		return value, true, nil
@@ -56,6 +64,8 @@ func (s *StoreStub) Get(key string) (structure.TranscodeInfo, bool, error) {
 }
 
 func (s *StoreStub) Set(key string, value structure.TranscodeInfo, ttl ...int64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.sets++
 	s.mockStore[key] = value
 	return nil
@@ -77,6 +87,8 @@ func (s *StoreStub) List(page int, size int) ([]structure.TranscodeInfo, int64, 
 }
 
 func (s *StoreStub) reset() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.mockStore = make(map[string]structure.TranscodeInfo)
 	s.sets = 0
 	s.gets = 0
@@ -117,6 +129,7 @@ func (s *StoreStub) EnqueuePackagingJob(queueName string, message structure.Pack
 }
 
 type EncoreHandlerStub struct {
+	mu    sync.Mutex
 	calls int
 }
 
@@ -160,13 +173,17 @@ func (e *EncoreHandlerStub) GetEncoreJob(jobId string) (structure.EncoreJob, err
 
 func (e *EncoreHandlerStub) reset() {
 	logger.Info("Resetting EncoreHandlerStub")
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	e.calls = 0
 }
 
 func (e *EncoreHandlerStub) CreateJob(creative *structure.ManifestAsset) (structure.EncoreJob, error) {
 	logger.Info("EncoreHandlerStub.createJob called")
 	newJob := structure.EncoreJob{}
-	e.calls += 1
+	e.mu.Lock()
+	e.calls++
+	e.mu.Unlock()
 	return newJob, nil
 }
 
