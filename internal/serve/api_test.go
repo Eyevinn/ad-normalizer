@@ -188,14 +188,18 @@ func setupApi() (*API, *httptest.Server, *StoreStub, *EncoreHandlerStub) {
 		KeyRegex:       "[^a-zA-Z0-9]",
 		KpiPostUrl:     "http://kpi-post.example.com/metrics",
 	}
-	// Initialize the API with the mock store
+	// Initialize the API with the mock store.
+	// Default checkAssetExists to always-true so existing tests don't make real
+	// HTTP calls to external asset URLs. Individual tests that exercise the
+	// existence-check logic override this field directly.
 	api := NewAPI(
 		storeStub,
 		apiConf,
 		encoreHandler,
-		&http.Client{}, // Use nil for the client in tests, or you can create a mock client
+		&http.Client{},
 		storeStub.kpiReport,
 	)
+	api.checkAssetExists = func(assetUrl string) bool { return true }
 	return api, testServer, storeStub, encoreHandler
 }
 
@@ -940,6 +944,84 @@ func TestPartitionCreativesTooLongCreativeId(t *testing.T) {
 	notBlacklisted, err := storeStub.InBlackList(okUrl)
 	is.NoErr(err)
 	is.True(!notBlacklisted)
+}
+
+// TestPartitionCreativesAsset404EvictsCache verifies that when the cached
+// master-playlist URL returns 404, the cache key is deleted and the creative
+// is treated as missing (queued for re-transcoding).
+func TestPartitionCreativesAsset404EvictsCache(t *testing.T) {
+	is := is.New(t)
+
+	api, ts, storeStub, _ := setupApi()
+	defer ts.Close()
+
+	// Inject a stub that simulates a 404 for the cached asset URL.
+	api.checkAssetExists = func(assetUrl string) bool { return false }
+
+	creativeId := util.HashCreativeUrl("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
+	cachedUrl := "https://asset-server.example.com/ads/alvedon-10s/index.m3u8"
+
+	_ = storeStub.Set(creativeId, structure.TranscodeInfo{
+		Url:    cachedUrl,
+		Status: "COMPLETED",
+		Source: "https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4",
+	})
+
+	creatives := map[string]structure.ManifestAsset{
+		creativeId: {
+			CreativeId:        creativeId,
+			MasterPlaylistUrl: "https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4",
+			Source:            "https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4",
+		},
+	}
+
+	found, missing, filteredOut := api.partitionCreatives(creatives, structure.ManifestFormatHLS)
+
+	is.Equal(len(found), 0)   // must not be served — asset is gone
+	is.Equal(len(missing), 1) // must be re-queued for re-transcoding
+	is.Equal(filteredOut, 0)
+	is.Equal(storeStub.deletes, 1) // cache key must have been evicted
+
+	_, stillInCache := storeStub.mockStore[creativeId]
+	is.True(!stillInCache) // key must be gone from the store
+}
+
+// TestPartitionCreativesAssetTransientErrorPreservesCache verifies that a
+// transient or non-404 error from the asset server does NOT evict the cache —
+// only a definitive 404 should trigger eviction.
+func TestPartitionCreativesAssetTransientErrorPreservesCache(t *testing.T) {
+	is := is.New(t)
+
+	api, ts, storeStub, _ := setupApi()
+	defer ts.Close()
+
+	// Inject a stub that simulates "alive" (non-404, e.g. 200 or network error
+	// treated as assume-alive).
+	api.checkAssetExists = func(assetUrl string) bool { return true }
+
+	creativeId := util.HashCreativeUrl("https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4")
+	cachedUrl := "https://asset-server.example.com/ads/alvedon-10s/index.m3u8"
+
+	_ = storeStub.Set(creativeId, structure.TranscodeInfo{
+		Url:    cachedUrl,
+		Status: "COMPLETED",
+		Source: "https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4",
+	})
+
+	creatives := map[string]structure.ManifestAsset{
+		creativeId: {
+			CreativeId:        creativeId,
+			MasterPlaylistUrl: "https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4",
+			Source:            "https://testcontent.eyevinn.technology/ads/alvedon-10s.mp4",
+		},
+	}
+
+	found, missing, filteredOut := api.partitionCreatives(creatives, structure.ManifestFormatHLS)
+
+	is.Equal(len(found), 1) // must still be served — asset is alive
+	is.Equal(len(missing), 0)
+	is.Equal(filteredOut, 0)
+	is.Equal(storeStub.deletes, 0) // cache must NOT have been evicted
 }
 
 func TestHandlePreIngestCreativesMethodNotAllowed(t *testing.T) {
