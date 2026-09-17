@@ -34,17 +34,18 @@ const jobPath = "/jobs"
 const blacklistPath = "/blacklist"
 
 type API struct {
-	valkeyStore    store.Store
-	adServerUrl    url.URL
-	assetServerUrl url.URL
-	keyField       string
-	keyRegex       string
-	encoreHandler  encore.EncoreHandler
-	client         *http.Client
-	jitPackage     bool
-	packageQueue   string
-	encoreUrl      url.URL
-	reportKpi      func(normalizerMetrics.AdsHandledEventArguments)
+	valkeyStore      store.Store
+	adServerUrl      url.URL
+	assetServerUrl   url.URL
+	keyField         string
+	keyRegex         string
+	encoreHandler    encore.EncoreHandler
+	client           *http.Client
+	jitPackage       bool
+	packageQueue     string
+	encoreUrl        url.URL
+	reportKpi        func(normalizerMetrics.AdsHandledEventArguments)
+	checkAssetExists func(assetUrl string) bool
 }
 
 func NewAPI(
@@ -54,7 +55,7 @@ func NewAPI(
 	client *http.Client,
 	kpiReportFunc func(normalizerMetrics.AdsHandledEventArguments),
 ) *API {
-	return &API{
+	api := &API{
 		valkeyStore:    valkeyStore,
 		adServerUrl:    config.AdServerUrl,
 		assetServerUrl: config.AssetServerUrl,
@@ -67,6 +68,8 @@ func NewAPI(
 		encoreUrl:      config.EncoreUrl,
 		reportKpi:      kpiReportFunc,
 	}
+	api.checkAssetExists = api.assetExists
+	return api
 }
 
 type statusResponse struct {
@@ -562,10 +565,32 @@ func (api *API) partitionCreatives(
 		}
 		if urlFound {
 			if transcodeInfo.Status == "COMPLETED" {
-				found[creative.CreativeId] = structure.ManifestAsset{
-					CreativeId:        creative.CreativeId,
-					MasterPlaylistUrl: structure.ManifestUrlForFormat(transcodeInfo.Url, manifestFormat),
-					Source:            transcodeInfo.Source,
+				if api.checkAssetExists(transcodeInfo.Url) {
+					found[creative.CreativeId] = structure.ManifestAsset{
+						CreativeId:        creative.CreativeId,
+						MasterPlaylistUrl: structure.ManifestUrlForFormat(transcodeInfo.Url, manifestFormat),
+						Source:            transcodeInfo.Source,
+					}
+				} else {
+					// Asset no longer exists at the cached URL — evict the key so the
+					// creative is re-transcoded on the next request.
+					if err := api.valkeyStore.Delete(creative.CreativeId); err != nil {
+						logger.Error("failed to delete stale cache entry",
+							slog.String("creativeId", creative.CreativeId),
+							slog.String("url", transcodeInfo.Url),
+							slog.String("error", err.Error()),
+						)
+					} else {
+						logger.Info("evicted stale cache entry (asset 404)",
+							slog.String("creativeId", creative.CreativeId),
+							slog.String("url", transcodeInfo.Url),
+						)
+					}
+					missing[creative.CreativeId] = structure.ManifestAsset{
+						CreativeId:        creative.CreativeId,
+						MasterPlaylistUrl: creative.MasterPlaylistUrl,
+						Source:            creative.MasterPlaylistUrl,
+					}
 				}
 			}
 		} else {
@@ -591,6 +616,31 @@ func (api *API) partitionCreatives(
 		}
 	}
 	return found, missing, filteredOut
+}
+
+// assetExists checks whether the master playlist URL still resolves to a live
+// asset. It issues a GET request and returns false only on a definitive 404.
+// Any other error (network failure, 5xx, timeout) is treated as "assume still
+// alive" so that a transient asset-server problem does not wipe the cache.
+func (api *API) assetExists(assetUrl string) bool {
+	resp, err := api.client.Get(assetUrl)
+	if err != nil {
+		logger.Warn("asset existence check failed (assuming alive)",
+			slog.String("url", assetUrl),
+			slog.String("error", err.Error()),
+		)
+		return true
+	}
+	defer resp.Body.Close()
+	// Drain body so the connection can be reused.
+	_, _ = io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode == http.StatusNotFound {
+		logger.Warn("asset existence check returned 404",
+			slog.String("url", assetUrl),
+		)
+		return false
+	}
+	return true
 }
 
 type preIngestCreativeRequest struct {
