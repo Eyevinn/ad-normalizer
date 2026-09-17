@@ -16,7 +16,9 @@ func TestMain(m *testing.M) {
 func TestKpiCollector(t *testing.T) {
 	is := is.New(t)
 
-	c, cancel := NewNormalizerKpiCollector(time.Millisecond*200, "")
+	// Use a long export interval so the ticker never fires during the test;
+	// we drive flushing explicitly via waitForIdle and cancel.
+	c, cancel := NewNormalizerKpiCollector(time.Hour, "")
 
 	collector, ok := c.(*normalizerKpiCollector)
 
@@ -33,8 +35,9 @@ func TestKpiCollector(t *testing.T) {
 
 	c.AdsHandled(args)
 
-	// Wait for the metric to be processed
-	time.Sleep(time.Millisecond * 10)
+	// Wait until the collector goroutine has processed the event before reading
+	// kpiMap — eliminates the data race that caused flaky test results.
+	collector.waitForIdle()
 
 	// Check that the metric was recorded
 	metrics, exists := collector.kpiMap["test-subdomain"]
@@ -53,7 +56,7 @@ func TestKpiCollector(t *testing.T) {
 	}
 
 	c.AdsHandled(args2)
-	time.Sleep(time.Millisecond * 10)
+	collector.waitForIdle()
 
 	// Check that metrics are accumulated
 	metrics, exists = collector.kpiMap["test-subdomain"]
@@ -63,11 +66,12 @@ func TestKpiCollector(t *testing.T) {
 	is.Equal(metrics.ServedAds, 143)
 	is.Equal(metrics.Service, "test-subdomain")
 
-	// Wait for export interval to trigger
-	time.Sleep(time.Millisecond * 250)
+	// Cancelling the context triggers a final exportMetrics call, which resets
+	// the map.  Wait for the goroutine to exit before reading kpiMap — this
+	// guarantees no concurrent access and eliminates the data race.
+	cancel()
+	<-collector.doneCh
 
 	// Check that map is cleared after export
 	is.Equal(len(collector.kpiMap), 0)
-
-	cancel()
 }
