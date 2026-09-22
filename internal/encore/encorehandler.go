@@ -72,6 +72,7 @@ func (eh *HttpEncoreHandler) CreateJob(creative *structure.ManifestAsset) (struc
 	submitted, err := eh.submitJob(job)
 	if err != nil {
 		logger.Error("Failed to submit Encore job", slog.String("error", err.Error()))
+		return submitted, err
 	}
 	return submitted, nil
 }

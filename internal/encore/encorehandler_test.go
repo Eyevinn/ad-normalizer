@@ -76,6 +76,33 @@ func TestGetJobWithoutOSCContext(t *testing.T) {
 	is.Equal(capturedJWT, "")
 }
 
+// TestCreateJobPropagatesSubmitError verifies that when the Encore endpoint
+// rejects the submission (non-201 status) CreateJob returns a non-nil error.
+// Previously it swallowed the error and returned nil, causing the QUEUED marker
+// to always be written even when submission failed (issue #97).
+func TestCreateJobPropagatesSubmitError(t *testing.T) {
+	is := is.New(t)
+
+	// Set up a server that always returns 503.
+	failServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+	}))
+	defer failServer.Close()
+
+	client := &http.Client{}
+	failUrl, _ := url.Parse(failServer.URL)
+	bucketUrl, _ := url.Parse("s3://example.com/transcoding-output/")
+	rootUrl, _ := url.Parse("https://ad-normalizer.osaas.io")
+	handler := NewHttpEncoreHandler(client, *failUrl, "test-profile", nil, *bucketUrl, *rootUrl)
+
+	asset := &structure.ManifestAsset{
+		CreativeId:        "error-creative-id",
+		MasterPlaylistUrl: "http://example.com/ad.mp4",
+	}
+	_, err := handler.CreateJob(asset)
+	is.True(err != nil) // error must propagate, not be swallowed
+}
+
 func TestCreateJobWithoutOSCContext(t *testing.T) {
 	is := is.New(t)
 	

@@ -44,6 +44,7 @@ type API struct {
 	jitPackage       bool
 	packageQueue     string
 	encoreUrl        url.URL
+	inFlightTtl      int
 	reportKpi        func(normalizerMetrics.AdsHandledEventArguments)
 	checkAssetExists func(assetUrl string) bool
 }
@@ -66,6 +67,7 @@ func NewAPI(
 		jitPackage:     config.JitPackage,
 		packageQueue:   config.PackagingQueueName,
 		encoreUrl:      config.EncoreUrl,
+		inFlightTtl:    config.InFlightTtl,
 		reportKpi:      kpiReportFunc,
 	}
 	api.checkAssetExists = api.assetExists
@@ -485,12 +487,17 @@ func (api *API) dispatchJobs(missingCreatives map[string]structure.ManifestAsset
 				slog.String("creativeId", creative.CreativeId),
 				slog.String("jobId", encoreJob.Id),
 			)
-			_ = api.valkeyStore.Set(creative.CreativeId, structure.TranscodeInfo{
+			if err := api.valkeyStore.Set(creative.CreativeId, structure.TranscodeInfo{
 				Url:        creative.MasterPlaylistUrl,
 				Status:     "QUEUED",
 				Source:     creative.MasterPlaylistUrl,
 				LastUpdate: time.Now().Unix(),
-			})
+			}, int64(api.inFlightTtl)); err != nil {
+				logger.Error("failed to write QUEUED marker to cache",
+					slog.String("creativeId", creative.CreativeId),
+					slog.String("error", err.Error()),
+				)
+			}
 		}(&creative)
 	}
 }
