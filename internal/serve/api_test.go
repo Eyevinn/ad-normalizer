@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -34,6 +35,7 @@ type StoreStub struct {
 	deletes   int
 	blacklist []string
 	kpis      normalizerMetrics.NormalizerMetrics
+	lastTtls  map[string]int64 // keyed by cache key; -1 means no TTL was passed
 }
 
 func (s *StoreStub) kpiReport(args normalizerMetrics.AdsHandledEventArguments) {
@@ -68,6 +70,14 @@ func (s *StoreStub) Set(key string, value structure.TranscodeInfo, ttl ...int64)
 	defer s.mu.Unlock()
 	s.sets++
 	s.mockStore[key] = value
+	if s.lastTtls == nil {
+		s.lastTtls = make(map[string]int64)
+	}
+	if len(ttl) > 0 {
+		s.lastTtls[key] = ttl[0]
+	} else {
+		s.lastTtls[key] = -1
+	}
 	return nil
 }
 
@@ -95,6 +105,7 @@ func (s *StoreStub) reset() {
 	s.deletes = 0
 	s.kpis = normalizerMetrics.NormalizerMetrics{}
 	s.blacklist = []string{} // Reset the blacklist
+	s.lastTtls = make(map[string]int64)
 }
 
 func (s *StoreStub) BlackList(key string) error {
@@ -187,6 +198,105 @@ func (e *EncoreHandlerStub) CreateJob(creative *structure.ManifestAsset) (struct
 	return newJob, nil
 }
 
+// EncoreHandlerFailStub always returns an error from CreateJob.
+type EncoreHandlerFailStub struct{}
+
+func (e *EncoreHandlerFailStub) GetEncoreJob(jobId string) (structure.EncoreJob, error) {
+	return structure.EncoreJob{}, nil
+}
+
+func (e *EncoreHandlerFailStub) CreateJob(creative *structure.ManifestAsset) (structure.EncoreJob, error) {
+	return structure.EncoreJob{}, errors.New("encore submission rejected: 503 Service Unavailable")
+}
+
+// TestDispatchJobsDoesNotWriteQueuedMarkerOnSubmitError verifies that when
+// Encore submission fails the QUEUED marker is NOT written to the cache.
+// Before the fix CreateJob swallowed the error, so the marker was always written.
+func TestDispatchJobsDoesNotWriteQueuedMarkerOnSubmitError(t *testing.T) {
+	is := is.New(t)
+
+	storeStub := &StoreStub{
+		mockStore: make(map[string]structure.TranscodeInfo),
+		lastTtls:  make(map[string]int64),
+		kpis:      normalizerMetrics.NormalizerMetrics{},
+	}
+	adserverUrl, _ := url.Parse("http://localhost:9999") // unused in this test
+	assetServerUrl, _ := url.Parse("https://asset-server.example.com")
+	apiConf := config.AdNormalizerConfig{
+		AdServerUrl:    *adserverUrl,
+		AssetServerUrl: *assetServerUrl,
+		KeyField:       "url",
+		KeyRegex:       "[^a-zA-Z0-9]",
+		InFlightTtl:    3600,
+	}
+	api := NewAPI(
+		storeStub,
+		apiConf,
+		&EncoreHandlerFailStub{},
+		&http.Client{},
+		storeStub.kpiReport,
+	)
+
+	creative := structure.ManifestAsset{
+		CreativeId:        "fail-creative-id",
+		MasterPlaylistUrl: "http://example.com/ad.mp4",
+	}
+	api.dispatchJobs(map[string]structure.ManifestAsset{creative.CreativeId: creative})
+
+	// Give the goroutines a moment to complete.
+	time.Sleep(100 * time.Millisecond)
+
+	// No marker should have been written because submission failed.
+	is.Equal(storeStub.sets, 0)
+}
+
+// TestDispatchJobsWritesQueuedMarkerWithTtl verifies that on a successful
+// submission the QUEUED marker is stored with the configured IN_FLIGHT_TTL so
+// that stranded markers self-heal instead of wedging the creative permanently.
+func TestDispatchJobsWritesQueuedMarkerWithTtl(t *testing.T) {
+	is := is.New(t)
+
+	storeStub := &StoreStub{
+		mockStore: make(map[string]structure.TranscodeInfo),
+		lastTtls:  make(map[string]int64),
+		kpis:      normalizerMetrics.NormalizerMetrics{},
+	}
+	adserverUrl, _ := url.Parse("http://localhost:9999") // unused in this test
+	assetServerUrl, _ := url.Parse("https://asset-server.example.com")
+	const wantTtl = int64(3600)
+	apiConf := config.AdNormalizerConfig{
+		AdServerUrl:    *adserverUrl,
+		AssetServerUrl: *assetServerUrl,
+		KeyField:       "url",
+		KeyRegex:       "[^a-zA-Z0-9]",
+		InFlightTtl:    int(wantTtl),
+	}
+	api := NewAPI(
+		storeStub,
+		apiConf,
+		&EncoreHandlerStub{},
+		&http.Client{},
+		storeStub.kpiReport,
+	)
+
+	creative := structure.ManifestAsset{
+		CreativeId:        "ttl-creative-id",
+		MasterPlaylistUrl: "http://example.com/ad.mp4",
+	}
+	api.dispatchJobs(map[string]structure.ManifestAsset{creative.CreativeId: creative})
+
+	// Give the goroutines a moment to complete.
+	time.Sleep(100 * time.Millisecond)
+
+	// Marker must be written exactly once.
+	is.Equal(storeStub.sets, 1)
+
+	// And it must carry the in-flight TTL, not be persisted forever.
+	gotTtl, ok := storeStub.lastTtls[creative.CreativeId]
+	is.True(ok)
+	is.Equal(gotTtl, wantTtl)
+}
+
 func setupApi() (*API, *httptest.Server, *StoreStub, *EncoreHandlerStub) {
 	storeStub := &StoreStub{
 		mockStore: make(map[string]structure.TranscodeInfo),
@@ -204,6 +314,7 @@ func setupApi() (*API, *httptest.Server, *StoreStub, *EncoreHandlerStub) {
 		KeyField:       "url",
 		KeyRegex:       "[^a-zA-Z0-9]",
 		KpiPostUrl:     "http://kpi-post.example.com/metrics",
+		InFlightTtl:    3600,
 	}
 	// Initialize the API with the mock store.
 	// Default checkAssetExists to always-true so existing tests don't make real
