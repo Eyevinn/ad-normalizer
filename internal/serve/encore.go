@@ -105,7 +105,15 @@ func (api *API) handleTranscodeCompleted(progress *structure.EncoreJobProgress) 
 		_ = api.valkeyStore.Delete(progress.ExternalId) // Something went wrong, remove the job from the store
 		return nil
 	}
-	err = api.valkeyStore.Set(progress.ExternalId, transcodeInfo)
+	// COMPLETED (JIT mode) is a terminal marker — persist it forever.
+	// PACKAGING (non-JIT mode) is an in-flight marker — expire it after
+	// inFlightTtl so a wedged entry self-heals via re-dispatch on the next
+	// VAST request rather than requiring manual Valkey deletion (issue #100).
+	if transcodeInfo.Status == "COMPLETED" {
+		err = api.valkeyStore.Set(progress.ExternalId, transcodeInfo)
+	} else {
+		err = api.valkeyStore.Set(progress.ExternalId, transcodeInfo, int64(api.inFlightTtl))
+	}
 	if err != nil {
 		logger.Error("failed to store transcode info",
 			slog.String("error", err.Error()),
