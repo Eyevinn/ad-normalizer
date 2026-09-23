@@ -209,6 +209,19 @@ func (e *EncoreHandlerFailStub) CreateJob(creative *structure.ManifestAsset) (st
 	return structure.EncoreJob{}, errors.New("encore submission rejected: 503 Service Unavailable")
 }
 
+// EncoreHandlerGetJobErrorStub returns an error from GetEncoreJob (e.g. auth/SAT failure).
+type EncoreHandlerGetJobErrorStub struct {
+	err error
+}
+
+func (e *EncoreHandlerGetJobErrorStub) GetEncoreJob(jobId string) (structure.EncoreJob, error) {
+	return structure.EncoreJob{}, e.err
+}
+
+func (e *EncoreHandlerGetJobErrorStub) CreateJob(creative *structure.ManifestAsset) (structure.EncoreJob, error) {
+	return structure.EncoreJob{}, nil
+}
+
 // TestDispatchJobsDoesNotWriteQueuedMarkerOnSubmitError verifies that when
 // Encore submission fails the QUEUED marker is NOT written to the cache.
 // Before the fix CreateJob swallowed the error, so the marker was always written.
