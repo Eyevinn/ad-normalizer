@@ -18,9 +18,14 @@ func (api *API) HandlePackagingFailure(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode request body", http.StatusBadRequest)
 		return
 	}
+	logger.Info("Packager failure callback received", slog.String("jobId", body.Message.JobId))
 	encoreJob, err := api.encoreHandler.GetEncoreJob(body.Message.JobId)
 	if err != nil {
-		http.Error(w, "Failed to get Encore job", http.StatusNotFound)
+		logger.Error("Failed to get Encore job for packaging failure callback",
+			slog.String("jobId", body.Message.JobId),
+			slog.String("error", err.Error()),
+		)
+		http.Error(w, "Failed to get Encore job", http.StatusBadGateway)
 		return
 	}
 	if encoreJob.ExternalId == "" {
@@ -43,10 +48,17 @@ func (api *API) HandlePackagingSuccess(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode request body", http.StatusBadRequest)
 		return
 	}
-	logger.Debug("getting Encore job for packaging success", slog.String("jobId", body.JobId))
+	logger.Info("Packager success callback received",
+		slog.String("jobId", body.JobId),
+		slog.String("outputPath", body.OutputPath),
+	)
 	encoreJob, err := api.encoreHandler.GetEncoreJob(body.JobId)
 	if err != nil {
-		http.Error(w, "Failed to get Encore job", http.StatusNotFound)
+		logger.Error("Failed to get Encore job for packaging success callback",
+			slog.String("jobId", body.JobId),
+			slog.String("error", err.Error()),
+		)
+		http.Error(w, "Failed to get Encore job", http.StatusBadGateway)
 		return
 	}
 	if encoreJob.ExternalId == "" {
